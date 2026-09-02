@@ -1,0 +1,256 @@
+/* ============================================================
+   VIABUS · Responsive
+   All breakpoint overrides live here, loaded last so they win.
+   Desktop-first → tablet (1080) → mobile (760) → small (480).
+   ============================================================ */
+
+/* ── Universal touch improvements ───────────────────────── */
+a, button, [role="button"], label, select, input[type="radio"],
+input[type="checkbox"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Minimum 44px touch targets on all interactive elements */
+@media (pointer: coarse) {
+  .ghost, .glass-button, button, .rp-pill, .qp-submit,
+  .qp-svc-card, .nav-links a, .menu-list a, .foot-col a {
+    min-height: 44px;
+  }
+  .qp-field input, .qp-field select, .qp-field textarea {
+    min-height: 48px;
+  }
+}
+
+/* ── Tablet (≤1080px) ────────────────────────────────────── */
+@media(max-width:1080px){
+  /* mosaic — compress row heights at tablet */
+  .mosaic{grid-template-rows:380px 220px}
+  .m3,.m5{height:190px}
+
+  .intro-grid{grid-template-columns:1fr;gap:34px}
+  .proof-inner{padding:48px 44px 44px}
+  .proof-grid{grid-template-columns:1fr 1fr;gap:0}
+  .gcard:nth-child(2)::after{display:none}
+  .gcard:nth-child(odd){padding-right:28px}
+  .gcard:nth-child(even){padding-right:0;padding-left:28px}
+  .gcard:nth-child(3){border-top:1px solid rgba(255,255,255,.12);padding-top:28px;margin-top:28px}
+  .gcard:nth-child(4){border-top:1px solid rgba(255,255,255,.12);padding-top:28px;margin-top:28px}
+  .fleet-row{grid-template-columns:1fr;gap:32px;padding-top:80px}
+  .fleet-row.flip .fleet-text{order:0}
+  .fleet-row .frame{height:420px}
+  .charter-inner{grid-template-columns:1fr;gap:52px;padding:0 44px}
+  .ch-intro{position:static}
+  .appnews-inner{grid-template-columns:1fr;gap:52px;padding:0 44px}
+  .routes-grid{grid-template-columns:1fr 1fr}
+  .voices-grid{grid-template-columns:1fr}
+  .vcard--feat{grid-row:auto}
+  .voices-head{padding:0 44px 44px}
+  /* why section: 2-col grid at tablet */
+  .why-wrap{padding:0 44px}
+  .why-grid{grid-template-columns:repeat(2,1fr)}
+  .why-subrow{flex-direction:column;gap:28px;align-items:flex-start}
+  .why-sub{text-align:left}
+  .why-split{grid-template-columns:1fr}
+  .why-sp-div{width:100%;height:1px;position:relative}
+  .why-sp-node{left:50%;top:50%}
+  .seq-cap{max-width:62%}
+
+  /* routes page tablet */
+  .rp-hero{padding:140px 44px 80px}
+  .rp-bar{flex-wrap:wrap;gap:12px}
+  .rp-grid{grid-template-columns:repeat(2,1fr)}
+
+  /* fleet page tablet */
+  .fp-hero{padding:140px 44px 80px}
+
+  /* footer */
+  .foot-top{grid-template-columns:1fr 1fr;gap:36px}
+  .foot-brand{grid-column:1/-1}
+  .foot-brand p{max-width:420px}
+  .foot-news{max-width:360px}
+
+  /* quote page — handled by inline styles in quote.html */
+}
+
+/* ── Mobile (≤760px) ─────────────────────────────────────── */
+@media(max-width:760px){
+  :root{--gap:72px}
+  .container{padding:0 20px}
+  .ew{padding:0 20px}
+
+  /* ── nav ── keep 1fr auto 1fr so wordmark stays perfectly centered */
+  .nav{grid-template-columns:1fr auto 1fr;padding:14px 20px}
+  .nav-links{display:none}
+  .nav-right .ghost.exp{display:none}
+  .nav-glass-btn{display:none}
+  .nav .wordmark{letter-spacing:0.36em;font-size:14px}
+
+  /* ── hero copy ── */
+  .hero-copy{gap:28px;padding:0 24px}
+  .hero-hed{font-size:clamp(44px,11vw,72px)}
+  .hero-label{font-size:10px;gap:14px}
+  .hero-label::before,.hero-label::after{flex:0 0 32px}
+  .hero-ctas{gap:10px}
+
+  /* sequence — shorter pin + repositioned caps */
+  .seq{height:300vh}
+  .seq-cap{max-width:84%}
+  .seq-cap.left{left:20px;top:180px}
+  .seq-cap.right{right:20px;top:120px;text-align:left}
+  .seq-cap.right .label{justify-content:flex-start}
+  .seq-cap.right p{margin-left:0}
+
+  /* ── mosaic — 2-col on mobile ── */
+  .mosaic{
+    grid-template-columns:1fr 1fr;
+    grid-template-rows:none;
+    gap:6px;margin-top:40px
+  }
+  .m1,.m2,.m3,.m4,.m5{
+    grid-column:auto;grid-row:auto;
+    height:220px;align-self:auto
+  }
+  .m5{grid-column:1/-1;height:200px}
+  .routes-grid{grid-template-columns:1fr}
+  .plan{padding:32px 20px}
+
+  /* ── voices ── */
+  .voices-head{padding:0 24px 36px;flex-direction:column;align-items:flex-start;gap:28px}
+  .voices-agg{text-align:left;padding-left:0}
+  .voices-agg .agg-n{font-size:clamp(36px,10vw,56px)}
+  .voices-grid{grid-template-columns:1fr;grid-template-rows:auto}
+  .vcard--feat{grid-row:auto}
+  .vcard{padding:36px 28px 32px}
+  .vcard--feat .vcard-text{font-size:clamp(18px,4.5vw,22px)}
+
+  /* ── charter mobile ── */
+  .charter-inner{grid-template-columns:1fr;gap:40px;padding:0 20px}
+  .ch-card{padding:32px 24px 28px}
+  .qc-grid{grid-template-columns:1fr}
+
+  /* ── app + newsletter mobile ── */
+  .appnews-inner{grid-template-columns:1fr;gap:44px;padding:0 20px}
+  .an-news-card{padding:36px 28px}
+
+  /* ── why section mobile ── */
+  .why-section{padding:72px 0 0}
+  .why-wrap{padding:0 20px}
+  .why-hero{margin-bottom:44px}
+  .why-eyebrow{gap:12px}
+  .why-subrow{flex-direction:column;gap:20px;align-items:flex-start}
+  .why-sub{max-width:100%}
+  .why-grid{grid-template-columns:1fr}
+  .wc{padding:36px 24px 32px}
+  .wc-ghost{font-size:90px}
+  .why-split{grid-template-columns:1fr}
+  .why-sp{padding:32px 24px 40px}
+  .why-sp-div{width:100%;height:1px}
+  .why-sp-node{left:50%;top:50%}
+
+  /* ── forms ── */
+  .qc-grid{grid-template-columns:1fr}
+  .closing-copy{flex-direction:column;align-items:flex-start;gap:18px}
+  .closing-copy h2{max-width:100%}
+  .closing-copy .c-right{text-align:left;align-items:flex-start}
+
+  /* ── footer ── */
+  .foot{padding-top:56px;padding-bottom:36px}
+  .foot-top{grid-template-columns:1fr;gap:32px}
+  .foot-brand p{max-width:100%}
+  .foot-news{max-width:100%}
+  .foot-brand{padding-bottom:8px}
+  .foot-bot{flex-direction:column;align-items:flex-start;gap:20px}
+  .foot-shell::after{display:none}
+
+  /* ── proof ── */
+  .proof{min-height:520px}
+  .proof-inner{padding:36px 28px 36px}
+  .proof-head h2{font-size:clamp(34px,9vw,52px)}
+
+  /* ── hero stats bar — stack on very small screens ── */
+  .hero-stats{border-radius:20px;padding:16px 4px}
+  .hs-item{padding:0 18px}
+  .hs-n{font-size:18px}
+  .hs-l{font-size:9px}
+
+  /* ── Routes page mobile ─────────────────────────────── */
+  .rp-hero{padding:110px 18px 52px}
+  .rp-h1{font-size:clamp(34px,9.5vw,56px)}
+  .rp-sub{font-size:14px;line-height:1.55}
+  .rp-stats{gap:18px;flex-wrap:wrap}
+  .rp-stat{min-width:90px}
+  .rp-stat-n{font-size:clamp(24px,6vw,36px)}
+
+  /* Filter bar: pills wrap, sort inline below */
+  .rp-bar{
+    flex-direction:column;
+    align-items:flex-start;
+    gap:10px;
+    padding:20px 0 16px
+  }
+  .rp-pills{display:flex;flex-wrap:wrap;gap:7px}
+  .rp-pill{font-size:12px;padding:8px 13px}
+  .rp-sort{font-size:13px}
+  .rp-sort select{font-size:13px;padding:7px 10px}
+  .rp-tally{font-size:12px;margin-bottom:18px}
+
+  /* ── 1-column card grid ── */
+  .rp-grid{
+    grid-template-columns:1fr;
+    gap:14px;
+    margin-bottom:60px
+  }
+
+  /* keep book link as subtle underline — no block styling */
+  .rc-book{
+    font-size:12px;font-weight:500;
+    color:var(--obsidian);
+    border-bottom:1px solid var(--obsidian);
+    padding-bottom:1px;
+    background:none;
+    display:inline;width:auto;
+    border-radius:0;
+    border-top:none;border-left:none;border-right:none
+  }
+
+  /* ── Fleet page mobile ─────────────────────────────── */
+  .fp-hero{padding:110px 20px 56px}
+
+  /* ── Quote page mobile (backup, also in quote.html) ─ */
+  .qp-hero{padding:110px 20px 56px}
+  .qp-outer{padding:0 16px}
+  .qp-layout{grid-template-columns:1fr;gap:40px;padding:48px 0 72px}
+  .qp-aside{position:static}
+  .qp-grid-2{grid-template-columns:1fr;gap:14px}
+  .qp-svc-grid{grid-template-columns:1fr}
+  .qp-svc-card{flex-direction:row;align-items:center;gap:14px;padding:16px}
+  .qp-section{padding:32px 0}
+  .qp-section-head h2{font-size:19px}
+  .qp-submit{font-size:15px;padding:16px 24px}
+  .qp-next-card{padding:24px 20px}
+  .qp-popular{padding:22px 18px}
+}
+
+/* ── Small mobile (≤480px) ───────────────────────────────── */
+@media(max-width:480px){
+  .foot-top{grid-template-columns:1fr}
+  .seq{height:260vh}
+  .proof-grid{grid-template-columns:1fr 1fr}
+  .gcard .n{font-size:clamp(38px,9vw,56px)}
+  .hero-hed{font-size:clamp(38px,12vw,56px)}
+
+  /* Routes — full-width cards on small phones */
+  .rp-grid{padding:0 16px}
+  .rp-pill{font-size:12px;padding:8px 13px}
+
+  /* Quote — full-bleed inputs */
+  .qp-outer{padding:0 14px}
+  .qp-h1{font-size:clamp(32px,10vw,50px)}
+
+  /* Stats bar — collapse dividers */
+  .hs-div{display:none}
+  .hero-stats{justify-content:space-between;gap:0}
+  .hs-item{padding:0 10px}
+  .hs-n{font-size:16px}
+  .hs-l{font-size:8.5px}
+}

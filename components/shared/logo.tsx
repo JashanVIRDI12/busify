@@ -32,7 +32,7 @@ export function Logo({ className }: { className?: string }) {
     <span className={cn("flex items-center gap-2.5", className)}>
       <LogoMark />
       <span className="font-display text-body font-extrabold tracking-[-0.03em] text-ink">
-        Busify
+        VIABUS
       </span>
     </span>
   );

@@ -1,0 +1,307 @@
+/* ============================================================
+   VIABUS · Layout
+   Structural chrome: navigation, fullscreen menu, hero,
+   section scaffold, closing image and footer.
+   ============================================================ */
+
+/* ---------- NAVIGATION ---------- */
+.nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+  padding:24px 40px;color:#fff;
+  transition:color .4s,background .55s,padding .4s,border-color .4s,backdrop-filter .4s;
+}
+.nav.solid{
+  color:var(--obsidian);
+  background:rgba(250,246,239,.88);
+  -webkit-backdrop-filter:blur(24px) saturate(160%);
+  backdrop-filter:blur(24px) saturate(160%);
+  padding:15px 40px;
+  border-bottom:1px solid rgba(0,0,0,.08)
+}
+.nav-left{display:flex;align-items:center;gap:22px}
+.nav-links{display:flex;gap:2px}
+.nav-links a{
+  font-size:13.5px;font-weight:500;padding:8px 14px;border-radius:var(--r-pill);
+  position:relative;transition:opacity .25s,color .25s,background .25s;
+  letter-spacing:-0.01em
+}
+.nav-links a::after{
+  content:"";position:absolute;bottom:5px;left:14px;right:14px;height:1.5px;
+  background:var(--ember);transform:scaleX(0);transform-origin:left;
+  transition:transform .32s cubic-bezier(.2,.8,.2,1)
+}
+.nav-links a:hover{opacity:1}
+.nav-links a:hover::after{transform:scaleX(1)}
+/* active page indicator — inherits #fff from .nav over hero, overridden to dark when solid */
+.nav-links a[aria-current="page"]{opacity:1}
+.nav-links a[aria-current="page"]::after{transform:scaleX(1)}
+.nav.solid .nav-links a[aria-current="page"]{color:var(--obsidian)}
+.menu-list a[aria-current="page"]{opacity:1}
+.nav .wordmark{font-size:15px;font-weight:500;letter-spacing:0.42em;text-align:center;padding-left:0.42em}
+.nav-right{display:flex;align-items:center;justify-content:flex-end;gap:18px}
+.nav-right .ghost{font-weight:400;font-size:13.5px;letter-spacing:-0.01em}
+/* solid-state CTA: ember-filled pill */
+.nav.solid .nav-glass-btn .glass-button{
+  background:var(--ember);
+  -webkit-backdrop-filter:none;backdrop-filter:none;
+  border-color:transparent;
+  color:#fff;
+  box-shadow:0 4px 18px rgba(250,92,64,.32)
+}
+.nav.solid .nav-glass-btn .glass-button:hover{
+  background:#e84d32;
+  box-shadow:0 6px 24px rgba(250,92,64,.46);
+  transform:translateY(-1px)
+}
+.nav.solid .nav-glass-btn .glass-button-shadow{display:none}
+
+/* burger — refined lines */
+.burger{
+  width:42px;height:42px;border-radius:12px;display:grid;place-items:center;
+  border:1px solid rgba(255,255,255,.22);
+  background:rgba(255,255,255,.06);
+  transition:border-color .3s,background .3s;flex-shrink:0
+}
+.nav.solid .burger{border-color:rgba(0,0,0,.14);background:transparent}
+.burger:hover{border-color:currentColor;background:rgba(255,255,255,.1)}
+.nav.solid .burger:hover{background:rgba(0,0,0,.05)}
+.burger span{display:block;width:18px;height:1.5px;background:currentColor;position:relative;transition:opacity .3s}
+.burger span::before,.burger span::after{content:"";position:absolute;left:0;width:18px;height:1.5px;background:currentColor;transition:transform .35s cubic-bezier(.2,.8,.2,1),width .35s}
+.burger span::before{top:-5px}
+.burger span::after{top:5px;width:12px}
+.burger:hover span::after{width:18px}
+
+/* ---------- FULLSCREEN MENU ---------- */
+.menu-overlay{
+  position:fixed;inset:0;z-index:120;
+  background:#07090f;color:#fff;
+  display:flex;flex-direction:column;
+  padding:32px 44px 40px;
+  opacity:0;pointer-events:none;
+  transition:opacity .4s cubic-bezier(.4,0,.2,1)
+}
+.menu-overlay.open{opacity:1;pointer-events:auto}
+.menu-top{display:flex;justify-content:space-between;align-items:center;padding-bottom:4px}
+.menu-close{
+  font-size:13px;font-weight:500;letter-spacing:-0.01em;
+  display:inline-flex;align-items:center;gap:8px;
+  color:rgba(255,255,255,.42);transition:color .25s;padding:10px 0
+}
+.menu-close:hover{color:#fff}
+.menu-close svg{width:16px;height:16px}
+.menu-list{margin:auto 0;display:flex;flex-direction:column;gap:4px;padding:32px 0}
+.menu-list a{
+  font-size:clamp(36px,8.5vw,76px);font-weight:700;
+  letter-spacing:-0.052em;line-height:1.06;
+  color:rgba(255,255,255,.75);
+  opacity:0;transform:translateY(28px);
+  transition:color .3s,padding-left .35s,opacity .42s cubic-bezier(.2,.8,.2,1),transform .42s cubic-bezier(.2,.8,.2,1)
+}
+.menu-overlay.open .menu-list a{opacity:1;transform:translateY(0)}
+.menu-overlay.open .menu-list a:nth-child(1){transition-delay:.06s}
+.menu-overlay.open .menu-list a:nth-child(2){transition-delay:.11s}
+.menu-overlay.open .menu-list a:nth-child(3){transition-delay:.16s}
+.menu-overlay.open .menu-list a:nth-child(4){transition-delay:.21s}
+.menu-overlay.open .menu-list a:nth-child(5){transition-delay:.26s}
+.menu-overlay.open .menu-list a:nth-child(6){transition-delay:.31s}
+.menu-list a:hover{color:#fff;padding-left:18px}
+.menu-list a:hover em{color:var(--ember)}
+.menu-list a em{
+  font-style:normal;font-size:13px;font-weight:400;
+  letter-spacing:0.05em;vertical-align:super;
+  color:rgba(255,255,255,.22);margin-left:12px;
+  transition:color .3s
+}
+.menu-foot{
+  display:flex;gap:32px;
+  color:rgba(255,255,255,.26);font-size:13px;letter-spacing:-0.01em;
+  border-top:1px solid rgba(255,255,255,.07);padding-top:28px
+}
+
+/* ---------- HERO COPY (overlaid on the scroll-sequence film) ----------
+   The hero is the pinned film section (.seq, see scroll-sequence.css);
+   these rules style the copy that sits inside its sticky stage.
+   NOTE: JS controls transform+opacity via updateFades() — inset:0 flex
+   centering means the initial translateY(0) from JS is conflict-free. */
+.nav:not(.solid){text-shadow:0 1px 24px rgba(0,0,0,.32)}
+.hero-copy{
+  position:absolute;inset:0;z-index:3;
+  color:#fff;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  text-align:center;gap:36px;
+  padding:0 40px
+}
+/* Hidden until GSAP animates them in — prevents flash before JS runs */
+.hero-copy h1,.hero-ctas,.hero-stats,.hs-item,.hs-div{opacity:0}
+
+/* ── cinematic headline ── */
+.hero-hed{
+  font-size:clamp(56px,9vw,120px);font-weight:700;
+  letter-spacing:-0.055em;line-height:.97;
+  text-shadow:0 4px 80px rgba(0,0,0,.5);
+  margin:0
+}
+.hero-hed-soft{
+  font-weight:400;color:rgba(255,255,255,.72)
+}
+
+.hero-ctas{display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center}
+
+/* ── secondary quote CTA — clean outline contrasting the glass primary ── */
+.hero-quote-btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:15px 30px;
+  border:1.5px solid rgba(255,255,255,.38);
+  border-radius:var(--r-pill);
+  font-size:15px;font-weight:500;letter-spacing:-0.025em;
+  color:rgba(255,255,255,.86);
+  transition:border-color .28s,background .28s,color .28s,transform .22s
+}
+.hero-quote-btn svg{width:15px;height:15px;flex-shrink:0;transition:transform .32s cubic-bezier(.2,.8,.2,1)}
+.hero-quote-btn:hover{
+  border-color:rgba(255,255,255,.75);
+  background:rgba(255,255,255,.1);
+  color:#fff;transform:translateY(-1px)
+}
+.hero-quote-btn:hover svg{transform:translateX(4px)}
+
+@keyframes bob{50%{transform:translateY(6px);opacity:.5}}
+
+/* ---------- SECTION SCAFFOLD ---------- */
+section{position:relative}
+.sec{padding-top:var(--gap)}
+.sec-head{display:flex;justify-content:space-between;align-items:flex-end;gap:40px;margin-bottom:48px}
+.sec-head .lead{max-width:640px}
+.sec-head .lead .label{margin-bottom:20px;display:flex;align-items:center;gap:14px}
+.sec-head .lead .label::before{content:"";width:34px;height:3px;background:var(--ember)}
+.sec-head .lead h2{margin-bottom:0}
+.sec-head .side{max-width:300px;text-align:right;color:var(--pebble)}
+
+/* dark editorial page wrappers used by experience/corporate/about */
+.ew { max-width: var(--page); margin: 0 auto; padding: 0 clamp(22px,4vw,48px); }
+.sec-pad { padding: clamp(80px,10vw,120px) 0; }
+
+/* ---------- CLOSING IMAGE ---------- */
+.closing{margin-top:0;position:relative;height:80vh;min-height:560px;overflow:hidden}
+.closing .closing-img{position:absolute;inset:0}
+.closing .closing-img::after{content:"";position:absolute;inset:0;background:rgba(0,0,0,.18)}
+.closing-copy{position:absolute;inset:auto 40px 56px 40px;color:#fff;z-index:2;display:flex;
+  justify-content:space-between;align-items:flex-end;gap:40px}
+.closing-copy h2{max-width:60%;text-shadow:0 2px 50px rgba(0,0,0,.4)}
+.closing-copy .c-right{max-width:320px;text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:18px}
+.closing-copy .c-right p{font-size:16px;color:rgba(255,255,255,.9);letter-spacing:-0.3px;text-shadow:0 1px 30px rgba(0,0,0,.5)}
+
+/* ---------- FOOTER ---------- */
+.foot-shell{
+  background:#07090f;position:relative;overflow:hidden
+}
+/* ember hairline across the top */
+.foot-shell::before{
+  content:"";position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent 0%,var(--ember) 28%,var(--ember) 72%,transparent 100%)
+}
+/* huge ghost wordmark watermark */
+.foot-shell::after{
+  content:"VIABUS";
+  position:absolute;bottom:-52px;right:-16px;
+  font-size:clamp(140px,18vw,260px);font-weight:700;letter-spacing:-0.055em;line-height:1;
+  color:rgba(255,255,255,.024);pointer-events:none;user-select:none
+}
+.foot{padding-top:80px;padding-bottom:48px}
+.foot-top{
+  display:grid;grid-template-columns:1.7fr 1fr 1fr 1fr;
+  gap:48px;padding-bottom:56px
+}
+.foot-brand .wordmark{
+  font-size:38px;font-weight:700;letter-spacing:-0.052em;
+  color:#fff;margin-bottom:20px
+}
+.foot-brand p{
+  color:rgba(255,255,255,.36);font-size:15px;
+  letter-spacing:-0.3px;line-height:1.55;max-width:260px;margin-bottom:28px
+}
+/* mini newsletter in footer brand */
+.foot-news{
+  display:flex;
+  border:1px solid rgba(255,255,255,.13);border-radius:var(--r-pill);
+  overflow:hidden;background:rgba(255,255,255,.04);
+  max-width:280px;transition:border-color .3s
+}
+.foot-news:focus-within{border-color:rgba(255,255,255,.32)}
+.foot-news input{
+  flex:1;background:transparent;border:none;outline:none;
+  padding:12px 18px;font-family:inherit;font-size:13.5px;
+  color:#fff;letter-spacing:-0.02em;min-width:0
+}
+.foot-news input::placeholder{color:rgba(255,255,255,.26)}
+.foot-news button{
+  background:var(--ember);color:#fff;border:none;
+  padding:12px 18px;font-family:inherit;font-size:12.5px;font-weight:600;
+  letter-spacing:-0.01em;cursor:pointer;white-space:nowrap;
+  transition:background .22s;flex-shrink:0
+}
+.foot-news button:hover{background:#e84d32}
+
+.foot-col h4{
+  font-size:10.5px;letter-spacing:0.2em;text-transform:uppercase;
+  color:rgba(255,255,255,.26);margin-bottom:22px;font-weight:500
+}
+.foot-col a{
+  display:block;font-size:14.5px;letter-spacing:-0.02em;
+  color:rgba(255,255,255,.5);margin-bottom:13px;width:fit-content;
+  transition:color .25s,padding-left .28s
+}
+.foot-col a:hover{color:#fff;padding-left:7px;opacity:1}
+.foot-bot{
+  display:flex;justify-content:space-between;align-items:center;
+  padding-top:28px;border-top:1px solid rgba(255,255,255,.07);
+  flex-wrap:wrap;gap:18px
+}
+.foot-bot .copy{
+  color:rgba(255,255,255,.24);font-size:13px;letter-spacing:-0.02em
+}
+.socials{display:flex;gap:8px}
+.socials a{
+  width:38px;height:38px;border-radius:10px;
+  border:1px solid rgba(255,255,255,.11);
+  display:grid;place-items:center;
+  color:rgba(255,255,255,.44);
+  transition:border-color .28s,background .28s,color .28s,transform .22s
+}
+.socials a:hover{
+  background:rgba(255,255,255,.08);
+  border-color:rgba(255,255,255,.28);
+  color:#fff;transform:translateY(-2px)
+}
+.socials a svg{width:16px;height:16px}
+
+/* ── glass stats bar ── */
+.hero-stats{
+  display:flex;align-items:center;
+  white-space:nowrap;
+  background:rgba(255,255,255,.11);
+  -webkit-backdrop-filter:blur(28px) saturate(180%);
+  backdrop-filter:blur(28px) saturate(180%);
+  border:1px solid rgba(255,255,255,.2);
+  border-radius:100px;
+  padding:20px 8px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.3),
+    inset 0 -1px 0 rgba(0,0,0,.12),
+    0 28px 64px rgba(0,0,0,.32)
+}
+.hs-item{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:0 38px
+}
+.hs-n{
+  font-size:clamp(18px,2.2vw,26px);font-weight:700;
+  color:#fff;letter-spacing:-0.04em;line-height:1
+}
+.hs-l{
+  font-size:10.5px;color:rgba(255,255,255,.52);
+  letter-spacing:0.1em;text-transform:uppercase;font-weight:500;white-space:nowrap
+}
+.hs-div{width:1px;height:36px;background:rgba(255,255,255,.16);flex-shrink:0}

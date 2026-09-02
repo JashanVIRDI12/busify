@@ -27,7 +27,7 @@ export async function actionContext(): Promise<{
   if (!user) redirect("/login");
 
   const session = await getSession();
-  if (!session) redirect("/onboarding");
+  if (!session) redirect("/no-access");
 
   return { session, supabase };
 }

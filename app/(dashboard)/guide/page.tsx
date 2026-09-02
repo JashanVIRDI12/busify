@@ -27,7 +27,7 @@ import { requireSession } from "@/lib/auth/session";
 import { ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/lib/permissions";
 import type { OrgRole } from "@/types/database";
 
-export const metadata: Metadata = { title: "How Busify works" };
+export const metadata: Metadata = { title: "How VIABUS works" };
 
 const LIFECYCLE = [
   {
@@ -101,7 +101,7 @@ export default async function GuidePage() {
     <div className="space-y-6">
       <PageHeader
         eyebrow="Guide"
-        title="How Busify works"
+        title="How VIABUS works"
         description={`Everything ${organization.name} can do today, in the order you will actually use it. Nothing here is aspirational — if it is on this page, it works.`}
       />
 

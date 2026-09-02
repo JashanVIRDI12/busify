@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="theme-color" content="#07090f" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Get a Quote — VIABUS</title>
+<meta name="description" content="Request a tailored quote for your journey. Individual seats, group charters and corporate shuttles — a dedicated manager replies within 2 hours." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="assets/css/tokens.css?v=4" />
+<link rel="stylesheet" href="assets/css/base.css?v=5" />
+<link rel="stylesheet" href="assets/css/layout.css?v=14" />
+<link rel="stylesheet" href="assets/css/components.css?v=21" />
+<link rel="stylesheet" href="assets/css/responsive.css?v=17" />
+
+<style>
+/* ════════════════════════════════════════════
+   VIABUS Quote Page
+   ════════════════════════════════════════════ */
+
+/* ── Hero ────────────────────────────────── */
+.qp-hero{
+  background:#07090f;color:#fff;
+  padding:160px 40px 80px;
+  position:relative;overflow:hidden
+}
+.qp-hero-glow{
+  position:absolute;pointer-events:none;
+  width:900px;height:500px;border-radius:50%;
+  background:radial-gradient(ellipse,rgba(250,92,64,.055) 0%,transparent 65%);
+  top:-60px;left:50%;transform:translateX(-50%);
+  will-change:transform
+}
+.qp-hero-inner{max-width:var(--page);margin:0 auto}
+.qp-eyebrow{
+  display:flex;align-items:center;gap:14px;
+  font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+  color:rgba(255,255,255,.35);font-weight:500;margin-bottom:26px
+}
+.qp-eyebrow::before{content:'';width:32px;height:3px;background:var(--ember);flex-shrink:0}
+.qp-h1{
+  font-size:clamp(40px,5.8vw,82px);
+  font-weight:700;letter-spacing:-.053em;line-height:.96;
+  color:#fff;margin-bottom:22px
+}
+.qp-line-mask{display:block;overflow:hidden;padding-bottom:.04em}
+.qp-line-inner{display:block}
+.qp-sub{
+  font-size:16px;color:rgba(255,255,255,.42);
+  line-height:1.58;max-width:500px;letter-spacing:-.012em
+}
+
+/* ── Page layout ─────────────────────────── */
+.qp-outer{max-width:var(--page);margin:0 auto;padding:0 40px}
+.qp-layout{
+  display:grid;
+  grid-template-columns:minmax(0,1.06fr) minmax(0,.74fr);
+  gap:64px;
+  padding:72px 0 120px;
+  align-items:start
+}
+
+/* ── Form ────────────────────────────────── */
+.qp-form{ display:flex;flex-direction:column;gap:0 }
+
+.qp-section{
+  padding:44px 0 44px;
+  border-bottom:1px solid var(--mist)
+}
+.qp-section:first-child{padding-top:0}
+.qp-section:last-of-type{border-bottom:none}
+
+.qp-section-head{
+  display:flex;align-items:flex-start;gap:22px;
+  margin-bottom:36px
+}
+.qp-num{
+  font-size:11px;font-weight:600;letter-spacing:.12em;
+  color:var(--ember);text-transform:uppercase;
+  padding-top:4px;flex-shrink:0;min-width:24px
+}
+.qp-section-head h2{
+  font-size:22px;font-weight:700;letter-spacing:-.038em;
+  margin-bottom:5px
+}
+.qp-section-head p{
+  font-size:14px;color:var(--pebble);letter-spacing:-.01em;line-height:1.4
+}
+
+/* 2-column grid for inputs */
+.qp-grid-2{
+  display:grid;grid-template-columns:1fr 1fr;gap:16px;
+  margin-bottom:16px
+}
+.qp-grid-2:last-child{margin-bottom:0}
+
+/* Field */
+.qp-field{display:flex;flex-direction:column;gap:7px}
+.qp-field.full{grid-column:1/-1}
+.qp-field label{
+  font-size:12px;font-weight:600;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--pebble)
+}
+.qp-field input,
+.qp-field select,
+.qp-field textarea{
+  font-family:inherit;font-size:15px;letter-spacing:-.018em;
+  color:var(--obsidian);
+  border:1.5px solid var(--mist);border-radius:12px;
+  padding:14px 16px;background:var(--pure-white);
+  outline:none;width:100%;
+  transition:border-color .22s,box-shadow .22s;
+  -webkit-appearance:none;appearance:none;
+  min-height:50px
+}
+.qp-field input::placeholder,
+.qp-field textarea::placeholder{color:var(--driftwood)}
+.qp-field input:focus,
+.qp-field select:focus,
+.qp-field textarea:focus{
+  border-color:var(--obsidian);
+  box-shadow:0 0 0 3px rgba(0,0,0,.06)
+}
+.qp-field textarea{
+  min-height:110px;resize:vertical;line-height:1.55
+}
+/* select wrapper for custom arrow */
+.qp-sel-wrap{position:relative}
+.qp-sel-wrap select{padding-right:40px;cursor:pointer}
+.qp-sel-wrap::after{
+  content:'';position:absolute;right:16px;top:50%;
+  width:10px;height:10px;pointer-events:none;transform:translateY(-50%);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-size:contain
+}
+
+/* ── Service type radio cards ────────────── */
+.qp-svc-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:12px
+}
+.qp-svc{position:relative;cursor:pointer}
+.qp-svc input[type="radio"]{
+  position:absolute;opacity:0;width:0;height:0;pointer-events:none
+}
+.qp-svc-card{
+  border:1.5px solid var(--mist);border-radius:16px;
+  padding:22px 18px 20px;
+  display:flex;flex-direction:column;gap:10px;
+  cursor:pointer;
+  transition:border-color .22s,background .22s,transform .22s,box-shadow .22s;
+  height:100%;user-select:none
+}
+.qp-svc:hover .qp-svc-card{
+  border-color:rgba(0,0,0,.3);
+  transform:translateY(-2px);
+  box-shadow:0 8px 28px rgba(0,0,0,.07)
+}
+.qp-svc input:checked + .qp-svc-card{
+  border-color:var(--obsidian);
+  background:var(--obsidian);
+  color:#fff;transform:translateY(-2px);
+  box-shadow:0 12px 36px rgba(0,0,0,.18)
+}
+.qp-svc-ic{
+  width:36px;height:36px;
+  display:grid;place-items:center;
+  border-radius:10px;
+  background:rgba(0,0,0,.06);
+  flex-shrink:0;transition:background .22s
+}
+.qp-svc input:checked + .qp-svc-card .qp-svc-ic{background:rgba(255,255,255,.12)}
+.qp-svc-ic svg{width:18px;height:18px}
+.qp-svc-card strong{
+  font-size:14.5px;font-weight:700;letter-spacing:-.025em;line-height:1.1
+}
+.qp-svc-card span{
+  font-size:12.5px;line-height:1.45;letter-spacing:-.01em;
+  color:var(--pebble);transition:color .22s
+}
+.qp-svc input:checked + .qp-svc-card span{color:rgba(255,255,255,.55)}
+
+/* ── Submit ──────────────────────────────── */
+.qp-form-foot{padding-top:40px;display:flex;flex-direction:column;gap:16px;align-items:flex-start}
+.qp-submit{
+  display:inline-flex;align-items:center;gap:12px;
+  background:var(--obsidian);color:#fff;
+  border:none;border-radius:var(--r-pill);
+  padding:18px 36px;
+  font-family:inherit;font-size:16px;font-weight:600;
+  letter-spacing:-.025em;cursor:pointer;
+  transition:background .25s,transform .22s,box-shadow .25s;
+  width:100%
+}
+.qp-submit:hover{background:#1a1a1a;transform:translateY(-2px);box-shadow:0 16px 48px rgba(0,0,0,.22)}
+.qp-submit:active{transform:translateY(0)}
+.qp-submit svg{width:18px;height:18px;flex-shrink:0;transition:transform .3s}
+.qp-submit:hover svg{transform:translateX(5px)}
+.qp-submit.loading{opacity:.6;pointer-events:none}
+.qp-footnote{font-size:13px;color:var(--pebble);letter-spacing:-.01em}
+
+/* ── Success state ───────────────────────── */
+.qp-success{
+  display:none;
+  flex-direction:column;align-items:flex-start;gap:24px;
+  padding:60px 0
+}
+.qp-success.visible{display:flex}
+.qp-check-wrap{
+  width:72px;height:72px;border-radius:50%;
+  border:2px solid var(--ember);
+  display:grid;place-items:center;flex-shrink:0
+}
+.qp-check-wrap svg{width:32px;height:32px}
+.qp-check-path{
+  stroke-dasharray:60;stroke-dashoffset:60;
+  transition:stroke-dashoffset .6s cubic-bezier(.2,.8,.2,1) .2s
+}
+.qp-check-wrap.drawn .qp-check-path{stroke-dashoffset:0}
+.qp-success h2{
+  font-size:clamp(28px,4vw,42px);font-weight:700;
+  letter-spacing:-.045em;line-height:1.02
+}
+.qp-success p{font-size:16px;color:var(--pebble);line-height:1.55;max-width:480px}
+.qp-ref{
+  display:inline-flex;align-items:center;gap:10px;
+  background:var(--warm-cream);border:1px solid var(--mist);
+  border-radius:12px;padding:14px 20px;
+  font-size:14px;letter-spacing:-.01em
+}
+.qp-ref strong{font-weight:700;letter-spacing:.06em;color:var(--ember)}
+
+/* ── Aside / Sidebar ─────────────────────── */
+.qp-aside{
+  display:flex;flex-direction:column;gap:24px;
+  position:sticky;top:100px
+}
+
+.qp-next-card{
+  background:var(--pure-white);border:1px solid var(--mist);
+  border-radius:20px;padding:32px 30px
+}
+.qp-next-card h3{
+  font-size:17px;font-weight:700;letter-spacing:-.03em;
+  margin-bottom:28px
+}
+.qp-steps-list{display:flex;flex-direction:column;gap:22px}
+.qp-step-item{display:flex;align-items:flex-start;gap:16px}
+.qp-step-num{
+  width:28px;height:28px;border-radius:50%;
+  background:var(--warm-cream);border:1px solid var(--mist);
+  display:grid;place-items:center;flex-shrink:0;
+  font-size:11px;font-weight:700;letter-spacing:.04em;
+  color:var(--pebble)
+}
+.qp-step-item strong{
+  display:block;font-size:14px;font-weight:600;
+  letter-spacing:-.02em;margin-bottom:4px
+}
+.qp-step-item p{font-size:13px;color:var(--pebble);line-height:1.45;letter-spacing:-.01em}
+
+/* Trust pills */
+.qp-trust-row{
+  display:flex;flex-direction:column;gap:1px;
+  border:1px solid var(--mist);border-radius:16px;overflow:hidden
+}
+.qp-trust-item{
+  display:flex;align-items:center;gap:14px;
+  padding:16px 20px;background:var(--pure-white);
+  font-size:14px;font-weight:500;letter-spacing:-.015em;
+  transition:background .2s
+}
+.qp-trust-item:hover{background:var(--warm-cream)}
+.qp-trust-ic{
+  width:36px;height:36px;border-radius:10px;
+  background:var(--warm-cream);display:grid;place-items:center;flex-shrink:0
+}
+.qp-trust-ic svg{width:16px;height:16px;stroke:var(--obsidian);fill:none;stroke-width:1.6;stroke-linecap:round}
+
+/* Popular routes quick-links */
+.qp-popular{
+  background:var(--pure-white);border:1px solid var(--mist);
+  border-radius:20px;padding:28px 28px
+}
+.qp-popular h4{
+  font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--pebble);font-weight:600;margin-bottom:18px
+}
+.qp-route-link{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:11px 0;border-bottom:1px solid var(--mist);
+  font-size:14px;font-weight:500;letter-spacing:-.02em;
+  color:var(--obsidian);transition:padding-left .25s,color .2s;cursor:pointer;
+  text-decoration:none
+}
+.qp-route-link:last-child{border-bottom:none;padding-bottom:0}
+.qp-route-link:hover{padding-left:6px;color:var(--ember)}
+.qp-route-from{color:var(--pebble);font-size:12px;margin-top:1px}
+.qp-route-price{
+  font-size:13px;font-weight:700;letter-spacing:-.02em;
+  color:var(--pebble);white-space:nowrap
+}
+
+/* ── Mobile ──────────────────────────────── */
+@media(max-width:1080px){
+  .qp-layout{grid-template-columns:1fr;gap:48px}
+  .qp-aside{position:static}
+}
+@media(max-width:760px){
+  .qp-hero{padding:130px 22px 60px}
+  .qp-outer{padding:0 20px}
+  .qp-layout{padding:52px 0 80px;gap:40px}
+  .qp-grid-2{grid-template-columns:1fr;gap:14px}
+  .qp-svc-grid{grid-template-columns:1fr;gap:10px}
+  .qp-svc-card{flex-direction:row;align-items:center;padding:18px 16px;gap:14px}
+  .qp-svc-card strong{font-size:14px}
+  .qp-svc-card span{font-size:12.5px}
+  .qp-section-head h2{font-size:19px}
+  .qp-submit{font-size:15px;padding:16px 28px}
+  .qp-next-card{padding:24px 22px}
+  .qp-popular{padding:22px 20px}
+  .qp-aside{gap:16px}
+}
+@media(max-width:480px){
+  .qp-hero{padding:110px 18px 52px}
+  .qp-section{padding:34px 0}
+  .qp-num{font-size:10px}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV injected by components.js -->
+
+<!-- ── HERO ── -->
+<section class="qp-hero" id="qpHero">
+  <div class="qp-hero-glow" aria-hidden="true"></div>
+  <div class="qp-hero-inner">
+    <div class="qp-eyebrow">Request a quote</div>
+    <h1 class="qp-h1">
+      <span class="qp-line-mask"><span class="qp-line-inner">Get your tailored</span></span>
+      <span class="qp-line-mask"><span class="qp-line-inner">quote in minutes.</span></span>
+    </h1>
+    <p class="qp-sub">One seat or an entire fleet — tell us where you're headed and a dedicated manager replies within two business hours.</p>
+  </div>
+</section>
+
+<!-- ── MAIN CONTENT ── -->
+<div class="qp-outer">
+  <div class="qp-layout">
+
+    <!-- ════ FORM ════ -->
+    <div class="qp-form-wrap">
+      <form class="qp-form" id="quoteForm" novalidate>
+
+        <!-- 01 Journey details -->
+        <div class="qp-section" id="qpS1">
+          <div class="qp-section-head">
+            <span class="qp-num">01</span>
+            <div>
+              <h2>Journey details</h2>
+              <p>Where you're going and when</p>
+            </div>
+          </div>
+
+          <div class="qp-grid-2">
+            <div class="qp-field">
+              <label for="qFrom">Departing from</label>
+              <input id="qFrom" type="text" placeholder="City or address" autocomplete="off" />
+            </div>
+            <div class="qp-field">
+              <label for="qTo">Destination</label>
+              <input id="qTo" type="text" placeholder="City or address" autocomplete="off" />
+            </div>
+          </div>
+
+          <div class="qp-grid-2">
+            <div class="qp-field">
+              <label for="qDepart">Departure date</label>
+              <input id="qDepart" type="date" autocomplete="off" />
+            </div>
+            <div class="qp-field">
+              <label for="qReturn">Return date <em style="font-weight:400;font-style:normal;text-transform:none;letter-spacing:0;color:var(--pebble)">· optional</em></label>
+              <input id="qReturn" type="date" autocomplete="off" />
+            </div>
+          </div>
+
+          <div class="qp-grid-2">
+            <div class="qp-field">
+              <label for="qPax">Passengers</label>
+              <input id="qPax" type="number" placeholder="e.g. 48" min="1" max="600" inputmode="numeric" />
+            </div>
+            <div class="qp-field">
+              <label for="qType">Trip type</label>
+              <div class="qp-sel-wrap">
+                <select id="qType">
+                  <option value="oneway">One-way</option>
+                  <option value="return">Round trip</option>
+                  <option value="multiday">Multi-day tour</option>
+                  <option value="shuttle">Regular shuttle</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 02 Service type -->
+        <div class="qp-section" id="qpS2">
+          <div class="qp-section-head">
+            <span class="qp-num">02</span>
+            <div>
+              <h2>Service type</h2>
+              <p>Select the service that best fits your trip</p>
+            </div>
+          </div>
+
+          <div class="qp-svc-grid">
+
+            <label class="qp-svc">
+              <input type="radio" name="service" value="individual" checked />
+              <div class="qp-svc-card">
+                <div class="qp-svc-ic">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                    <circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.8 3.1-6.5 7-6.5s7 2.7 7 6.5"/>
+                  </svg>
+                </div>
+                <strong>Individual seat</strong>
+                <span>Single or small group booking on a scheduled route</span>
+              </div>
+            </label>
+
+            <label class="qp-svc">
+              <input type="radio" name="service" value="charter" />
+              <div class="qp-svc-card">
+                <div class="qp-svc-ic">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                    <rect x="1" y="7" width="16" height="10" rx="2"/><path d="M17 10h3l2 3v2h-5M5.5 18a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM15.5 18a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z"/>
+                  </svg>
+                </div>
+                <strong>Charter coach</strong>
+                <span>Dedicated vehicle for groups of 20 or more passengers</span>
+              </div>
+            </label>
+
+            <label class="qp-svc">
+              <input type="radio" name="service" value="corporate" />
+              <div class="qp-svc-card">
+                <div class="qp-svc-ic">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                    <rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/>
+                  </svg>
+                </div>
+                <strong>Corporate shuttle</strong>
+                <span>Regular employee transport with dedicated operations management</span>
+              </div>
+            </label>
+
+          </div>
+        </div>
+
+        <!-- 03 Contact -->
+        <div class="qp-section" id="qpS3">
+          <div class="qp-section-head">
+            <span class="qp-num">03</span>
+            <div>
+              <h2>Your details</h2>
+              <p>So we can send you a tailored quote</p>
+            </div>
+          </div>
+
+          <div class="qp-grid-2">
+            <div class="qp-field">
+              <label for="qName">Full name</label>
+              <input id="qName" type="text" placeholder="Jordan Avery" autocomplete="name" />
+            </div>
+            <div class="qp-field">
+              <label for="qCompany">Company <em style="font-weight:400;font-style:normal;text-transform:none;letter-spacing:0;color:var(--pebble)">· optional</em></label>
+              <input id="qCompany" type="text" placeholder="Acme Inc." autocomplete="organization" />
+            </div>
+          </div>
+
+          <div class="qp-grid-2">
+            <div class="qp-field">
+              <label for="qEmail">Email</label>
+              <input id="qEmail" type="email" placeholder="you@company.com" autocomplete="email" inputmode="email" />
+            </div>
+            <div class="qp-field">
+              <label for="qPhone">Phone</label>
+              <input id="qPhone" type="tel" placeholder="+1 (555) 000-0000" autocomplete="tel" inputmode="tel" />
+            </div>
+          </div>
+
+          <div class="qp-grid-2" style="margin-top:0">
+            <div class="qp-field full">
+              <label for="qNotes">Special requirements <em style="font-weight:400;font-style:normal;text-transform:none;letter-spacing:0;color:var(--pebble)">· optional</em></label>
+              <textarea id="qNotes" placeholder="Wheelchair access, onboard catering, multiple pickup points, overnight stops, luggage requirements…"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Honeypot: off-screen and tab-skipped, so a person never meets it.
+             A bot that fills every input trips it and the request is dropped. -->
+        <div aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden">
+          <label for="qWebsite">Company website</label>
+          <input id="qWebsite" type="text" tabindex="-1" autocomplete="off" />
+        </div>
+
+        <p id="qpError" role="alert" style="display:none;margin:0 0 14px;color:var(--ember);font-size:14px;line-height:1.5"></p>
+
+        <!-- Submit -->
+        <div class="qp-form-foot" id="qpFormFoot">
+          <button type="submit" class="qp-submit" id="qpSubmit">
+            Request your tailored quote
+            <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <p class="qp-footnote">No obligation &middot; A dedicated manager replies within 2 business hours</p>
+        </div>
+
+      </form>
+
+      <!-- Success state (shown after submit) -->
+      <div class="qp-success" id="qpSuccess" aria-live="polite">
+        <div class="qp-check-wrap" id="qpCheckWrap">
+          <svg viewBox="0 0 32 32" fill="none">
+            <path class="qp-check-path" d="M6 16l7 8L26 8"
+              stroke="var(--ember)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <h2>Your request is on its way.</h2>
+        <div class="qp-ref">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" style="width:16px;height:16px;flex-shrink:0"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h5"/></svg>
+          Reference: <strong id="qpRef">VB-0000</strong>
+        </div>
+        <p>We've received your quote request and a dedicated travel manager will reply to your email within two business hours. Check your inbox — it's usually much sooner.</p>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px">
+          <a href="routes.html" class="ghost">Browse routes
+            <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <a href="index.html" class="ghost" style="color:var(--pebble)">Back to home
+            <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ SIDEBAR ════ -->
+    <aside class="qp-aside" id="qpAside">
+
+      <!-- What happens next -->
+      <div class="qp-next-card">
+        <h3>What happens next?</h3>
+        <div class="qp-steps-list">
+          <div class="qp-step-item">
+            <div class="qp-step-num">01</div>
+            <div>
+              <strong>Your request lands with us</strong>
+              <p>Our operations team reviews your journey details immediately upon receipt</p>
+            </div>
+          </div>
+          <div class="qp-step-item">
+            <div class="qp-step-num">02</div>
+            <div>
+              <strong>We build your quote</strong>
+              <p>Transparent, all-in pricing based on your route, vehicle class and availability</p>
+            </div>
+          </div>
+          <div class="qp-step-item">
+            <div class="qp-step-num">03</div>
+            <div>
+              <strong>Review &amp; confirm</strong>
+              <p>No commitment required. Adjust the details, ask questions, or confirm your booking</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trust signals -->
+      <div class="qp-trust-row">
+        <div class="qp-trust-item">
+          <div class="qp-trust-ic">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v4l2.5 2"/></svg>
+          </div>
+          <div>
+            <div style="font-size:14px;font-weight:600;letter-spacing:-.02em">2-hour reply</div>
+            <div style="font-size:12px;color:var(--pebble);margin-top:1px">During business hours, usually sooner</div>
+          </div>
+        </div>
+        <div class="qp-trust-item">
+          <div class="qp-trust-ic">
+            <svg viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></svg>
+          </div>
+          <div>
+            <div style="font-size:14px;font-weight:600;letter-spacing:-.02em">No commitment</div>
+            <div style="font-size:12px;color:var(--pebble);margin-top:1px">Review the quote before you decide anything</div>
+          </div>
+        </div>
+        <div class="qp-trust-item">
+          <div class="qp-trust-ic">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          </div>
+          <div>
+            <div style="font-size:14px;font-weight:600;letter-spacing:-.02em">Dedicated manager</div>
+            <div style="font-size:12px;color:var(--pebble);margin-top:1px">One person handles your booking end-to-end</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Popular routes -->
+      <div class="qp-popular">
+        <h4>Popular routes</h4>
+        <a href="routes.html" class="qp-route-link">
+          <div>
+            <div>Toronto → New York</div>
+            <div class="qp-route-from">Ontario → New York State · 9h 30m</div>
+          </div>
+          <div class="qp-route-price">from $89</div>
+        </a>
+        <a href="routes.html" class="qp-route-link">
+          <div>
+            <div>Vancouver → Seattle</div>
+            <div class="qp-route-from">BC → Washington State · 4h 10m</div>
+          </div>
+          <div class="qp-route-price">from $39</div>
+        </a>
+        <a href="routes.html" class="qp-route-link">
+          <div>
+            <div>Toronto → Montréal</div>
+            <div class="qp-route-from">Ontario → Québec · 5h 30m</div>
+          </div>
+          <div class="qp-route-price">from $45</div>
+        </a>
+        <a href="routes.html" class="qp-route-link">
+          <div>
+            <div>Montréal → Boston</div>
+            <div class="qp-route-from">Québec → Massachusetts · 7h 15m</div>
+          </div>
+          <div class="qp-route-price">from $69</div>
+        </a>
+        <a href="routes.html" class="qp-route-link">
+          <div>
+            <div>Calgary → Banff</div>
+            <div class="qp-route-from">Alberta → Alberta · 1h 45m</div>
+          </div>
+          <div class="qp-route-price">from $29</div>
+        </a>
+      </div>
+
+    </aside>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="assets/js/components.js?v=3"></script>
+<script src="assets/js/ui.js?v=6" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js" defer></script>
+<script src="assets/js/quote-gsap.js?v=1" defer></script>
+
+<!-- Form logic — posts to the Busify backend at /api/public/quote -->
+<script>
+(function () {
+  var form    = document.getElementById('quoteForm');
+  var submit  = document.getElementById('qpSubmit');
+  var foot    = document.getElementById('qpFormFoot');
+  var success = document.getElementById('qpSuccess');
+  var refEl   = document.getElementById('qpRef');
+  var check   = document.getElementById('qpCheckWrap');
+  var errEl   = document.getElementById('qpError');
+
+  if (!form) return;
+
+  /* Payload key -> input id. Mirrors lib/validations/viabus-quote.ts. */
+  var FIELDS = {
+    contact_name:         'qName',
+    contact_email:        'qEmail',
+    contact_phone:        'qPhone',
+    company:              'qCompany',
+    pickup_location:      'qFrom',
+    destination:          'qTo',
+    departure_date:       'qDepart',
+    return_date:          'qReturn',
+    passenger_count:      'qPax',
+    trip_type:            'qType',
+    special_requirements: 'qNotes'
+  };
+
+  var REQUIRED = ['qName', 'qEmail', 'qFrom', 'qTo', 'qDepart', 'qPax'];
+
+  var SUBMIT_LABEL = submit ? submit.innerHTML : '';
+
+  function val(id) {
+    var el = document.getElementById(id);
+    return el ? el.value.trim() : '';
+  }
+
+  function mark(id, bad) {
+    var el = document.getElementById(id);
+    if (el) el.style.borderColor = bad ? 'var(--ember)' : '';
+  }
+
+  function showError(message) {
+    if (!errEl) return;
+    errEl.textContent = message || '';
+    errEl.style.display = message ? 'block' : 'none';
+  }
+
+  function resetSubmit() {
+    submit.classList.remove('loading');
+    submit.disabled = false;
+    submit.innerHTML = SUBMIT_LABEL;
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    showError('');
+
+    /* Client-side pass so the obvious cases never cost a round trip. The
+       server validates the same rules again — this is courtesy, not defence. */
+    var ok = true;
+    REQUIRED.forEach(function (id) {
+      var empty = !val(id);
+      mark(id, empty);
+      if (empty) ok = false;
+    });
+
+    if (!ok) {
+      showError('Please fill in the highlighted fields.');
+      return;
+    }
+
+    var payload = {};
+    Object.keys(FIELDS).forEach(function (key) {
+      payload[key] = val(FIELDS[key]);
+    });
+
+    var service = form.querySelector('input[name="service"]:checked');
+    payload.service_type = service ? service.value : 'individual';
+    payload.company_website = val('qWebsite');
+
+    submit.classList.add('loading');
+    submit.disabled = true;
+    submit.textContent = 'Sending…';
+
+    fetch('/api/public/quote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+      .then(function (res) {
+        return res.json()
+          .catch(function () { return null; })
+          .then(function (body) { return { status: res.status, body: body }; });
+      })
+      .then(function (result) {
+        var body = result.body;
+
+        if (!body || body.ok !== true) {
+          var fieldErrors = (body && body.fieldErrors) || {};
+          var keys = Object.keys(fieldErrors);
+
+          keys.forEach(function (key) {
+            if (FIELDS[key]) mark(FIELDS[key], true);
+          });
+
+          showError(
+            (keys.length && fieldErrors[keys[0]][0]) ||
+            (body && body.message) ||
+            'Something went wrong. Please try again.'
+          );
+          resetSubmit();
+          return;
+        }
+
+        if (refEl && body.reference) refEl.textContent = body.reference;
+
+        form.style.display = 'none';
+        foot.style.display = 'none';
+        success.classList.add('visible');
+
+        setTimeout(function () {
+          if (check) check.classList.add('drawn');
+        }, 100);
+
+        if (window.gsap) {
+          gsap.from('#qpSuccess > *', {
+            opacity: 0, y: 22, duration: 0.65,
+            ease: 'power3.out', stagger: 0.09
+          });
+        }
+
+        success.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      })
+      .catch(function () {
+        showError('We could not reach the server. Check your connection and try again.');
+        resetSubmit();
+      });
+  });
+})();
+</script>
+</body>
+</html>

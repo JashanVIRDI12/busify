@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="theme-color" content="#07090f" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VIABUS Corporate — Enterprise & Group Travel</title>
+<meta name="description" content="SLA-backed departures, dedicated account managers and a reporting portal your finance team will love. Enterprise coach travel built for companies that move." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="assets/css/tokens.css?v=2" />
+<link rel="stylesheet" href="assets/css/base.css?v=2" />
+<link rel="stylesheet" href="assets/css/layout.css?v=14" />
+<link rel="stylesheet" href="assets/css/components.css?v=21" />
+<link rel="stylesheet" href="assets/css/responsive.css?v=17" />
+
+<style>
+/* ================================================================
+   VIABUS CORPORATE
+   ================================================================ */
+body { background: #07090f; }
+
+/* ── eyebrow ── */
+.cp-ey {
+  font-size: 10.5px; letter-spacing: .22em; text-transform: uppercase;
+  font-weight: 600; color: rgba(255,255,255,.32);
+  display: flex; align-items: center; gap: 10px; margin-bottom: 20px;
+}
+.cp-ey::before { content: ''; width: 24px; height: 1.5px; background: var(--ember); flex-shrink: 0; }
+.cp-ey.dk { color: rgba(0,0,0,.28); }
+
+/* ================================================================
+   1. HERO
+   ================================================================ */
+.cp-hero {
+  position: relative; overflow: hidden;
+  height: 100vh; min-height: 680px;
+  display: flex; align-items: flex-end;
+}
+.cp-hbg { position: absolute; inset: 0; z-index: 0; }
+.cp-hbg img { width: 100%; height: 100%; object-fit: cover; filter: saturate(1.1) brightness(.4); }
+.cp-hbg::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(7,9,15,.95) 0%, rgba(7,9,15,.32) 55%, rgba(7,9,15,.08) 100%);
+}
+.cp-hero-inner {
+  position: relative; z-index: 2; width: 100%;
+  padding-bottom: clamp(52px,7vw,88px);
+}
+.cp-hero-body {
+  display: grid; grid-template-columns: 1fr auto;
+  gap: clamp(40px,5vw,80px); align-items: flex-end;
+}
+.cp-h1 {
+  font-size: clamp(52px,7vw,100px); font-weight: 700;
+  letter-spacing: -.052em; line-height: .94; color: #fff;
+}
+.cp-sub {
+  font-size: 15px; color: rgba(255,255,255,.42); line-height: 1.7;
+  letter-spacing: -.015em; margin-top: 22px; max-width: 420px;
+}
+.cp-ctas { display: flex; align-items: center; gap: 14px; margin-top: 32px; flex-wrap: wrap; }
+.cp-ghost {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 14px 28px; border: 1.5px solid rgba(255,255,255,.28); border-radius: var(--r-pill);
+  font-size: 14px; font-weight: 500; letter-spacing: -.02em; color: rgba(255,255,255,.76);
+  transition: border-color .28s, background .28s, color .28s;
+}
+.cp-ghost svg { width: 15px; height: 15px; transition: transform .3s cubic-bezier(.2,.8,.2,1); }
+.cp-ghost:hover { border-color: rgba(255,255,255,.65); background: rgba(255,255,255,.07); color: #fff; }
+.cp-ghost:hover svg { transform: translateX(4px); }
+
+/* hero right: glass stat stack */
+.cp-stats-panel {
+  display: flex; flex-direction: column;
+  border-radius: 22px; overflow: hidden;
+  background: rgba(255,255,255,.06);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid rgba(255,255,255,.1);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 32px 80px rgba(0,0,0,.35);
+  min-width: 210px;
+}
+.cp-hstat { padding: 22px 28px; border-bottom: 1px solid rgba(255,255,255,.07); }
+.cp-hstat:last-child { border-bottom: none; }
+.cp-hstat-n { font-size: clamp(26px,2.8vw,36px); font-weight: 700; letter-spacing: -.05em; color: #fff; line-height: 1; }
+.cp-hstat-l { font-size: 11.5px; color: rgba(255,255,255,.32); letter-spacing: -.01em; margin-top: 5px; }
+
+/* ================================================================
+   2. TICKER
+   ================================================================ */
+.cp-ticker { background: var(--ember); padding: 13px 0; overflow: hidden; white-space: nowrap; }
+.cp-ticker-track { display: inline-flex; gap: 48px; animation: cpTick 28s linear infinite; }
+.cp-ticker-track span { font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: #fff; }
+.cp-tick-dot { color: rgba(255,255,255,.45); }
+@keyframes cpTick { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+/* ================================================================
+   3. PROMISE — light, editorial rows
+   ================================================================ */
+.cp-promise { background: #f5f3ef; border-bottom: 1px solid rgba(0,0,0,.06); }
+.cp-promise-top {
+  display: flex; justify-content: space-between; align-items: flex-end;
+  padding-bottom: 52px; border-bottom: 1px solid rgba(0,0,0,.09);
+}
+.cp-promise-h2 {
+  font-size: clamp(34px,4.6vw,66px); font-weight: 700;
+  letter-spacing: -.053em; line-height: .96; color: var(--obsidian);
+}
+.cp-promise-hint {
+  max-width: 260px; font-size: 14px; color: rgba(0,0,0,.38);
+  line-height: 1.65; text-align: right; letter-spacing: -.015em; align-self: flex-end;
+}
+.cp-rows { display: flex; flex-direction: column; }
+.cp-row {
+  display: grid;
+  grid-template-columns: clamp(72px,8vw,108px) 48px 1fr auto;
+  gap: 0 clamp(20px,2.8vw,40px);
+  align-items: center; padding: clamp(24px,3.2vw,38px) 0;
+  border-bottom: 1px solid rgba(0,0,0,.09);
+  cursor: default; position: relative;
+}
+.cp-row::before {
+  content: ''; position: absolute;
+  left: calc(-1 * clamp(22px,4vw,48px)); right: calc(-1 * clamp(22px,4vw,48px));
+  top: 0; bottom: 0; background: rgba(250,92,64,.045);
+  opacity: 0; transition: opacity .28s; pointer-events: none;
+}
+.cp-row:hover::before { opacity: 1; }
+.cp-row-num {
+  font-size: clamp(48px,6vw,80px); font-weight: 700; letter-spacing: -.065em; line-height: 1;
+  color: rgba(0,0,0,.07); transition: color .32s; white-space: nowrap; user-select: none;
+}
+.cp-row:hover .cp-row-num { color: var(--ember); }
+.cp-row-ic {
+  width: 48px; height: 48px; border-radius: 14px;
+  background: rgba(250,92,64,.08); border: 1px solid rgba(250,92,64,.16);
+  display: grid; place-items: center; flex-shrink: 0;
+  transition: background .28s, border-color .28s;
+}
+.cp-row:hover .cp-row-ic { background: rgba(250,92,64,.14); border-color: rgba(250,92,64,.3); }
+.cp-row-ic svg { width: 21px; height: 21px; stroke: var(--ember); fill: none; stroke-width: 1.65; stroke-linecap: round; stroke-linejoin: round; }
+.cp-row-body { display: flex; flex-direction: column; gap: 5px; }
+.cp-row-t { font-size: clamp(18px,2.1vw,28px); font-weight: 700; letter-spacing: -.04em; color: var(--obsidian); line-height: 1.05; }
+.cp-row-d { font-size: 13.5px; color: rgba(0,0,0,.42); line-height: 1.65; letter-spacing: -.01em; max-width: 380px; }
+.cp-row-arr { display: flex; align-items: center; width: 40px; height: 40px; color: rgba(0,0,0,.14); transition: transform .3s, color .3s; flex-shrink: 0; }
+.cp-row-arr svg { width: 20px; height: 20px; }
+.cp-row:hover .cp-row-arr { color: var(--ember); transform: translateX(6px); }
+
+/* ================================================================
+   4. USE CASES — full-bleed image, glass cards
+   ================================================================ */
+.cp-cases { position: relative; overflow: hidden; }
+.cp-cbg { position: absolute; inset: 0; z-index: 0; }
+.cp-cbg img { width: 100%; height: 100%; object-fit: cover; filter: saturate(.85) brightness(.28); }
+.cp-cbg::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(160deg, rgba(7,9,15,.85) 0%, rgba(7,9,15,.52) 100%);
+}
+.cp-cases-inner { position: relative; z-index: 2; }
+.cp-cases-top {
+  display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 52px;
+}
+.cp-cases-h2 { font-size: clamp(34px,4.6vw,66px); font-weight: 700; letter-spacing: -.053em; line-height: .96; color: #fff; }
+.cp-cases-hint { max-width: 260px; font-size: 14px; color: rgba(255,255,255,.34); line-height: 1.65; text-align: right; }
+.cp-cases-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+.cp-case {
+  border-radius: 24px; padding: 40px 32px 44px;
+  background: rgba(255,255,255,.07);
+  -webkit-backdrop-filter: blur(28px) saturate(165%);
+  backdrop-filter: blur(28px) saturate(165%);
+  border: 1px solid rgba(255,255,255,.1);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 16px 48px rgba(0,0,0,.25);
+  transition: transform .4s cubic-bezier(.2,.8,.2,1), background .3s;
+}
+.cp-case:hover { transform: translateY(-8px); background: rgba(255,255,255,.11); }
+.cp-case-tag {
+  display: inline-flex; align-items: center;
+  background: rgba(250,92,64,.12); border: 1px solid rgba(250,92,64,.22);
+  border-radius: 100px; padding: 4px 12px;
+  font-size: 10px; font-weight: 700; letter-spacing: .1em; color: var(--ember);
+  margin-bottom: 28px; text-transform: uppercase;
+}
+.cp-case h4 { font-size: clamp(20px,2.2vw,26px); font-weight: 700; letter-spacing: -.045em; color: #fff; margin-bottom: 14px; line-height: 1.08; }
+.cp-case p { font-size: 13.5px; line-height: 1.7; color: rgba(255,255,255,.44); letter-spacing: -.01em; }
+.cp-case-list { list-style: none; padding: 0; margin-top: 20px; display: flex; flex-direction: column; gap: 10px; border-top: 1px solid rgba(255,255,255,.08); padding-top: 20px; }
+.cp-case-list li { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: rgba(255,255,255,.48); }
+.cp-case-list li::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--ember); flex-shrink: 0; }
+
+/* ================================================================
+   5. NUMBERS BAR — dark
+   ================================================================ */
+.cp-numbers { background: #07090f; border-top: 1px solid rgba(255,255,255,.06); border-bottom: 1px solid rgba(255,255,255,.06); }
+.cp-nums-grid { display: grid; grid-template-columns: repeat(4,1fr); }
+.cp-num-cell { padding: clamp(32px,4.5vw,56px) clamp(22px,3vw,40px); border-right: 1px solid rgba(255,255,255,.07); }
+.cp-num-cell:last-child { border-right: none; }
+.cp-num-n { font-size: clamp(32px,4vw,52px); font-weight: 700; letter-spacing: -.055em; color: #fff; line-height: 1; margin-bottom: 8px; }
+.cp-num-l { font-size: 13px; color: rgba(255,255,255,.3); letter-spacing: -.01em; }
+
+/* ================================================================
+   6. TESTIMONIALS
+   ================================================================ */
+.cp-voices { background: #07090f; position: relative; overflow: hidden; }
+.cp-voices::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse 60% 50% at 50% 100%, rgba(250,92,64,.04) 0%, transparent 70%);
+  pointer-events: none;
+}
+.cp-voices-inner { position: relative; z-index: 1; }
+.cp-voices-h2 { font-size: clamp(34px,4.6vw,66px); font-weight: 700; letter-spacing: -.053em; line-height: .96; color: #fff; margin-bottom: 52px; }
+.cp-v-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.cp-v-card {
+  border-radius: 24px; padding: 40px 36px 44px;
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.08);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07);
+}
+.cp-stars { display: flex; gap: 4px; margin-bottom: 24px; }
+.cp-stars svg { width: 14px; height: 14px; fill: var(--ember); }
+.cp-v-card blockquote { font-size: 15px; line-height: 1.72; color: rgba(255,255,255,.68); letter-spacing: -.02em; font-style: italic; margin-bottom: 28px; }
+.cp-who { display: flex; align-items: center; gap: 14px; }
+.cp-av { width: 40px; height: 40px; border-radius: 50%; background: var(--ember); display: grid; place-items: center; font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0; }
+.cp-nm { font-size: 14px; font-weight: 600; color: #fff; letter-spacing: -.03em; }
+.cp-rl { font-size: 12px; color: rgba(255,255,255,.3); letter-spacing: -.01em; margin-top: 2px; }
+
+/* ================================================================
+   7. CTA BAND
+   ================================================================ */
+.cp-cta { position: relative; overflow: hidden; }
+.cp-cta-bg { position: absolute; inset: 0; z-index: 0; }
+.cp-cta-bg img { width: 100%; height: 100%; object-fit: cover; filter: saturate(.7) brightness(.22); }
+.cp-cta-bg::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(to bottom, rgba(7,9,15,.88) 0%, rgba(7,9,15,.72) 100%);
+}
+.cp-cta-inner {
+  position: relative; z-index: 2;
+  display: flex; justify-content: space-between; align-items: center; gap: 48px;
+}
+.cp-cta-h { font-size: clamp(32px,4.2vw,60px); font-weight: 700; letter-spacing: -.052em; line-height: .96; color: #fff; max-width: 12ch; }
+.cp-cta-r { display: flex; flex-direction: column; align-items: flex-end; gap: 20px; }
+.cp-cta-sub { font-size: 14px; color: rgba(255,255,255,.34); line-height: 1.6; text-align: right; max-width: 280px; }
+.cp-cta-btns { display: flex; align-items: center; gap: 14px; }
+
+/* ================================================================
+   8. QUOTE FORM — enterprise two-column (missing styles restored)
+   ================================================================ */
+.quote-wrap {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(48px, 6vw, 80px);
+  align-items: start;
+}
+.quote-intro h3 {
+  font-size: clamp(28px, 3.6vw, 44px);
+  font-weight: 700;
+  letter-spacing: -.052em;
+  line-height: .98;
+  color: #fff;
+  margin-bottom: 18px;
+}
+.quote-intro p {
+  font-size: 15px;
+  line-height: 1.65;
+  color: rgba(255,255,255,.48);
+  letter-spacing: -.015em;
+  max-width: 38ch;
+  margin-bottom: 24px;
+}
+.quote-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+.qtag {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.55);
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 999px;
+  padding: 6px 13px;
+  background: rgba(255,255,255,.03);
+}
+.quote-trust {
+  padding-top: 20px;
+  border-top: 1px solid rgba(255,255,255,.08);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.qt-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  letter-spacing: -.01em;
+  color: rgba(255,255,255,.7);
+}
+.qt-row svg {
+  width: 17px;
+  height: 17px;
+  stroke: var(--ember);
+  flex-shrink: 0;
+}
+
+/* right glass card */
+.quote-card {
+  position: relative;
+  background: rgba(255,255,255,.065);
+  border: 1px solid rgba(255,255,255,.11);
+  border-radius: 22px;
+  overflow: hidden;
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  backdrop-filter: blur(28px) saturate(160%);
+  box-shadow: 0 24px 64px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.12);
+}
+.qc-accent {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(to right, var(--ember) 0%, rgba(250,92,64,.18) 60%, transparent 100%);
+}
+.qc-body {
+  padding: 36px 36px 32px;
+}
+.qc-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.qc-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -.03em;
+  color: #fff;
+}
+.qc-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255,255,255,.6);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.qc-badge svg {
+  width: 13px;
+  height: 13px;
+  stroke: var(--ember);
+  flex-shrink: 0;
+}
+
+/* inherit shared .qc-grid + .q-input + .quote-submit + .q-foot from components.css */
+
+/* ================================================================
+   RESPONSIVE
+   ================================================================ */
+@media (max-width: 900px) {
+  .cp-hero-body { grid-template-columns: 1fr; gap: 40px; }
+  .cp-stats-panel { flex-direction: row; flex-wrap: wrap; }
+  .cp-hstat { flex: 1 1 45%; border-bottom: 1px solid rgba(255,255,255,.07); border-right: 1px solid rgba(255,255,255,.07); }
+  .cp-promise-top { flex-direction: column; align-items: flex-start; gap: 14px; padding-bottom: 40px; }
+  .cp-promise-hint { text-align: left; max-width: 100%; }
+  .cp-row { grid-template-columns: clamp(60px,7vw,88px) 44px 1fr 32px; gap: 0 16px; }
+  .cp-cases-top { flex-direction: column; align-items: flex-start; gap: 14px; margin-bottom: 40px; }
+  .cp-cases-grid { grid-template-columns: 1fr 1fr; }
+  .cp-nums-grid { grid-template-columns: 1fr 1fr; }
+  .cp-num-cell:nth-child(2) { border-right: none; }
+  .cp-num-cell:nth-child(3) { border-top: 1px solid rgba(255,255,255,.07); }
+  .cp-num-cell:nth-child(4) { border-top: 1px solid rgba(255,255,255,.07); border-right: none; }
+  .cp-v-grid { grid-template-columns: 1fr; }
+  .cp-cta-inner { flex-direction: column; align-items: flex-start; gap: 32px; }
+  .cp-cta-r { align-items: flex-start; }
+  .cp-cta-sub { text-align: left; }
+  /* quote form collapse */
+  .quote-wrap { grid-template-columns: 1fr; gap: 40px; }
+}
+@media (max-width: 680px) {
+  .cp-cases-grid { grid-template-columns: 1fr; }
+  .cp-row { grid-template-columns: 44px 1fr; }
+  .cp-row-num { display: none; }
+  .cp-row-arr { display: none; }
+  .cp-cases-hint { display: none; }
+}
+</style>
+</head>
+<body style="background:#07090f">
+<!-- NAV injected by components.js -->
+
+<!-- ════════════════════════════════════════════════════
+     1. HERO
+     ════════════════════════════════════════════════════ -->
+<section class="cp-hero">
+  <div class="cp-hbg">
+    <img src="assets/img/fleet/fleet-corporate-charter.webp"
+         data-fallback="https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=2000&q=80"
+         alt="" decoding="async" loading="lazy" />
+  </div>
+  <div class="cp-hero-inner ew">
+    <div class="cp-hero-body">
+      <div>
+        <div class="cp-ey" id="cp-ey">Corporate Travel</div>
+        <h1 class="cp-h1" id="cp-h1">Travel built<br>for teams.</h1>
+        <p class="cp-sub" id="cp-sub">SLA-backed departures, dedicated account managers and a reporting portal your finance team will actually like.</p>
+        <div class="cp-ctas" id="cp-ctas">
+          <div class="glass-button-wrap">
+            <a href="#cp-quote" class="glass-button"><span class="glass-button-text">Get a quote</span></a>
+            <div class="glass-button-shadow"></div>
+          </div>
+          <a href="#cp-cases" class="cp-ghost">
+            See use cases
+            <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </div>
+      </div>
+      <div class="cp-stats-panel" id="cp-stats">
+        <div class="cp-hstat"><div class="cp-hstat-n">500+</div><div class="cp-hstat-l">Corporate accounts</div></div>
+        <div class="cp-hstat"><div class="cp-hstat-n">99.4%</div><div class="cp-hstat-l">On-time guarantee</div></div>
+        <div class="cp-hstat"><div class="cp-hstat-n">2 hr</div><div class="cp-hstat-l">Quote response time</div></div>
+        <div class="cp-hstat"><div class="cp-hstat-n">$0</div><div class="cp-hstat-l">Booking fees</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════
+     2. TICKER
+     ════════════════════════════════════════════════════ -->
+<div class="cp-ticker" aria-hidden="true">
+  <div class="cp-ticker-track">
+    <span>Dedicated Account Manager</span><span class="cp-tick-dot">·</span>
+    <span>SLA-Backed Departures</span><span class="cp-tick-dot">·</span>
+    <span>Corporate Portal</span><span class="cp-tick-dot">·</span>
+    <span>Fleet of 200+ Coaches</span><span class="cp-tick-dot">·</span>
+    <span>Compliance Ready</span><span class="cp-tick-dot">·</span>
+    <span>Group Rates · 10+ Seats</span><span class="cp-tick-dot">·</span>
+    <span>Dedicated Account Manager</span><span class="cp-tick-dot">·</span>
+    <span>SLA-Backed Departures</span><span class="cp-tick-dot">·</span>
+    <span>Corporate Portal</span><span class="cp-tick-dot">·</span>
+    <span>Fleet of 200+ Coaches</span><span class="cp-tick-dot">·</span>
+    <span>Compliance Ready</span><span class="cp-tick-dot">·</span>
+    <span>Group Rates · 10+ Seats</span><span class="cp-tick-dot">·</span>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     3. PROMISE — light, editorial rows
+     ════════════════════════════════════════════════════ -->
+<section class="cp-promise sec-pad">
+  <div class="ew">
+    <div class="cp-promise-top">
+      <div>
+        <div class="cp-ey dk" id="cp-pr-ey">The enterprise promise</div>
+        <h2 class="cp-promise-h2" id="cp-pr-h2">No surprises.<br>Full accountability.</h2>
+      </div>
+      <p class="cp-promise-hint" id="cp-pr-hint">Every account gets a dedicated travel manager, live tracking and an SLA we back financially.</p>
+    </div>
+    <div class="cp-rows">
+      <div class="cp-row">
+        <div class="cp-row-num">01</div>
+        <div class="cp-row-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg></div>
+        <div class="cp-row-body">
+          <div class="cp-row-t">Dedicated Account Manager</div>
+          <p class="cp-row-d">One point of contact for all bookings, changes and escalations. Available by phone, email and WhatsApp.</p>
+        </div>
+        <div class="cp-row-arr"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      </div>
+      <div class="cp-row">
+        <div class="cp-row-num">02</div>
+        <div class="cp-row-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v4l2.5 2"/></svg></div>
+        <div class="cp-row-body">
+          <div class="cp-row-t">SLA-Backed Departures</div>
+          <p class="cp-row-d">99.4% on-time guarantee. Miss the threshold? We credit your account automatically — no questions asked.</p>
+        </div>
+        <div class="cp-row-arr"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      </div>
+      <div class="cp-row">
+        <div class="cp-row-num">03</div>
+        <div class="cp-row-ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 9h18M9 4v5M15 4v5"/></svg></div>
+        <div class="cp-row-body">
+          <div class="cp-row-t">Corporate Portal</div>
+          <p class="cp-row-d">Book, manage and report on all travel in one dashboard. Exportable invoices and cost-centre tagging included.</p>
+        </div>
+        <div class="cp-row-arr"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      </div>
+      <div class="cp-row">
+        <div class="cp-row-num">04</div>
+        <div class="cp-row-ic"><svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 4.4-3.4 8.5-8 9.9C7.4 20.5 4 16.4 4 12V7l8-4Z"/><path d="m9 12 2 2 4-4"/></svg></div>
+        <div class="cp-row-body">
+          <div class="cp-row-t">Compliance Documentation</div>
+          <p class="cp-row-d">Insurance certificates, operator licences, driver records and safety audits — available on demand, same day.</p>
+        </div>
+        <div class="cp-row-arr"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════
+     4. USE CASES — full-bleed image, glass cards
+     ════════════════════════════════════════════════════ -->
+<section class="cp-cases sec-pad" id="cp-cases">
+  <div class="cp-cbg">
+    <img src="assets/img/mosaic/mosaic-01-openroad.webp"
+         data-fallback="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=2000&q=80"
+         alt="" decoding="async" loading="lazy" />
+  </div>
+  <div class="ew cp-cases-inner">
+    <div class="cp-cases-top">
+      <div>
+        <div class="cp-ey" id="cp-uc-ey">Use cases</div>
+        <h2 class="cp-cases-h2" id="cp-uc-h2">Built for every<br>scenario.</h2>
+      </div>
+      <p class="cp-cases-hint">From daily commutes to multi-city roadshows — we've done it before, and we'll do it better every time.</p>
+    </div>
+    <div class="cp-cases-grid">
+      <div class="cp-case">
+        <div class="cp-case-tag">Recurring</div>
+        <h4>Daily Commute Shuttles</h4>
+        <p>Recurring routes from home city to office campus. Custom timing, reserved seats, monthly invoicing.</p>
+        <ul class="cp-case-list">
+          <li>Fixed weekly schedules</li>
+          <li>Reserved seat assignments</li>
+          <li>Monthly consolidated invoicing</li>
+        </ul>
+      </div>
+      <div class="cp-case">
+        <div class="cp-case-tag">On-demand</div>
+        <h4>Corporate Offsites</h4>
+        <p>All-hands, team retreats, strategy days. We handle all logistics so your team just shows up.</p>
+        <ul class="cp-case-list">
+          <li>Custom pickup locations</li>
+          <li>Catering coordination available</li>
+          <li>Multi-vehicle convoys</li>
+        </ul>
+      </div>
+      <div class="cp-case">
+        <div class="cp-case-tag">Multi-city</div>
+        <h4>Roadshows &amp; Events</h4>
+        <p>Multi-city tours, conference transfers, client events. Coordinated across multiple vehicles and cities.</p>
+        <ul class="cp-case-list">
+          <li>City-to-city coordination</li>
+          <li>Real-time fleet tracking</li>
+          <li>Single point of contact</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════
+     5. NUMBERS
+     ════════════════════════════════════════════════════ -->
+<div class="cp-numbers">
+  <div class="ew">
+    <div class="cp-nums-grid">
+      <div class="cp-num-cell"><div class="cp-num-n">500+</div><div class="cp-num-l">Corporate accounts active</div></div>
+      <div class="cp-num-cell"><div class="cp-num-n">99.4%</div><div class="cp-num-l">On-time guarantee, SLA-backed</div></div>
+      <div class="cp-num-cell"><div class="cp-num-n">2 hr</div><div class="cp-num-l">Max response on any quote</div></div>
+      <div class="cp-num-cell"><div class="cp-num-n">200+</div><div class="cp-num-l">Verified coaches in our network</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════
+     6. QUOTE FORM
+     ════════════════════════════════════════════════════ -->
+<section class="sec-pad" id="cp-quote" style="background:#07090f">
+  <div class="ew">
+    <div class="quote-wrap">
+      <div class="quote-intro" id="cp-q-l">
+        <div class="cp-ey">Get a quote</div>
+        <h3>Travelling as a team?<br>Get an enterprise quote.</h3>
+        <p>Dedicated account manager assigned within 2 business hours. Tell us your requirements and we'll build a plan around your company.</p>
+        <div class="quote-tags">
+          <span class="qtag">Daily shuttles</span>
+          <span class="qtag">Corporate offsites</span>
+          <span class="qtag">Roadshows</span>
+          <span class="qtag">Multi-city tours</span>
+        </div>
+        <div class="quote-trust">
+          <div class="qt-row">
+            <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.6"/><path d="M12 8v4l2.5 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+            <span>Dedicated manager assigned within 2 hours</span>
+          </div>
+          <div class="qt-row">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 3l8 4v5c0 4.4-3.4 8.5-8 9.9C7.4 20.5 4 16.4 4 12V7l8-4Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>Custom SLA available for 50+ seats/month</span>
+          </div>
+          <div class="qt-row">
+            <svg viewBox="0 0 24 24" fill="none"><path d="m5 13 4 4L19 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span>No commitment required</span>
+          </div>
+        </div>
+      </div>
+      <form class="quote-card" id="cp-q-r" onsubmit="return false">
+        <div class="qc-accent"></div>
+        <div class="qc-body">
+          <div class="qc-top">
+            <h4 class="qc-title">Enterprise quote request</h4>
+            <div class="qc-badge">
+              <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.5"/><path d="M12 8v4l2.5 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+              <span>2-hr reply</span>
+            </div>
+          </div>
+          <div class="qc-grid">
+            <div class="q-input"><label>Full name</label><div class="ctrl"><input type="text" placeholder="Jordan Avery" /></div></div>
+            <div class="q-input"><label>Company</label><div class="ctrl"><input type="text" placeholder="Acme Inc." /></div></div>
+          </div>
+          <div class="qc-grid">
+            <div class="q-input"><label>Email</label><div class="ctrl"><input type="email" placeholder="you@company.com" /></div></div>
+            <div class="q-input"><label>Phone</label><div class="ctrl"><input type="tel" placeholder="+1 (555) 000-0000" /></div></div>
+          </div>
+          <div class="qc-grid">
+            <div class="q-input"><label>Trip type</label><div class="ctrl ctrl--sel"><select><option>Daily shuttle</option><option>One-way charter</option><option>Round trip</option><option>Multi-day roadshow</option><option>Other</option></select><svg class="sel-arr" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+            <div class="q-input"><label>Passengers</label><div class="ctrl"><input type="number" placeholder="60" min="1" /></div></div>
+          </div>
+          <div class="q-input area"><label>Special requirements</label><div class="ctrl"><textarea placeholder="Recurring schedule, cost-centre codes, accessibility needs…"></textarea></div></div>
+          <button type="submit" class="quote-submit">
+            Request enterprise quote
+            <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <p class="q-foot">No obligation · A manager will reply within 2 business hours</p>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════
+     7. TESTIMONIALS
+     ════════════════════════════════════════════════════ -->
+<section class="cp-voices sec-pad">
+  <div class="ew cp-voices-inner">
+    <div class="cp-ey" id="cp-v-ey">What our clients say</div>
+    <h2 class="cp-voices-h2" id="cp-v-h2">Companies that<br>move with us.</h2>
+    <div class="cp-v-grid">
+      <div class="cp-v-card">
+        <div class="cp-stars">
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        </div>
+        <blockquote>"We run a daily shuttle for 60 employees between Toronto and Hamilton. VIABUS handles everything — timing, tracking, invoicing. It's removed 4 hours of admin from our ops team every week."</blockquote>
+        <div class="cp-who">
+          <div class="cp-av">RK</div>
+          <div><div class="cp-nm">Rachel Kim</div><div class="cp-rl">Operations Director · Maple Leaf Digital</div></div>
+        </div>
+      </div>
+      <div class="cp-v-card">
+        <div class="cp-stars">
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        </div>
+        <blockquote>"Our last three offsites used VIABUS for ground transport. The account manager knew our requirements before we even asked the second time. That's the standard we expect."</blockquote>
+        <div class="cp-who">
+          <div class="cp-av">DP</div>
+          <div><div class="cp-nm">David Park</div><div class="cp-rl">Chief of Staff · Northern Capital, Vancouver</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════
+     8. CTA BAND
+     ════════════════════════════════════════════════════ -->
+<section class="cp-cta sec-pad">
+  <div class="cp-cta-bg">
+    <img src="assets/img/closing/closing-rockies-dusk.webp"
+         data-fallback="https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=2000&q=80"
+         alt="" decoding="async" loading="lazy" />
+  </div>
+  <div class="ew cp-cta-inner">
+    <h2 class="cp-cta-h" id="cp-cta-h">Ready to move<br>your team?</h2>
+    <div class="cp-cta-r" id="cp-cta-r">
+      <p class="cp-cta-sub">Speak to our enterprise team today. Quotes in 2 hours, accounts set up same week.</p>
+      <div class="cp-cta-btns">
+        <div class="glass-button-wrap">
+          <a href="#cp-quote" class="glass-button"><span class="glass-button-text">Get a quote</span></a>
+          <div class="glass-button-shadow"></div>
+        </div>
+        <a href="about.html" class="cp-ghost">
+          About VIABUS
+          <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script src="assets/js/components.js?v=3"></script>
+<script src="assets/js/ui.js?v=7" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+<script>
+(function () {
+  'use strict';
+  if (typeof gsap === 'undefined') return;
+  gsap.registerPlugin(ScrollTrigger);
+  ScrollTrigger.config({ ignoreMobileResize: true });
+  var E = 'power3.out';
+
+  gsap.set(['#cp-ey','#cp-h1','#cp-sub','#cp-ctas'], { opacity: 0, y: 28 });
+  gsap.set('#cp-stats', { opacity: 0, x: 44 });
+  gsap.set(['#cp-pr-ey','#cp-pr-h2','#cp-pr-hint'], { opacity: 0, y: 28 });
+  gsap.set('.cp-row',      { opacity: 0, y: 32 });
+  gsap.set(['#cp-uc-ey','#cp-uc-h2'], { opacity: 0, y: 28 });
+  gsap.set('.cp-case',     { opacity: 0, y: 44 });
+  gsap.set('.cp-num-cell', { opacity: 0, y: 28 });
+  gsap.set(['#cp-q-l','#cp-q-r'], { opacity: 0, y: 44 });
+  gsap.set(['#cp-v-ey','#cp-v-h2'], { opacity: 0, y: 28 });
+  gsap.set('.cp-v-card',   { opacity: 0, y: 44 });
+  gsap.set(['#cp-cta-h','#cp-cta-r'], { opacity: 0, y: 34 });
+
+  gsap.timeline({ delay: .12 })
+    .to('#cp-ey',    { opacity:1, y:0, duration:.6,  ease:E })
+    .to('#cp-h1',    { opacity:1, y:0, duration:.85, ease:E }, '-=.35')
+    .to('#cp-sub',   { opacity:1, y:0, duration:.65, ease:E }, '-=.5')
+    .to('#cp-ctas',  { opacity:1, y:0, duration:.55, ease:E }, '-=.38')
+    .to('#cp-stats', { opacity:1, x:0, duration:.95, ease:'power2.out' }, '-=.65');
+
+  ScrollTrigger.create({ trigger: '.cp-promise', start: 'top 75%', once: true,
+    onEnter: function () {
+      gsap.to(['#cp-pr-ey','#cp-pr-h2','#cp-pr-hint'], { opacity:1, y:0, stagger:.1, duration:.7, ease:E });
+      gsap.to('.cp-row', { opacity:1, y:0, stagger:.09, duration:.7, delay:.28, ease:E });
+    }
+  });
+  ScrollTrigger.create({ trigger: '.cp-cases', start: 'top 72%', once: true,
+    onEnter: function () {
+      gsap.to(['#cp-uc-ey','#cp-uc-h2'], { opacity:1, y:0, stagger:.1, duration:.7, ease:E });
+      gsap.to('.cp-case', { opacity:1, y:0, stagger:.1, duration:.75, delay:.22, ease:E });
+    }
+  });
+  ScrollTrigger.create({ trigger: '.cp-numbers', start: 'top 76%', once: true,
+    onEnter: function () { gsap.to('.cp-num-cell', { opacity:1, y:0, stagger:.1, duration:.65, ease:E }); }
+  });
+  ScrollTrigger.create({ trigger: '#cp-quote', start: 'top 72%', once: true,
+    onEnter: function () {
+      gsap.to('#cp-q-l', { opacity:1, y:0, duration:.8, ease:E });
+      gsap.to('#cp-q-r', { opacity:1, y:0, duration:.85, delay:.14, ease:E });
+    }
+  });
+  ScrollTrigger.create({ trigger: '.cp-voices', start: 'top 72%', once: true,
+    onEnter: function () {
+      gsap.to(['#cp-v-ey','#cp-v-h2'], { opacity:1, y:0, stagger:.1, duration:.7, ease:E });
+      gsap.to('.cp-v-card', { opacity:1, y:0, stagger:.12, duration:.75, delay:.22, ease:E });
+    }
+  });
+  ScrollTrigger.create({ trigger: '.cp-cta', start: 'top 74%', once: true,
+    onEnter: function () {
+      gsap.to('#cp-cta-h', { opacity:1, y:0, duration:.75, ease:E });
+      gsap.to('#cp-cta-r', { opacity:1, y:0, duration:.8, delay:.14, ease:E });
+    }
+  });
+}());
+</script>
+</body>
+</html>

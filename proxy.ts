@@ -15,7 +15,12 @@ export const config = {
     /*
      * Everything except static assets and image files — those never carry a
      * session that needs refreshing.
+     *
+     * `/assets/*` and `.html` are the VIABUS marketing site, served straight
+     * out of `public/`. Those requests are anonymous by definition, and a home
+     * page pulling 364 sequence frames would otherwise mean 364 pointless
+     * session refreshes.
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|assets/|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|html|mp4)$).*)",
   ],
 };

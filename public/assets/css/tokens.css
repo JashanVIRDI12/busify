@@ -1,0 +1,28 @@
+/* ============================================================
+   VIABUS · Design Tokens
+   Lightship editorial system — warm cream, near-monochrome,
+   one ember accent. Single source of truth for the palette,
+   type scale, spacing, radii and layout constants.
+   ============================================================ */
+:root{
+  /* ---- Colors ---- */
+  --warm-cream:#faf6ef;   /* page canvas + card surface */
+  --pure-white:#ffffff;   /* elevated surfaces, image frames */
+  --obsidian:#000000;     /* text, hairlines, icon strokes */
+  --pebble:#999999;       /* muted body text */
+  --driftwood:#a1a1a1;    /* helper text, placeholders */
+  --mist:#d9d9d9;         /* light hairline dividers, inputs */
+  --ember:#fa5c40;        /* RARE accent — strips/focus only */
+
+  /* ---- Typography ---- */
+  /* Archivo: tight, industrial geometric sans — F37 Bolton substitute */
+  --font:"Archivo","Söhne",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+
+  /* ---- Layout ---- */
+  --page:1440px;          /* max content width */
+  --gap:100px;            /* section rhythm */
+
+  /* ---- Radii ---- */
+  --r-img:20px;           /* cards + framed photography */
+  --r-pill:100px;         /* nav chips, buttons, inputs */
+}

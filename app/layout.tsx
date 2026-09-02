@@ -30,11 +30,11 @@ const sometype = Sometype_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Busify AI — Charter operations, run properly",
-    template: "%s · Busify AI",
+    default: "VIABUS — Operations portal",
+    template: "%s · VIABUS",
   },
   description:
-    "Fleet, drivers, customers, quotes and bookings for charter bus and motorcoach operators.",
+    "Trip requests, quotes, fleet and drivers for VIABUS coach operations.",
 };
 
 export const viewport: Viewport = {

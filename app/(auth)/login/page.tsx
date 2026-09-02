@@ -16,12 +16,17 @@ export default async function LoginPage({
   return (
     <AuthCard
       title="Sign in"
-      description="Pick up where your operation left off."
+      description="VIABUS operations portal."
+      // Staff accounts are created by an administrator, not self-service —
+      // there is no signup route to link to.
       footer={
         <>
-          New to Busify AI?{" "}
-          <Link href="/signup" className="font-medium text-interactive hover:underline">
-            Create an account
+          Need access?{" "}
+          <Link
+            href="/"
+            className="font-medium text-interactive hover:underline"
+          >
+            Contact your administrator
           </Link>
         </>
       }

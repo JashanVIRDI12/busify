@@ -16,7 +16,6 @@ import {
   forgotPasswordSchema,
   resetPasswordSchema,
   signInSchema,
-  signUpSchema,
 } from "@/lib/validations/auth";
 
 /** Only ever redirect to a path on this origin. */
@@ -24,35 +23,6 @@ function safeNext(next: unknown): string {
   if (typeof next !== "string") return "/dashboard";
   if (!next.startsWith("/") || next.startsWith("//")) return "/dashboard";
   return next;
-}
-
-export async function signUpAction(
-  _prev: FormState,
-  formData: FormData,
-): Promise<FormState> {
-  const parsed = signUpSchema.safeParse(formDataToObject(formData));
-  if (!parsed.success) return validationError(parsed.error);
-
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.signUp({
-    email: parsed.data.email,
-    password: parsed.data.password,
-    options: {
-      data: { full_name: parsed.data.fullName },
-      emailRedirectTo: `${siteUrl()}/auth/callback?next=/onboarding`,
-    },
-  });
-
-  if (error) return formError(error.message);
-
-  // Session present means email confirmation is disabled on this project, so
-  // the user is already signed in and can go straight to onboarding.
-  if (data.session) {
-    revalidatePath("/", "layout");
-    redirect("/onboarding");
-  }
-
-  redirect(`/verify-email?email=${encodeURIComponent(parsed.data.email)}`);
 }
 
 export async function signInAction(
@@ -147,7 +117,7 @@ export async function resendVerificationAction(
   const { error } = await supabase.auth.resend({
     type: "signup",
     email: parsed.data.email,
-    options: { emailRedirectTo: `${siteUrl()}/auth/callback?next=/onboarding` },
+    options: { emailRedirectTo: `${siteUrl()}/auth/callback?next=/dashboard` },
   });
 
   if (error) return formError(error.message);

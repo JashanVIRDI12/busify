@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="theme-color" content="#07090f" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VIABUS — The open road, in first class</title>
+<meta name="description" content="Premium intercity coach travel with live tracking, instant quotes and seats built for the long way round." />
+
+<!-- Fonts: Archivo (tight industrial geometric sans — F37 Bolton substitute) -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+<!-- Styles (load order = cascade order) -->
+<link rel="stylesheet" href="assets/css/tokens.css?v=4" />
+<link rel="stylesheet" href="assets/css/base.css?v=5" />
+<link rel="stylesheet" href="assets/css/layout.css?v=14" />
+<link rel="stylesheet" href="assets/css/components.css?v=21" />
+<link rel="stylesheet" href="assets/css/scroll-sequence.css?v=4" />
+<link rel="stylesheet" href="assets/css/responsive.css?v=17" />
+
+<!-- preload first sequence frames for an instant first paint -->
+<link rel="preload" as="image" href="assets/img/sequence/frame_0001.webp" />
+<link rel="preload" as="image" href="assets/img/sequence/poster.webp" />
+
+<!-- GSAP premium home enhancements + surprise designs -->
+<style>
+/* premium stagger + surprise styles */
+.mosaic figure { will-change: transform, opacity; perspective: 800px; transform-style: preserve-3d; }
+.mosaic figure img { transform-style: preserve-3d; }
+.route { position: relative; overflow: hidden; padding-bottom: 26px; perspective: 900px; transform-style: preserve-3d; }
+.route-journey {
+  position: absolute;
+  left: 22px; right: 22px; bottom: 14px;
+  height: 3px;
+  pointer-events: none;
+  opacity: 0.75;
+  z-index: 3;
+}
+.route-journey svg {
+  width: 100%; height: 3px; display: block;
+}
+.route-journey .rj-path {
+  fill: none;
+  stroke: var(--ember);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+}
+.route-journey .rj-bus {
+  position: absolute;
+  top: -5px;
+  left: 0;
+  width: 14px; height: 10px;
+  transform: translateX(0);
+  opacity: 0;
+  color: #fff;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,.4));
+}
+.route-journey .rj-bus svg { width: 100%; height: 100%; display:block; }
+
+/* enhanced card lift + tilt container */
+.route, .gcard, .vcard, .fleet-row .frame { transition: transform .1s ease, box-shadow .2s ease; }
+.gcard, .vcard { will-change: transform; }
+
+/* proof cards surprise sweep */
+.gcard { position: relative; overflow: hidden; }
+.gcard::after {
+  content: '';
+  position: absolute;
+  top: -50%; left: -140%;
+  width: 35%; height: 200%;
+  background: linear-gradient(115deg, transparent, rgba(255,255,255,.16), transparent);
+  transform: skewX(-22deg);
+  pointer-events: none;
+  opacity: 0;
+  transition: left 1.1s cubic-bezier(.2,.8,.2,1), opacity .2s;
+}
+.gcard.in-view::after {
+  left: 160%;
+  opacity: 1;
+}
+
+/* subtle spec stagger */
+.spec-list .s { transition: none; }
+
+/* magnetic / hover polish */
+.glass-button, .hero-quote-btn, .ghost { transition: transform .12s cubic-bezier(.2,.8,.2,1), box-shadow .2s; }
+</style>
+</head>
+<body>
+
+<!-- ===================== NAV ===================== -->
+<!-- ===================== HERO · scroll-sequence film ===================== -->
+<!-- The 145-frame coach film is now the hero background. The hero copy is
+     kept exactly and rests in place at the top, lifting away as the film
+     scrubs; chapter captions follow. See assets/js/scroll-sequence.js -->
+<header class="seq" id="hero" aria-label="VIABUS — the open road, in first class"
+        data-frames="363" data-path="assets/img/sequence/frame_" data-ext=".webp" data-pad="4">
+  <div class="seq-stage" style="background-image:url('assets/img/sequence/poster.webp')">
+    <canvas class="seq-canvas" id="seqCanvas" aria-hidden="true"></canvas>
+
+    <!-- HERO COPY — persistent overlay, no fade attributes so JS never touches it -->
+    <div class="hero-copy">
+      <h1 class="hero-hed">The open road,<br><span class="hero-hed-soft">in first class.</span></h1>
+      <div class="hero-ctas">
+        <div class="glass-button-wrap">
+          <a href="quote.html" class="glass-button glass-button--lg">
+            <span class="glass-button-text">Book your seat
+              <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+          </a>
+          <div class="glass-button-shadow"></div>
+        </div>
+        <a href="quote.html" class="hero-quote-btn">Get a quote
+          <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+      </div>
+      <!-- glass stats bar -->
+      <div class="hero-stats">
+        <div class="hs-item">
+          <span class="hs-n">2M+</span>
+          <span class="hs-l">Journeys</span>
+        </div>
+        <div class="hs-div"></div>
+        <div class="hs-item">
+          <span class="hs-n">500+</span>
+          <span class="hs-l">Cities</span>
+        </div>
+        <div class="hs-div"></div>
+        <div class="hs-item">
+          <span class="hs-n">99.2%</span>
+          <span class="hs-l">On-time</span>
+        </div>
+        <div class="hs-div"></div>
+        <div class="hs-item">
+          <span class="hs-n">4.9★</span>
+          <span class="hs-l">Rating</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="seq-progress"><span id="seqBar"></span></div>
+    <div class="seq-loading" id="seqLoading"><span class="spin"></span>Loading the journey <span id="seqPct">0</span>%</div>
+  </div>
+</header>
+
+<main class="container">
+
+  <!-- ===================== INTRO ===================== -->
+  <section class="sec" id="intro">
+    <div class="intro-grid">
+      <div class="intro-lead reveal">
+        <div class="label intro-eyebrow">The idea</div>
+        <h2 class="intro-h">A bus company that thinks like a flagship product<span class="dim"> — every route, vehicle and mile designed with intent.</span></h2>
+      </div>
+      <div class="intro-aside reveal d1">
+        <p class="body-lg">We connect cities across Canada and the USA through a vetted network of premium operators — every journey departing from Canada. No queues, no surprises, just considered travel from the first tap to the final stop.</p>
+        <a href="#fleet" class="ghost">Meet the fleet
+          <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+      </div>
+    </div>
+
+    <!-- photo mosaic -->
+    <div class="mosaic">
+      <figure class="frame m1 reveal">
+        <img class="ph" src="assets/img/mosaic/mosaic-01-openroad.webp" data-fallback="https://images.unsplash.com/photo-1502920917128-1aa500764cbd?auto=format&fit=crop&w=1400&q=80" alt="Prevost H3-45 on an open Canadian highway at sunrise" decoding="async" loading="lazy" />
+        <figcaption><div class="label">Coast to coast</div><div class="t">Open-road journeys</div></figcaption>
+      </figure>
+      <figure class="frame m2 reveal d1">
+        <img class="ph" src="assets/img/mosaic/mosaic-02-coach-rockies.webp" data-fallback="https://images.unsplash.com/photo-1426604966848-d7adac402bff?auto=format&fit=crop&w=1400&q=80" alt="Prevost H3-45 at a Rocky Mountain viewpoint" decoding="async" loading="lazy" />
+        <figcaption><div class="label">Daily departures</div><div class="t">Scenic intercity routes</div></figcaption>
+      </figure>
+      <figure class="frame m3 reveal">
+        <img class="ph" src="assets/img/mosaic/mosaic-03-onboard.webp" data-fallback="https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=1000&q=80" alt="First-class interior of a Prevost H3-45 motorcoach" decoding="async" loading="lazy" />
+        <figcaption><div class="label">Comfort first</div><div class="t">Built to travel</div></figcaption>
+      </figure>
+      <figure class="frame m4 reveal d1">
+        <img class="ph" src="assets/img/mosaic/mosaic-04-lake-dusk.webp" data-fallback="https://images.unsplash.com/photo-1493246507139-91e8fad9978e?auto=format&fit=crop&w=1100&q=80" alt="Prevost H3-45 on a Canadian mountain lake road at dusk" decoding="async" loading="lazy" />
+        <figcaption><div class="label">Live tracking</div><div class="t">Always on the map</div></figcaption>
+      </figure>
+      <figure class="frame m5 reveal d2">
+        <img class="ph" src="assets/img/mosaic/mosaic-05-skyline.webp" data-fallback="https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1000&q=80" alt="Prevost H3-45 with Toronto skyline at blue hour" decoding="async" loading="lazy" />
+        <figcaption><div class="label">500+ cities</div><div class="t">One network</div></figcaption>
+      </figure>
+    </div>
+
+    <!-- proof — glass stat cards over a cinematic band -->
+    <div class="proof reveal">
+      <img class="proof-bg" src="assets/img/stats/stats-rockies-dusk.webp" data-fallback="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=2000&q=80" alt="Canadian Rockies at dusk" decoding="async" loading="lazy" />
+      <div class="proof-inner">
+        <div class="proof-head">
+          <div class="proof-head-l">
+            <div class="label">By the numbers</div>
+            <h2>Trusted on<br>every mile.</h2>
+            <p>Real figures from a network that treats every departure like a flagship launch.</p>
+          </div>
+        </div>
+        <div class="proof-grid">
+          <div class="gcard">
+            <div class="n" data-count="2" data-suffix="M">0</div>
+            <div class="l">Journeys booked</div>
+          </div>
+          <div class="gcard">
+            <div class="n" data-count="500" data-suffix="+">0</div>
+            <div class="l">Cities connected</div>
+          </div>
+          <div class="gcard">
+            <div class="n" data-count="99.2" data-suffix="%" data-dec="1">0</div>
+            <div class="l">On-time arrivals</div>
+          </div>
+          <div class="gcard">
+            <div class="n" data-count="4.9" data-suffix="★" data-dec="1">0</div>
+            <div class="l">Traveller rating</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== ROUTES ===================== -->
+  <section class="sec" id="routes">
+    <div class="sec-head">
+      <div class="lead reveal">
+        <div class="label">Most travelled</div>
+        <h2 class="h-lg">Popular routes</h2>
+      </div>
+      <div class="side reveal d1">
+        <p class="body">Hand-picked corridors departing daily from Canada — coast to coast and across the US border. Fares shown are the lowest available this week.</p>
+      </div>
+    </div>
+
+    <div class="routes-grid">
+      <article class="route reveal d1">
+        <div class="frame"><img class="ph" src="assets/img/routes/route-toronto-newyork.webp" data-fallback="https://images.unsplash.com/photo-1470770841072-f978cf4d019e?auto=format&fit=crop&w=900&q=80" alt="Autumn forests on the Toronto–New York corridor" decoding="async" loading="lazy" /><span class="badge">6 daily</span><span class="price">from $89</span></div>
+        <div class="route-line"><span class="cities">Toronto<span class="ar">→</span>New York</span></div>
+        <div class="route-meta"><span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v4l3 2" stroke-linecap="round"/></svg>9h 30m</span><span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.6 2.6 14.4 0 17M12 3.5c-2.6 2.6-2.6 14.4 0 17" stroke-linecap="round"/></svg>Cross-border</span></div>
+      </article>
+
+      <article class="route reveal d2">
+        <div class="frame"><img class="ph" src="assets/img/routes/route-vancouver-seattle.webp" data-fallback="https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=900&q=80" alt="Pacific Northwest coast on the Vancouver–Seattle corridor" decoding="async" loading="lazy" /><span class="badge">12 daily</span><span class="price">from $39</span></div>
+        <div class="route-line"><span class="cities">Vancouver<span class="ar">→</span>Seattle</span></div>
+        <div class="route-meta"><span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v4l3 2" stroke-linecap="round"/></svg>4h 10m</span><span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.6 2.6 14.4 0 17M12 3.5c-2.6 2.6-2.6 14.4 0 17" stroke-linecap="round"/></svg>Cross-border</span></div>
+      </article>
+
+      <article class="route reveal d3">
+        <div class="frame"><img class="ph" src="assets/img/routes/route-montreal-boston.webp" data-fallback="https://images.unsplash.com/photo-1426604966848-d7adac402bff?auto=format&fit=crop&w=900&q=80" alt="New England mountains on the Montréal–Boston corridor" decoding="async" loading="lazy" /><span class="badge">5 daily</span><span class="price">from $69</span></div>
+        <div class="route-line"><span class="cities">Montréal<span class="ar">→</span>Boston</span></div>
+        <div class="route-meta"><span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v4l3 2" stroke-linecap="round"/></svg>7h 15m</span><span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.6 2.6 14.4 0 17M12 3.5c-2.6 2.6-2.6 14.4 0 17" stroke-linecap="round"/></svg>Cross-border</span></div>
+      </article>
+
+      <article class="route reveal d1">
+        <div class="frame"><img class="ph" src="assets/img/routes/route-toronto-montreal.webp" data-fallback="https://images.unsplash.com/photo-1472214103451-9374bd1c798e?auto=format&fit=crop&w=900&q=80" alt="St. Lawrence countryside on the Toronto–Montréal corridor" decoding="async" loading="lazy" /><span class="badge">18 daily</span><span class="price">from $45</span></div>
+        <div class="route-line"><span class="cities">Toronto<span class="ar">→</span>Montréal</span></div>
+        <div class="route-meta"><span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v4l3 2" stroke-linecap="round"/></svg>5h 30m</span><span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 21c-4-3.5-7-6.8-7-11a7 7 0 0 1 14 0c0 4.2-3 7.5-7 11Z"/><circle cx="12" cy="10" r="2.2" fill="currentColor"/></svg>Domestic</span></div>
+      </article>
+
+      <article class="route reveal d2">
+        <div class="frame"><img class="ph" src="assets/img/routes/route-calgary-banff.webp" data-fallback="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=900&q=80" alt="Canadian Rockies on the Calgary–Banff corridor" decoding="async" loading="lazy" /><span class="badge">14 daily</span><span class="price">from $29</span></div>
+        <div class="route-line"><span class="cities">Calgary<span class="ar">→</span>Banff</span></div>
+        <div class="route-meta"><span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v4l3 2" stroke-linecap="round"/></svg>1h 45m</span><span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 21c-4-3.5-7-6.8-7-11a7 7 0 0 1 14 0c0 4.2-3 7.5-7 11Z"/><circle cx="12" cy="10" r="2.2" fill="currentColor"/></svg>Domestic</span></div>
+      </article>
+
+      <article class="route reveal d3">
+        <div class="frame"><img class="ph" src="assets/img/routes/route-montreal-quebec.webp" data-fallback="https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=900&q=80" alt="St. Lawrence scenery on the Montréal–Québec City corridor" decoding="async" loading="lazy" /><span class="badge">10 daily</span><span class="price">from $35</span></div>
+        <div class="route-line"><span class="cities">Montréal<span class="ar">→</span>Québec City</span></div>
+        <div class="route-meta"><span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><circle cx="12" cy="12" r="8.5"/><path d="M12 8v4l3 2" stroke-linecap="round"/></svg>3h 05m</span><span><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 21c-4-3.5-7-6.8-7-11a7 7 0 0 1 14 0c0 4.2-3 7.5-7 11Z"/><circle cx="12" cy="10" r="2.2" fill="currentColor"/></svg>Domestic</span></div>
+      </article>
+    </div>
+  </section>
+
+  <!-- ===================== FLEET ===================== -->
+  <section class="sec" id="fleet">
+    <div class="sec-head">
+      <div class="lead reveal">
+        <div class="label">The fleet</div>
+        <h2 class="h-lg">Engineered for every kind of journey</h2>
+      </div>
+      <div class="side reveal d1"><p class="body">Every vehicle is GPS-tracked, regularly inspected and driven by vetted, certified professionals.</p></div>
+    </div>
+
+    <!-- premium coach -->
+    <div class="fleet-row reveal">
+      <div class="fleet-text">
+        <div class="idx">01 — Everyday luxury</div>
+        <h3>Premium Coach</h3>
+        <p>Our flagship for everyday travel. Wide recliner seats, panoramic glass and a quiet ride that makes the miles disappear.</p>
+        <div class="spec-list">
+          <div class="s"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M5 12.5a10 10 0 0 1 14 0M8 15.5a6 6 0 0 1 8 0" stroke-linecap="round"/><circle cx="12" cy="18.5" r="1" fill="currentColor"/></svg>WiFi &amp; USB-C at every seat</div>
+          <div class="s"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M7 4v9l-2 7M17 4v9l2 7M7 13h10" stroke-linecap="round" stroke-linejoin="round"/></svg>Full recliner seating</div>
+          <div class="s"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 21c-4-3.5-7-6.8-7-11a7 7 0 0 1 14 0c0 4.2-3 7.5-7 11Z"/><circle cx="12" cy="10" r="2.4" fill="currentColor" stroke="none"/></svg>Live GPS tracking — from $49</div>
+        </div>
+        <a href="quote.html" class="ghost lg">Book a seat
+          <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+      </div>
+      <div class="frame"><img class="ph" src="assets/img/fleet/fleet-premium-coach.webp" data-fallback="https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?auto=format&fit=crop&w=1400&q=80" alt="Prevost H3-45 silver motorcoach — Premium Coach" decoding="async" loading="lazy" /></div>
+    </div>
+
+    <!-- corporate -->
+    <div class="fleet-row flip reveal">
+      <div class="fleet-text">
+        <div class="idx">02 — Business class</div>
+        <h3>Corporate Charter</h3>
+        <p>A luxury executive fleet for offsites, roadshows and daily shuttles. Custom routes, dedicated managers, one invoice.</p>
+        <div class="spec-list">
+          <div class="s"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 3l2.5 5 5.5.8-4 3.9 1 5.5L12 16l-5 2.7 1-5.5-4-3.9 5.5-.8Z" stroke-linejoin="round"/></svg>Luxury executive fleet</div>
+          <div class="s"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h.01M15 9h.01M9 20v-3h6v3" stroke-linecap="round"/></svg>Dedicated business travel</div>
+          <div class="s"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><circle cx="6" cy="6" r="2.2"/><circle cx="18" cy="18" r="2.2"/><path d="M8 6h6a4 4 0 0 1 0 8h-4a4 4 0 0 0 0 8" stroke-dasharray="1 3"/></svg>Custom routes &amp; timing</div>
+        </div>
+        <a href="quote.html" class="ghost lg">Request a quote
+          <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+      </div>
+      <div class="frame"><img class="ph" src="assets/img/fleet/fleet-corporate-charter.webp" data-fallback="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=1400&q=80" alt="Prevost H3-45 white motorcoach — Corporate Charter" decoding="async" loading="lazy" /></div>
+    </div>
+
+    <!-- school -->
+    <div class="fleet-row reveal">
+      <div class="fleet-text">
+        <div class="idx">03 — For schools</div>
+        <h3>School Transport</h3>
+        <p>Safe, verified vehicles for schools and youth groups — with the tracking and accountability families expect.</p>
+        <div class="spec-list">
+          <div class="s"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3Z" stroke-linejoin="round"/><path d="m9 12 2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>Safe &amp; verified vehicles</div>
+          <div class="s"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><path d="M12 21c-4-3.5-7-6.8-7-11a7 7 0 0 1 14 0c0 4.2-3 7.5-7 11Z"/><circle cx="12" cy="10" r="2.4" fill="currentColor" stroke="none"/></svg>Real-time GPS tracking</div>
+          <div class="s"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.6 3-6.5 7-6.5s7 2.9 7 6.5" stroke-linecap="round"/></svg>Certified, vetted drivers</div>
+        </div>
+        <a href="quote.html" class="ghost lg">Enquire now
+          <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+      </div>
+      <div class="frame"><img class="ph" src="assets/img/fleet/fleet-school-transport.webp" data-fallback="https://images.unsplash.com/photo-1418065460487-3e41a6c84dc5?auto=format&fit=crop&w=1400&q=80" alt="Prevost H3-45 motorcoach fleet" decoding="async" loading="lazy" /></div>
+    </div>
+  </section>
+
+  <!-- ===================== PLAN ===================== -->
+</main>
+
+<!-- ===================== CHARTER & GROUPS ===================== -->
+<section class="charter-section" id="plan">
+  <div class="charter-inner">
+
+    <!-- Left: editorial intro -->
+    <div class="ch-intro reveal">
+      <div class="ch-eyebrow">Charter &amp; groups</div>
+      <h2 class="ch-h">Travelling as a group?<br>Get a tailored quote.</h2>
+      <p class="ch-sub">Corporates, schools, weddings and tours. Tell us where you're headed and a dedicated manager replies within two business hours.</p>
+      <div class="ch-tags">
+        <span class="chtag">Corporate shuttles</span>
+        <span class="chtag">Multi-day tours</span>
+        <span class="chtag">School transport</span>
+        <span class="chtag">Events</span>
+      </div>
+      <div class="ch-trust">
+        <div class="ch-row">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.6"/><path d="M12 8v4l2.5 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <span>Reply within 2 business hours</span>
+        </div>
+        <div class="ch-row">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="1.6"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          <span>Dedicated travel manager assigned</span>
+        </div>
+        <div class="ch-row">
+          <svg viewBox="0 0 24 24" fill="none"><path d="m5 13 4 4L19 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>No commitment required</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: glass form card -->
+    <form class="ch-card reveal d2" onsubmit="return false" id="quote">
+      <div class="ch-card-head">
+        <div>
+          <div class="ch-card-label">Charter &amp; group request</div>
+        </div>
+        <div class="ch-badge">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.5"/><path d="M12 8v4l2.5 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          2-hr reply
+        </div>
+      </div>
+      <div class="qc-grid">
+        <div class="q-input"><label>Full name</label><div class="ctrl"><input type="text" placeholder="Jordan Avery" /></div></div>
+        <div class="q-input"><label>Company · optional</label><div class="ctrl"><input type="text" placeholder="Acme Inc." /></div></div>
+      </div>
+      <div class="qc-grid">
+        <div class="q-input"><label>Email</label><div class="ctrl"><input type="email" placeholder="you@company.com" /></div></div>
+        <div class="q-input"><label>Phone</label><div class="ctrl"><input type="tel" placeholder="+1 (555) 000-0000" /></div></div>
+      </div>
+      <div class="qc-grid">
+        <div class="q-input"><label>Trip type</label><div class="ctrl ctrl--sel"><select><option>One-way charter</option><option>Round trip</option><option>Multi-day tour</option><option>Corporate shuttle</option><option>School transport</option></select><svg class="sel-arr" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+        <div class="q-input"><label>Passengers</label><div class="ctrl"><input type="number" placeholder="24" min="1" /></div></div>
+      </div>
+      <div class="q-input"><label>Travel date</label><div class="ctrl"><input type="date" /></div></div>
+      <div class="q-input area"><label>Special requirements</label><div class="ctrl"><textarea placeholder="Wheelchair access, catering, multiple pickups…"></textarea></div></div>
+      <button type="submit" class="quote-submit">
+        Request a tailored quote
+        <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <p class="q-foot">No obligation &middot; A manager will reply within 2 business hours</p>
+    </form>
+
+  </div>
+</section>
+
+<!-- ===================== WHY ===================== -->
+<section id="why" class="why-section">
+  <div class="why-ambient" aria-hidden="true"></div>
+  <div class="why-wrap">
+
+    <!-- Headline block -->
+    <div class="why-hero">
+      <div class="why-eyebrow" id="whyEyebrow">
+        <span class="why-tag">Why VIABUS</span>
+        <div class="why-tag-rule"></div>
+        <span class="why-tag why-tag--dim">Six&nbsp;reasons</span>
+      </div>
+      <h2 class="why-hed" id="whyHed">
+        Enterprise&#8209;grade&nbsp;trust,<br>
+        <span class="why-hed-soft">traveller&#8209;grade&nbsp;comfort.</span>
+      </h2>
+      <div class="why-subrow" id="whySubrow">
+        <p class="why-sub">Built with the precision of a flagship product and the warmth of great hospitality.</p>
+        <div class="why-duality-bar">
+          <span class="why-d-label">Enterprise</span>
+          <div class="why-d-line"><div class="why-d-node"></div></div>
+          <span class="why-d-label why-d-label--warm">Traveller</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 × 2 feature grid -->
+    <div class="why-grid" id="whyGrid">
+
+      <article class="wc">
+        <span class="wc-ghost">01</span>
+        <div class="wc-body">
+          <div class="wc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M12 21c-4-3.5-7-6.8-7-11a7 7 0 0 1 14 0c0 4.2-3 7.5-7 11Z"/><circle cx="12" cy="10" r="2.4" fill="currentColor" stroke="none"/></svg></div>
+          <h3 class="wc-h">Real&#8209;time tracking</h3>
+          <p class="wc-p">Follow your coach on a live map, share your ETA, and get arrival alerts down to the minute.</p>
+        </div>
+      </article>
+
+      <article class="wc">
+        <span class="wc-ghost">02</span>
+        <div class="wc-body">
+          <div class="wc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></svg></div>
+          <h3 class="wc-h">Instant quotes</h3>
+          <p class="wc-p">Transparent, all-in pricing in seconds — no hidden fees, no surge surprises, ever.</p>
+        </div>
+      </article>
+
+      <article class="wc">
+        <span class="wc-ghost">03</span>
+        <div class="wc-body">
+          <div class="wc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3Z"/><path d="m9 12 2 2 4-4" stroke-linecap="round"/></svg></div>
+          <h3 class="wc-h">Verified operators</h3>
+          <p class="wc-p">Every partner is background-checked, licensed and continuously rated by real travellers.</p>
+        </div>
+      </article>
+
+      <article class="wc">
+        <span class="wc-ghost">04</span>
+        <div class="wc-body">
+          <div class="wc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v9l-2 7M17 4v9l2 7M7 13h10"/></svg></div>
+          <h3 class="wc-h">First&#8209;class comfort</h3>
+          <p class="wc-p">Wide recliner seats, generous legroom, climate control and panoramic windows as standard.</p>
+        </div>
+      </article>
+
+      <article class="wc">
+        <span class="wc-ghost">05</span>
+        <div class="wc-body">
+          <div class="wc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M5 12.5a10 10 0 0 1 14 0M8 15.5a6 6 0 0 1 8 0"/><circle cx="12" cy="18.5" r="1.2" fill="currentColor" stroke="none"/></svg></div>
+          <h3 class="wc-h">WiFi &amp; power</h3>
+          <p class="wc-p">Stay connected the whole way with onboard WiFi, USB-C charging and seat-back entertainment.</p>
+        </div>
+      </article>
+
+      <article class="wc">
+        <span class="wc-ghost">06</span>
+        <div class="wc-body">
+          <div class="wc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a7 7 0 0 1 14 0v4a2 2 0 0 1-2 2h-1v-6h3M5 13v4a2 2 0 0 0 2 2h1v-6H5"/></svg></div>
+          <h3 class="wc-h">24/7 concierge</h3>
+          <p class="wc-p">Real humans, any hour. Change plans, get help or rebook in a tap — we've got the road covered.</p>
+        </div>
+      </article>
+
+    </div>
+
+    <!-- Duality split: enterprise vs traveller -->
+    <div class="why-split" id="whySplit">
+      <div class="why-sp why-sp--left">
+        <div class="why-sp-tag">Enterprise Grade</div>
+        <ul class="why-sp-list">
+          <li>SLA-backed departure guarantees</li>
+          <li>ISO-certified operators &amp; fleet audits</li>
+          <li>Corporate booking &amp; reporting portal</li>
+          <li>Compliance documentation on demand</li>
+        </ul>
+      </div>
+      <div class="why-sp-div" aria-hidden="true"><div class="why-sp-node"></div></div>
+      <div class="why-sp why-sp--right">
+        <div class="why-sp-tag why-sp-tag--warm">Traveller Grade</div>
+        <ul class="why-sp-list">
+          <li>Ergonomic seats with guaranteed legroom</li>
+          <li>Hospitality-trained, uniformed crew</li>
+          <li>Real-time journey updates &amp; concierge</li>
+          <li>On-demand refreshment &amp; USB-C charging</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ===================== VOICES ===================== -->
+<section class="voices-section" id="voices">
+  <div class="voices-head reveal">
+    <div class="voices-head-l">
+      <div class="label">Loved by travellers</div>
+      <h2 class="voices-title">Trusted across<br>every kind of trip</h2>
+    </div>
+    <div class="voices-agg">
+      <div class="agg-n">4.9</div>
+      <div class="agg-stars">★★★★★</div>
+      <div class="agg-sub">From 2M+ journeys</div>
+    </div>
+  </div>
+  <div class="voices-grid">
+    <article class="vcard vcard--feat reveal d1">
+      <div class="vcard-top">
+        <div class="vcard-tag">Corporate charter</div>
+        <div class="vcard-stars"><svg viewBox="0 0 24 24"><path d="m12 2 2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.6 5.9 20.4l1.5-6.8L2.2 9l6.9-.7Z"/></svg><svg viewBox="0 0 24 24"><path d="m12 2 2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.6 5.9 20.4l1.5-6.8L2.2 9l6.9-.7Z"/></svg><svg viewBox="0 0 24 24"><path d="m12 2 2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.6 5.9 20.4l1.5-6.8L2.2 9l6.9-.7Z"/></svg><svg viewBox="0 0 24 24"><path d="m12 2 2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.6 5.9 20.4l1.5-6.8L2.2 9l6.9-.7Z"/></svg><svg viewBox="0 0 24 24"><path d="m12 2 2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.6 5.9 20.4l1.5-6.8L2.2 9l6.9-.7Z"/></svg></div>
+      </div>
+      <blockquote class="vcard-text">We moved an all-hands of 80 people from Montréal to Toronto. The quote came back in an hour and live tracking kept everyone calm at the border. The smoothest travel ops we've run.</blockquote>
+      <div class="vcard-metrics">
+        <div class="vcard-metric">
+          <span class="vm-n">80</span>
+          <span class="vm-l">Passengers</span>
+        </div>
+        <div class="vcard-metric-div"></div>
+        <div class="vcard-metric">
+          <span class="vm-n">1hr</span>
+          <span class="vm-l">Quote turnaround</span>
+        </div>
+        <div class="vcard-metric-div"></div>
+        <div class="vcard-metric">
+          <span class="vm-n">MTL→YYZ</span>
+          <span class="vm-l">Route</span>
+        </div>
+      </div>
+      <footer class="vcard-who">
+        <span class="vcard-av">DR</span>
+        <div>
+          <div class="vcard-nm">Daniel Roy</div>
+          <div class="vcard-rl">Operations Lead · Boreal Tech, Montréal</div>
+        </div>
+      </footer>
+    </article>
+    <article class="vcard vcard--sm reveal d2">
+      <div class="vcard-stars"><svg viewBox="0 0 24 24"><path d="m12 2 2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.6 5.9 20.4l1.5-6.8L2.2 9l6.9-.7Z"/></svg><svg viewBox="0 0 24 24"><path d="m12 2 2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.6 5.9 20.4l1.5-6.8L2.2 9l6.9-.7Z"/></svg><svg viewBox="0 0 24 24"><path d="m12 2 2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.6 5.9 20.4l1.5-6.8L2.2 9l6.9-.7Z"/></svg><svg viewBox="0 0 24 24"><path d="m12 2 2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.6 5.9 20.4l1.5-6.8L2.2 9l6.9-.7Z"/></svg><svg viewBox="0 0 24 24"><path d="m12 2 2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.6 5.9 20.4l1.5-6.8L2.2 9l6.9-.7Z"/></svg></div>
+      <blockquote class="vcard-text">Crossing into Seattle with two kids used to be stressful. Reserved seats, tracking my parents could follow, and a smooth border stop — everyone actually slept. We won't go back.</blockquote>
+      <footer class="vcard-who">
+        <span class="vcard-av">SM</span>
+        <div>
+          <div class="vcard-nm">Sarah McKenna</div>
+          <div class="vcard-rl">Family traveller · Vancouver</div>
+        </div>
+      </footer>
+    </article>
+    <article class="vcard vcard--sm reveal d3">
+      <div class="vcard-stars"><svg viewBox="0 0 24 24"><path d="m12 2 2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.6 5.9 20.4l1.5-6.8L2.2 9l6.9-.7Z"/></svg><svg viewBox="0 0 24 24"><path d="m12 2 2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.6 5.9 20.4l1.5-6.8L2.2 9l6.9-.7Z"/></svg><svg viewBox="0 0 24 24"><path d="m12 2 2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.6 5.9 20.4l1.5-6.8L2.2 9l6.9-.7Z"/></svg><svg viewBox="0 0 24 24"><path d="m12 2 2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.6 5.9 20.4l1.5-6.8L2.2 9l6.9-.7Z"/></svg><svg viewBox="0 0 24 24"><path d="m12 2 2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.6 5.9 20.4l1.5-6.8L2.2 9l6.9-.7Z"/></svg></div>
+      <blockquote class="vcard-text">On a student budget the Montréal–Toronto run is unreal — WiFi, a plug, and enough legroom to study the whole way home. I've replaced the train with VIABUS.</blockquote>
+      <footer class="vcard-who">
+        <span class="vcard-av">LT</span>
+        <div>
+          <div class="vcard-nm">Liam Tremblay</div>
+          <div class="vcard-rl">Student · McGill University</div>
+        </div>
+      </footer>
+    </article>
+  </div>
+</section>
+
+<!-- ===================== CLOSING IMAGE ===================== -->
+<section class="closing reveal">
+  <div class="closing-img frame" style="border-radius:0">
+    <img class="ph" src="assets/img/closing/closing-rockies-dusk.webp" data-fallback="https://images.unsplash.com/photo-1493246507139-91e8fad9978e?auto=format&fit=crop&w=2400&q=80" alt="Prevost H3-45 crossing the Canadian Rockies at dusk" decoding="async" loading="lazy" />
+  </div>
+  <div class="closing-copy">
+    <h2 class="h-lg">Wherever you're headed,<br>we'll make the journey worth it.</h2>
+    <div class="c-right">
+      <p>Premium coaches, real-time tracking and fares that make sense.</p>
+      <div class="glass-button-wrap">
+        <a href="quote.html" class="glass-button glass-button--lg">
+          <span class="glass-button-text">Book your seat
+            <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+        </a>
+        <div class="glass-button-shadow"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== APP ===================== -->
+<section class="appnews" id="app">
+  <div class="appnews-inner appnews-inner--solo">
+    <div class="an-app reveal">
+      <div class="an-eyebrow">VIABUS Mobile</div>
+      <h2 class="an-h">Your whole journey,<br>in your pocket.</h2>
+      <p class="an-sub">Book in three taps, board with a digital pass, and track every mile in real time — even offline.</p>
+      <ul class="an-chips">
+        <li>Live GPS tracking</li>
+        <li>Digital boarding pass</li>
+        <li>Offline mode</li>
+        <li>500+ cities</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== FOOTER ===================== -->
+<!-- Scripts -->
+<script src="assets/js/components.js?v=3"></script>
+<script src="assets/js/scroll-sequence.js?v=4" defer></script>
+<script src="assets/js/ui.js?v=6" defer></script>
+<!-- GSAP + single home animation module -->
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js" defer></script>
+<script src="assets/js/home-gsap.js?v=1" defer></script>
+</body>
+</html>

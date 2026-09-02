@@ -151,7 +151,7 @@ export default async function PublicQuotePage({
               {organization.email ? ` or ${organization.email}` : ""}.
             </p>
           )}
-          <p>Powered by Busify AI</p>
+          <p>VIABUS</p>
         </footer>
       </main>
     </div>
