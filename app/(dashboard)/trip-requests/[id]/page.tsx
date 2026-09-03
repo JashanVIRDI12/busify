@@ -19,7 +19,7 @@ import {
   TripStatusBadge,
 } from "@/components/shared/status-badge";
 import { TripCopilot } from "@/components/ai/trip-copilot";
-import { QuoteBuilderDialog } from "@/components/quotes/quote-builder-dialog";
+import { createQuoteFromRequestAction } from "@/app/(dashboard)/quotes/builder-actions";
 import { FleetAvailabilityPanel } from "@/components/trip-requests/fleet-availability-panel";
 import { RequestActions } from "@/components/trip-requests/request-actions";
 import { Badge } from "@/components/ui/badge";
@@ -79,28 +79,19 @@ export default async function TripRequestDetailPage({
 
   const supabase = await createClient();
 
-  const [availability, { data: trip }, { data: quotes }, { data: vehicleTypes }, { data: customers }] =
-    await Promise.all([
-      getFleetAvailability(request),
-      supabase
-        .from("trips")
-        .select("id, status")
-        .eq("trip_request_id", request.id)
-        .maybeSingle(),
-      supabase
-        .from("quotes")
-        .select("id, quote_number, status, total, currency")
-        .eq("trip_request_id", request.id)
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("vehicle_types")
-        .select("id, name, base_rate, per_km_rate, per_hour_rate, default_capacity")
-        .order("name"),
-      supabase
-        .from("customers")
-        .select("id, first_name, last_name, company")
-        .order("first_name"),
-    ]);
+  const [availability, { data: trip }, { data: quotes }] = await Promise.all([
+    getFleetAvailability(request),
+    supabase
+      .from("trips")
+      .select("id, status")
+      .eq("trip_request_id", request.id)
+      .maybeSingle(),
+    supabase
+      .from("quotes")
+      .select("id, quote_number, title, status, total, currency")
+      .eq("trip_request_id", request.id)
+      .order("created_at", { ascending: false }),
+  ]);
 
   const requirements = (request.special_requirements ?? "")
     .split("\n")
@@ -349,10 +340,11 @@ export default async function TripRequestDetailPage({
                         aria-hidden
                       />
                       <div className="min-w-0 flex-1">
-                        <p className="tabular text-sm font-medium">
-                          {quote.quote_number}
+                        <p className="truncate text-sm font-medium">
+                          {quote.title || quote.quote_number}
                         </p>
                         <p className="tabular text-xs text-muted-foreground">
+                          {quote.quote_number} ·{" "}
                           {formatMoney(Number(quote.total), quote.currency)}
                         </p>
                       </div>
@@ -363,20 +355,18 @@ export default async function TripRequestDetailPage({
               )}
 
               {canWriteFinance(role) && request.status !== "DECLINED" && (
-                <QuoteBuilderDialog
-                  vehicleTypes={vehicleTypes ?? []}
-                  customers={customers ?? []}
-                  currency={organization.currency}
-              province={organization.state}
-                  tripRequestId={request.id}
-                  defaultCustomerId={request.customer_id}
-                  trigger={
-                    <Button variant="outline" size="lg" className="mb-3 w-full">
-                      <FileText />
-                      Create quote
-                    </Button>
-                  }
-                />
+                <form action={createQuoteFromRequestAction} className="mb-3">
+                  <input type="hidden" name="request_id" value={request.id} />
+                  <Button
+                    type="submit"
+                    variant="outline"
+                    size="lg"
+                    className="w-full"
+                  >
+                    <FileText />
+                    Create quote
+                  </Button>
+                </form>
               )}
 
               <RequestActions

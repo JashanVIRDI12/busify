@@ -84,6 +84,47 @@ export type QuoteItemKind =
   | "ADDITIONAL_SERVICE"
   | "OTHER";
 
+export type QuotePipelineStatus =
+  | "LEAD"
+  | "QUOTED"
+  | "FOLLOW_UP"
+  | "WON"
+  | "LOST";
+
+export type QuotePriority = "LOW" | "NORMAL" | "HIGH" | "URGENT";
+
+export type QuoteTripType =
+  | "ONE_WAY"
+  | "ROUND_TRIP"
+  | "HOURLY"
+  | "DAILY"
+  | "SHUTTLE"
+  | "OTHER";
+
+export type QuoteCustomerVisibility =
+  | "LINE_ITEM_TOTALS"
+  | "LINE_ITEM_CALCS"
+  | "TOTAL_ONLY";
+
+export type QuoteStopKind = "PICKUP" | "STOP" | "DROPOFF";
+
+export type QuoteChargeSection = "BASE_FARE" | "ITEMIZED" | "TAX";
+
+export type QuoteChargeKind =
+  | "FLAT"
+  | "PERCENT"
+  | "PER_MILE"
+  | "PER_HOUR"
+  | "PER_DAY";
+
+export type QuoteBaseFareMode = "HIGHEST" | "CHOOSE";
+
+export type QuoteBaseFareBasis = "DAILY" | "HOURLY" | "MILEAGE" | "BASE";
+
+export type PaymentMethodKind = "CARD" | "BANK" | "CHECK" | "WIRE" | "OTHER";
+
+export type QuoteOverageBasis = "HOURLY" | "MILEAGE" | "DAILY";
+
 export type BookingStatus =
   | "PENDING_PAYMENT"
   | "CONFIRMED"
@@ -154,6 +195,7 @@ type VehicleTypeRow = Timestamps & {
   base_rate: number;
   per_km_rate: number;
   per_hour_rate: number;
+  per_day_rate: number;
 };
 
 type VehicleRow = Timestamps & {
@@ -302,6 +344,152 @@ type QuoteRow = Timestamps & {
   viewed_at: string | null;
   responded_at: string | null;
   notes: string | null;
+  // --- Quote builder header fields -----------------------------------------
+  title: string;
+  pipeline_status: QuotePipelineStatus;
+  priority: QuotePriority | null;
+  sales_rep_id: string | null;
+  event_name: string | null;
+  referred_by: string | null;
+  tags: string[];
+  billing_customer_id: string | null;
+  customer_visibility: QuoteCustomerVisibility;
+  allow_instant_booking: boolean;
+  allow_pay_later: boolean;
+  allow_full_card_payment: boolean;
+  po_number: string | null;
+  po_only: boolean;
+  payment_policy: string | null;
+  require_signature: boolean;
+  expiry_days: number | null;
+  expiry_anchor: "FIRST_SENT" | "LAST_SENT";
+  contract_terms_id: string | null;
+  overage_basis: QuoteOverageBasis | null;
+  overage_rate: number | null;
+  first_sent_at: string | null;
+};
+
+type ContractTermsRow = Timestamps & {
+  id: string;
+  organization_id: string;
+  name: string;
+  body: string;
+  is_default: boolean;
+};
+
+type GarageRow = Timestamps & {
+  id: string;
+  organization_id: string;
+  name: string;
+  address: string | null;
+  city: string | null;
+  province: string | null;
+  postal_code: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  is_default: boolean;
+  notes: string | null;
+};
+
+type QuoteTripRow = Timestamps & {
+  id: string;
+  organization_id: string;
+  quote_id: string;
+  position: number;
+  name: string;
+  trip_type: QuoteTripType | null;
+  passenger_count: number | null;
+  driver_count: number | null;
+  trip_contact_name: string | null;
+  trip_contact_email: string | null;
+  trip_contact_phone: string | null;
+  departing_garage_id: string | null;
+  departing_note: string | null;
+  departing_date: string | null;
+  departing_time: string | null;
+  departing_arrival_time: string | null;
+  returning_garage_id: string | null;
+  returning_note: string | null;
+  returning_date: string | null;
+  returning_time: string | null;
+  return_leg_miles: number;
+  return_leg_minutes: number;
+  base_fare_mode: QuoteBaseFareMode;
+  base_fare_basis: QuoteBaseFareBasis | null;
+  rate_daily: number;
+  rate_hourly: number;
+  rate_per_mile: number;
+  rate_flat_base: number;
+  base_fare_override: number | null;
+  days: number;
+  hours: number;
+  total_miles: number;
+  dead_miles: number;
+  live_miles: number;
+  estimated_minutes: number;
+  base_fare_total: number;
+  subtotal: number;
+  tax_total: number;
+  total: number;
+  due_now_percent: number;
+  due_now_amount: number | null;
+  balance_due_date: string | null;
+  recurrence: Json | null;
+  notes: string | null;
+};
+
+type QuoteTripStopRow = Timestamps & {
+  id: string;
+  organization_id: string;
+  quote_trip_id: string;
+  position: number;
+  kind: QuoteStopKind;
+  label: string | null;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  stop_date: string | null;
+  stop_time: string | null;
+  spot_time: string | null;
+  notes: string | null;
+  leg_miles: number;
+  leg_minutes: number;
+};
+
+type QuoteTripVehicleRow = Timestamps & {
+  id: string;
+  organization_id: string;
+  quote_trip_id: string;
+  position: number;
+  vehicle_type_id: string | null;
+  vehicle_id: string | null;
+  quantity: number;
+};
+
+type QuoteTripChargeRow = Timestamps & {
+  id: string;
+  organization_id: string;
+  quote_trip_id: string;
+  position: number;
+  section: QuoteChargeSection;
+  label: string;
+  kind: QuoteChargeKind;
+  rate: number;
+  quantity: number;
+  amount: number;
+  taxable: boolean;
+};
+
+type QuotePaymentMethodRow = Timestamps & {
+  id: string;
+  organization_id: string;
+  quote_id: string;
+  method: PaymentMethodKind;
+  position: number;
+  enabled: boolean;
+  online_processing: boolean;
+  processing_fee_percent: number;
+  customer_note: string | null;
 };
 
 type QuoteItemRow = Timestamps & {
@@ -480,6 +668,54 @@ export type Database = {
         Update: Update<QuoteItemRow>;
         Relationships: [];
       };
+      contract_terms: {
+        Row: ContractTermsRow;
+        Insert: Insert<ContractTermsRow, "organization_id" | "name">;
+        Update: Update<ContractTermsRow>;
+        Relationships: [];
+      };
+      garages: {
+        Row: GarageRow;
+        Insert: Insert<GarageRow, "organization_id" | "name">;
+        Update: Update<GarageRow>;
+        Relationships: [];
+      };
+      quote_trips: {
+        Row: QuoteTripRow;
+        Insert: Insert<QuoteTripRow, "organization_id" | "quote_id">;
+        Update: Update<QuoteTripRow>;
+        Relationships: [];
+      };
+      quote_trip_stops: {
+        Row: QuoteTripStopRow;
+        Insert: Insert<QuoteTripStopRow, "organization_id" | "quote_trip_id">;
+        Update: Update<QuoteTripStopRow>;
+        Relationships: [];
+      };
+      quote_trip_vehicles: {
+        Row: QuoteTripVehicleRow;
+        Insert: Insert<QuoteTripVehicleRow, "organization_id" | "quote_trip_id">;
+        Update: Update<QuoteTripVehicleRow>;
+        Relationships: [];
+      };
+      quote_trip_charges: {
+        Row: QuoteTripChargeRow;
+        Insert: Insert<
+          QuoteTripChargeRow,
+          "organization_id" | "quote_trip_id" | "section"
+        >;
+        Update: Update<QuoteTripChargeRow>;
+        Relationships: [];
+      };
+      quote_payment_methods: {
+        Row: QuotePaymentMethodRow;
+        Insert: Insert<
+          QuotePaymentMethodRow,
+          "organization_id" | "quote_id" | "method"
+        >;
+        Update: Update<QuotePaymentMethodRow>;
+        Relationships: [];
+      };
       bookings: {
         Row: BookingRow;
         Insert: Insert<BookingRow, "organization_id">;
@@ -523,6 +759,17 @@ export type Database = {
       trip_status: TripStatus;
       quote_status: QuoteStatus;
       quote_item_kind: QuoteItemKind;
+      quote_pipeline_status: QuotePipelineStatus;
+      quote_priority: QuotePriority;
+      quote_trip_type: QuoteTripType;
+      quote_customer_visibility: QuoteCustomerVisibility;
+      quote_stop_kind: QuoteStopKind;
+      quote_charge_section: QuoteChargeSection;
+      quote_charge_kind: QuoteChargeKind;
+      quote_base_fare_mode: QuoteBaseFareMode;
+      quote_base_fare_basis: QuoteBaseFareBasis;
+      payment_method_kind: PaymentMethodKind;
+      quote_overage_basis: QuoteOverageBasis;
       booking_status: BookingStatus;
       maintenance_status: MaintenanceStatus;
     };

@@ -90,6 +90,24 @@
 
 /* magnetic / hover polish */
 .glass-button, .hero-quote-btn, .ghost { transition: transform .12s cubic-bezier(.2,.8,.2,1), box-shadow .2s; }
+
+/* charter form — validation + submit + success states */
+[hidden] { display: none !important; }
+#quote .q-input.q-bad .ctrl { border-color: var(--ember, #ff5a46); box-shadow: 0 0 0 3px rgba(255,90,70,.14); }
+#quote .q-err {
+  margin: 4px 0 12px; color: var(--ember, #ff5a46);
+  font-size: 13.5px; line-height: 1.5;
+}
+#quote .quote-submit.is-loading { opacity: .7; pointer-events: none; }
+.ch-success { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; justify-content: center; }
+.ch-success-check {
+  width: 52px; height: 52px; border-radius: 999px;
+  display: grid; place-items: center;
+  background: rgba(70,200,120,.14); color: #37c46f;
+}
+.ch-success-check svg { width: 30px; height: 30px; }
+.ch-success h3 { margin: 0; font-size: 22px; letter-spacing: -.01em; }
+.ch-success p { margin: 0; color: var(--pebble, #9aa3b2); font-size: 15px; line-height: 1.6; }
 </style>
 </head>
 <body>
@@ -374,7 +392,8 @@
     </div>
 
     <!-- Right: glass form card -->
-    <form class="ch-card reveal d2" onsubmit="return false" id="quote">
+    <form class="ch-card reveal d2" id="quote" novalidate
+          data-quote-intake data-success="#cqSuccess" data-ref="#cqRef">
       <div class="ch-card-head">
         <div>
           <div class="ch-card-label">Charter &amp; group request</div>
@@ -385,25 +404,57 @@
         </div>
       </div>
       <div class="qc-grid">
-        <div class="q-input"><label>Full name</label><div class="ctrl"><input type="text" placeholder="Jordan Avery" /></div></div>
-        <div class="q-input"><label>Company · optional</label><div class="ctrl"><input type="text" placeholder="Acme Inc." /></div></div>
+        <div class="q-input"><label for="cqFrom">Departing from</label><div class="ctrl"><input id="cqFrom" name="pickup_location" type="text" placeholder="City or address" autocomplete="off" /></div></div>
+        <div class="q-input"><label for="cqTo">Destination</label><div class="ctrl"><input id="cqTo" name="destination" type="text" placeholder="City or address" autocomplete="off" /></div></div>
       </div>
       <div class="qc-grid">
-        <div class="q-input"><label>Email</label><div class="ctrl"><input type="email" placeholder="you@company.com" /></div></div>
-        <div class="q-input"><label>Phone</label><div class="ctrl"><input type="tel" placeholder="+1 (555) 000-0000" /></div></div>
+        <div class="q-input"><label for="cqName">Full name</label><div class="ctrl"><input id="cqName" name="contact_name" type="text" placeholder="Jordan Avery" autocomplete="name" /></div></div>
+        <div class="q-input"><label for="cqCompany">Company · optional</label><div class="ctrl"><input id="cqCompany" name="company" type="text" placeholder="Acme Inc." autocomplete="organization" /></div></div>
       </div>
       <div class="qc-grid">
-        <div class="q-input"><label>Trip type</label><div class="ctrl ctrl--sel"><select><option>One-way charter</option><option>Round trip</option><option>Multi-day tour</option><option>Corporate shuttle</option><option>School transport</option></select><svg class="sel-arr" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
-        <div class="q-input"><label>Passengers</label><div class="ctrl"><input type="number" placeholder="24" min="1" /></div></div>
+        <div class="q-input"><label for="cqEmail">Email</label><div class="ctrl"><input id="cqEmail" name="contact_email" type="email" placeholder="you@company.com" autocomplete="email" inputmode="email" /></div></div>
+        <div class="q-input"><label for="cqPhone">Phone · optional</label><div class="ctrl"><input id="cqPhone" name="contact_phone" type="tel" placeholder="+1 (555) 000-0000" autocomplete="tel" inputmode="tel" /></div></div>
       </div>
-      <div class="q-input"><label>Travel date</label><div class="ctrl"><input type="date" /></div></div>
-      <div class="q-input area"><label>Special requirements</label><div class="ctrl"><textarea placeholder="Wheelchair access, catering, multiple pickups…"></textarea></div></div>
-      <button type="submit" class="quote-submit">
+      <div class="qc-grid">
+        <div class="q-input"><label for="cqDepart">Travel date</label><div class="ctrl"><input id="cqDepart" name="departure_date" type="date" autocomplete="off" /></div></div>
+        <div class="q-input"><label for="cqReturn">Return date · optional</label><div class="ctrl"><input id="cqReturn" name="return_date" type="date" autocomplete="off" /></div></div>
+      </div>
+      <div class="qc-grid">
+        <div class="q-input"><label for="cqType">Trip type</label><div class="ctrl ctrl--sel"><select id="cqType" name="trip_type"><option value="oneway">One-way charter</option><option value="return">Round trip</option><option value="multiday">Multi-day tour</option><option value="shuttle">Corporate / school shuttle</option></select><svg class="sel-arr" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div></div>
+        <div class="q-input"><label for="cqPax">Passengers</label><div class="ctrl"><input id="cqPax" name="passenger_count" type="number" placeholder="24" min="1" max="600" inputmode="numeric" /></div></div>
+      </div>
+      <div class="q-input area"><label for="cqNotes">Special requirements · optional</label><div class="ctrl"><textarea id="cqNotes" name="special_requirements" placeholder="Wheelchair access, catering, multiple pickups…"></textarea></div></div>
+
+      <!-- This card is the charter / group entry point; the full quote.html form
+           lets the customer pick individual vs charter vs corporate. -->
+      <input type="hidden" name="service_type" value="charter" />
+
+      <!-- Honeypot: hidden from people, tab-skipped. A bot that fills it is dropped. -->
+      <div aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden">
+        <label for="cqWebsite">Company website</label>
+        <input id="cqWebsite" name="company_website" type="text" tabindex="-1" autocomplete="off" />
+      </div>
+
+      <p class="q-err" id="cqError" role="alert" hidden></p>
+
+      <button type="submit" class="quote-submit" id="cqSubmit">
         Request a tailored quote
         <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
       <p class="q-foot">No obligation &middot; A manager will reply within 2 business hours</p>
     </form>
+
+    <!-- Success state, swapped in after a successful submit -->
+    <div class="ch-card ch-success" id="cqSuccess" hidden aria-live="polite">
+      <div class="ch-success-check" aria-hidden="true">
+        <svg viewBox="0 0 32 32" fill="none"><path d="m9 16.5 4.5 4.5L23 11" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <h3>Request received</h3>
+      <p>A dedicated travel manager will reply within two business hours. Your reference is <strong id="cqRef">—</strong>.</p>
+      <a href="quote.html" class="ghost">Send another request
+        <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>
 
   </div>
 </section>
@@ -635,5 +686,6 @@
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js" defer></script>
 <script src="assets/js/home-gsap.js?v=1" defer></script>
+<script src="assets/js/quote-intake.js?v=1" defer></script>
 </body>
 </html>

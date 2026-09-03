@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { FileText, Plus } from "lucide-react";
 
+import { createQuoteDraftAction } from "@/app/(dashboard)/quotes/builder-actions";
 import { EmptyState } from "@/components/shared/empty-state";
 import { FilterTabs, type FilterTab } from "@/components/shared/filter-tabs";
 import { ListShell } from "@/components/shared/list-shell";
 import { PageHeader } from "@/components/shared/page-header";
 import { SearchInput } from "@/components/shared/search-input";
-import { QuoteBuilderDialog } from "@/components/quotes/quote-builder-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -62,18 +62,13 @@ export default async function QuotesPage({
 
   const supabase = await createClient();
 
-  const [{ data: statusRows }, { data: vehicleTypes }, { data: customers }] =
-    await Promise.all([
-      supabase.from("quotes").select("status"),
-      supabase
-        .from("vehicle_types")
-        .select("id, name, base_rate, per_km_rate, per_hour_rate, default_capacity")
-        .order("name"),
-      supabase
-        .from("customers")
-        .select("id, first_name, last_name, company")
-        .order("first_name"),
-    ]);
+  const [{ data: statusRows }, { data: customers }] = await Promise.all([
+    supabase.from("quotes").select("status"),
+    supabase
+      .from("customers")
+      .select("id, first_name, last_name, company")
+      .order("first_name"),
+  ]);
 
   let query = supabase
     .from("quotes")
@@ -117,18 +112,12 @@ export default async function QuotesPage({
         description="Prices you have put in front of customers, and what came back."
         actions={
           writeAllowed ? (
-            <QuoteBuilderDialog
-              vehicleTypes={vehicleTypes ?? []}
-              customers={customers ?? []}
-              currency={organization.currency}
-              province={organization.state}
-              trigger={
-                <Button>
-                  <Plus />
-                  New quote
-                </Button>
-              }
-            />
+            <form action={createQuoteDraftAction}>
+              <Button type="submit">
+                <Plus />
+                New quote
+              </Button>
+            </form>
           ) : null
         }
       />
@@ -164,7 +153,7 @@ export default async function QuotesPage({
                 <TableHead>Quote</TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead className="text-right">Total</TableHead>
-                <TableHead className="text-right">Deposit</TableHead>
+                <TableHead className="text-right">Due on booking</TableHead>
                 <TableHead>Valid until</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
@@ -175,10 +164,13 @@ export default async function QuotesPage({
                   <TableCell>
                     <Link
                       href={`/quotes/${quote.id}`}
-                      className="tabular font-medium text-interactive hover:underline"
+                      className="font-medium text-interactive hover:underline"
                     >
-                      {quote.quote_number ?? "—"}
+                      {quote.title || quote.quote_number || "Untitled quote"}
                     </Link>
+                    <span className="tabular block text-xs text-muted-foreground">
+                      {quote.quote_number ?? "—"}
+                    </span>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {quote.customer_id
