@@ -39,10 +39,13 @@ type MembershipRow = {
 };
 
 /**
- * The caller's memberships, newest organization first.
+ * The caller's own memberships, oldest organization first.
  *
- * RLS already restricts this to the current user, so there is no user_id
- * filter here — adding one would imply the filter is what makes it safe.
+ * The `organization_members` SELECT policy lets a member read *every* member
+ * row of an organization they belong to, not just their own — so the
+ * `user_id` filter here is a correctness requirement, not a security one.
+ * Without it a member of a multi-person org could resolve a teammate's role
+ * as their own.
  */
 export const getMemberships = cache(
   async (): Promise<{ role: OrgRole; organization: Organization }[]> => {
@@ -53,6 +56,7 @@ export const getMemberships = cache(
     const { data, error } = await supabase
       .from("organization_members")
       .select("role, organizations(*)")
+      .eq("user_id", user.id)
       .order("created_at", { ascending: true });
 
     if (error) {
