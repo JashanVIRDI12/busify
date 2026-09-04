@@ -12,6 +12,7 @@ import {
   Settings,
   TicketCheck,
   Users,
+  UsersRound,
   UserSquare,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -66,6 +67,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Workspace",
     items: [
       { label: "Guide", href: "/guide", icon: BookOpen },
+      { label: "Team", href: "/settings/organization", icon: UsersRound },
       { label: "API", href: "/settings/api", icon: Code2 },
       { label: "Settings", href: "/settings", icon: Settings },
     ],

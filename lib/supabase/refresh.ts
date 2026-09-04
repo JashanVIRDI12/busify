@@ -10,6 +10,7 @@ const PUBLIC_PATHS = [
   "/forgot-password",
   "/reset-password",
   "/verify-email",
+  "/driver/login",
   "/auth/callback",
   "/auth/confirm",
   // Public booking intake — customers reach this without an account.
@@ -17,6 +18,8 @@ const PUBLIC_PATHS = [
   // Customer-facing quote, addressed by opaque token.
   "/quote",
 ];
+
+const LOGIN_PATHS = new Set(["/login", "/signup", "/driver/login"]);
 
 function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.some(
@@ -61,17 +64,25 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname, search } = request.nextUrl;
 
+  const isDriverArea = pathname === "/driver" || pathname.startsWith("/driver/");
+
   if (!user && !isPublicPath(pathname)) {
     const url = request.nextUrl.clone();
-    url.pathname = "/login";
     url.search = "";
-    url.searchParams.set("next", `${pathname}${search}`);
+    if (isDriverArea) {
+      url.pathname = "/driver/login";
+    } else {
+      url.pathname = "/login";
+      url.searchParams.set("next", `${pathname}${search}`);
+    }
     return NextResponse.redirect(url);
   }
 
-  if (user && (pathname === "/login" || pathname === "/signup")) {
+  if (user && LOGIN_PATHS.has(pathname)) {
+    // Optimistic redirect only — the DAL guards (requireSession / requireDriver)
+    // do the real role routing once the page runs.
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
+    url.pathname = pathname === "/driver/login" ? "/driver" : "/dashboard";
     url.search = "";
     return NextResponse.redirect(url);
   }

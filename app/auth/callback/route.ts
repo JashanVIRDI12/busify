@@ -1,6 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { landingPath } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+
+/** An explicit, same-origin redirect target, or null. */
+function explicitNext(value: string | null): string | null {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return null;
+  return value;
+}
 
 /**
  * PKCE code exchange. Supabase email links and OAuth providers land here with
@@ -9,11 +16,7 @@ import { createClient } from "@/lib/supabase/server";
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const code = searchParams.get("code");
-  const nextParam = searchParams.get("next") ?? "/dashboard";
-  const next =
-    nextParam.startsWith("/") && !nextParam.startsWith("//")
-      ? nextParam
-      : "/dashboard";
+  const next = explicitNext(searchParams.get("next"));
 
   if (!code) {
     return NextResponse.redirect(
@@ -32,5 +35,5 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  return NextResponse.redirect(`${origin}${next}`);
+  return NextResponse.redirect(`${origin}${next ?? (await landingPath())}`);
 }

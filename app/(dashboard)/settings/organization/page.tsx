@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, Info } from "lucide-react";
+import { ArrowLeft, Info, UserPlus } from "lucide-react";
 
 import { PageHeader } from "@/components/shared/page-header";
 import {
@@ -8,7 +8,9 @@ import {
   MemberRowActions,
 } from "@/components/settings/member-row-actions";
 import { BookingLink } from "@/components/settings/booking-link";
+import { InviteDialog } from "@/components/settings/invite-dialog";
 import { OrganizationForm } from "@/components/settings/organization-form";
+import { PendingInvites } from "@/components/settings/pending-invites";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -58,6 +60,22 @@ export default async function OrganizationSettingsPage() {
 
   const manageAllowed = canManage(role);
   const ownerCount = (members ?? []).filter((m) => m.role === "OWNER").length;
+
+  // Managers can invite; only they can read these (RLS), so guard the queries.
+  const [{ data: pendingInvites }, { data: unlinkedDrivers }] = manageAllowed
+    ? await Promise.all([
+        supabase
+          .from("invitations")
+          .select("id, email, role, created_at")
+          .eq("status", "PENDING")
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("drivers")
+          .select("id, first_name, last_name")
+          .is("user_id", null)
+          .order("first_name"),
+      ])
+    : [{ data: [] }, { data: [] }];
 
   return (
     <div className="space-y-6">
@@ -113,9 +131,22 @@ export default async function OrganizationSettingsPage() {
               records even if the interface were to offer it.
             </CardDescription>
           </div>
-          <Badge variant="muted">
-            {members?.length ?? 0} {members?.length === 1 ? "member" : "members"}
-          </Badge>
+          {manageAllowed ? (
+            <InviteDialog
+              drivers={unlinkedDrivers ?? []}
+              trigger={
+                <Button size="sm">
+                  <UserPlus />
+                  Invite
+                </Button>
+              }
+            />
+          ) : (
+            <Badge variant="muted">
+              {members?.length ?? 0}{" "}
+              {members?.length === 1 ? "member" : "members"}
+            </Badge>
+          )}
         </CardHeader>
         <CardContent className="px-0 pb-0">
           <Table>
@@ -188,10 +219,10 @@ export default async function OrganizationSettingsPage() {
             </TableBody>
           </Table>
 
-          <p className="border-t border-border px-5 py-3.5 text-sm text-muted-foreground">
-            Inviting teammates by email arrives in a later phase. Roles and removal
-            work today.
-          </p>
+          <PendingInvites
+            invites={pendingInvites ?? []}
+            canManage={manageAllowed}
+          />
         </CardContent>
       </Card>
     </div>

@@ -134,6 +134,20 @@ type OrganizationMemberRow = Timestamps & {
   role: OrgRole;
 };
 
+export type InvitationStatus = "PENDING" | "ACCEPTED" | "REVOKED";
+
+type InvitationRow = Timestamps & {
+  id: string;
+  organization_id: string;
+  email: string;
+  role: OrgRole;
+  /** Set only for driver invitations — the driver record the login attaches to. */
+  driver_id: string | null;
+  invited_by: string | null;
+  status: InvitationStatus;
+  accepted_at: string | null;
+};
+
 type CustomerRow = Timestamps & {
   id: string;
   organization_id: string;
@@ -370,6 +384,12 @@ export type Database = {
         Update: Update<OrganizationMemberRow>;
         Relationships: [];
       };
+      invitations: {
+        Row: InvitationRow;
+        Insert: Insert<InvitationRow, "organization_id" | "email">;
+        Update: Update<InvitationRow>;
+        Relationships: [];
+      };
       customers: {
         Row: CustomerRow;
         Insert: Insert<CustomerRow, "organization_id" | "first_name">;
@@ -511,6 +531,10 @@ export type Database = {
           p_currency?: string | null;
         };
         Returns: OrganizationRow;
+      };
+      accept_invitation: {
+        Args: Record<string, never>;
+        Returns: undefined;
       };
     };
     Enums: {
