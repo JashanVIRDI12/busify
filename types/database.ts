@@ -148,6 +148,20 @@ export type DriverPayStatus =
   | "PAID"
   | "VOID";
 
+export type ChargeCategory = "CHARGE" | "MARKUP" | "TAX";
+
+export type ChargeRateType = "FLAT" | "PER_QUANTITY" | "PERCENTAGE";
+
+export type ChargePlacement = "ITEMIZED" | "BASE_FARE";
+
+export type DriverPayMethod = "HOURLY" | "PERCENTAGE";
+
+export type DriverPaySwitch = "DAILY_RATE" | "HOURS";
+
+export type EmailTemplateKind = "QUOTE_BOOKING" | "QUOTE_REQUEST" | "INVOICE";
+
+export type TermsKind = "CONTRACT" | "QUOTE";
+
 export type ReservationPaymentStatus =
   | "UNPAID"
   | "PARTIAL"
@@ -183,6 +197,104 @@ type OrganizationRow = Timestamps & {
   currency: string;
   /** CRA GST/HST registration number, printed on quotes. */
   gst_hst_number: string | null;
+  // --- Company profile ------------------------------------------------------
+  website: string | null;
+  email_sender_name: string | null;
+  bcc_email: string | null;
+  sales_phone: string | null;
+  operations_phone: string | null;
+  fax: string | null;
+  dot_number: string | null;
+  address_line2: string | null;
+  facebook_url: string | null;
+  instagram_url: string | null;
+  twitter_url: string | null;
+  // --- Branding, used on the quote PDF and the checkout page -----------------
+  favicon_url: string | null;
+  brand_primary_color: string | null;
+  brand_secondary_color: string | null;
+};
+
+type OrganizationSettingsRow = Timestamps & {
+  organization_id: string;
+  default_garage_id: string | null;
+  pre_trip_arrival_minutes: number;
+  spot_time_minutes: number;
+  pricing_mode: QuoteBaseFareMode;
+  /** Which bases `CHOOSE` sums. Ignored when `pricing_mode` is `HIGHEST`. */
+  pricing_bases: string[];
+  customer_visibility: QuoteCustomerVisibility;
+  enable_sales_tax: boolean;
+  enable_tracking_link: boolean;
+  event_types: string[];
+  widget_vehicle_types: string[];
+  driver_pay_method: DriverPayMethod;
+  long_day_enabled: boolean;
+  long_day_hours: number;
+  long_day_switch_to: DriverPaySwitch;
+  overnight_enabled: boolean;
+  overnight_switch_to: DriverPaySwitch;
+  percentage_of_total: boolean;
+  pay_rate_types: string[];
+  per_trip_minimum_enabled: boolean;
+  per_trip_minimum_by_hours: boolean;
+  per_diem_enabled: boolean;
+  per_diem_min_days: number;
+};
+
+type VehicleRateRow = Timestamps & {
+  id: string;
+  organization_id: string;
+  /** Null vehicle_id means this is the default for the whole type. */
+  vehicle_type_id: string | null;
+  vehicle_id: string | null;
+  live_mile_rate: number;
+  dead_mile_rate: number;
+  hourly_rate: number;
+  minimum_hours: number;
+  daily_rate: number;
+};
+
+type CustomChargeRow = Timestamps & {
+  id: string;
+  organization_id: string;
+  category: ChargeCategory;
+  name: string;
+  rate_type: ChargeRateType;
+  rate: number;
+  placement: ChargePlacement;
+  tax_exempt: boolean;
+  default_on_quote: boolean;
+  note: string | null;
+  position: number;
+};
+
+type SavedStopRow = Timestamps & {
+  id: string;
+  organization_id: string;
+  name: string;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  notes: string | null;
+};
+
+type IndustryRow = Timestamps & {
+  id: string;
+  organization_id: string;
+  /** The short number the console shows. A label, never a lookup key. */
+  reference: number;
+  name: string;
+};
+
+type EmailTemplateRow = Timestamps & {
+  id: string;
+  organization_id: string;
+  kind: EmailTemplateKind;
+  from_email: string | null;
+  subject: string;
+  body: string;
+  include_pdf: boolean;
 };
 
 type OrganizationMemberRow = Timestamps & {
@@ -535,6 +647,8 @@ type ContractTermsRow = Timestamps & {
   name: string;
   body: string;
   is_default: boolean;
+  /** The same table backs the contract terms and the quote-page terms. */
+  kind: TermsKind;
 };
 
 type GarageRow = Timestamps & {
@@ -736,6 +850,47 @@ export type Database = {
         Row: OrganizationRow;
         Insert: Insert<OrganizationRow, "name" | "slug">;
         Update: Update<OrganizationRow>;
+        Relationships: [];
+      };
+      organization_settings: {
+        Row: OrganizationSettingsRow;
+        Insert: Insert<OrganizationSettingsRow, "organization_id">;
+        Update: Update<OrganizationSettingsRow>;
+        Relationships: [
+          Rel<"organization_settings_garage_fk", "default_garage_id", "garages">,
+        ];
+      };
+      vehicle_rates: {
+        Row: VehicleRateRow;
+        Insert: Insert<VehicleRateRow, "organization_id">;
+        Update: Update<VehicleRateRow>;
+        Relationships: [
+          Rel<"vehicle_rates_type_fk", "vehicle_type_id", "vehicle_types">,
+          Rel<"vehicle_rates_vehicle_fk", "vehicle_id", "vehicles">,
+        ];
+      };
+      custom_charges: {
+        Row: CustomChargeRow;
+        Insert: Insert<CustomChargeRow, "organization_id" | "name">;
+        Update: Update<CustomChargeRow>;
+        Relationships: [];
+      };
+      saved_stops: {
+        Row: SavedStopRow;
+        Insert: Insert<SavedStopRow, "organization_id" | "name">;
+        Update: Update<SavedStopRow>;
+        Relationships: [];
+      };
+      industries: {
+        Row: IndustryRow;
+        Insert: Insert<IndustryRow, "organization_id" | "name">;
+        Update: Update<IndustryRow>;
+        Relationships: [];
+      };
+      email_templates: {
+        Row: EmailTemplateRow;
+        Insert: Insert<EmailTemplateRow, "organization_id" | "kind">;
+        Update: Update<EmailTemplateRow>;
         Relationships: [];
       };
       organization_members: {
@@ -1048,6 +1203,13 @@ export type Database = {
       ticket_severity: TicketSeverity;
       driver_pay_status: DriverPayStatus;
       reservation_payment_status: ReservationPaymentStatus;
+      charge_category: ChargeCategory;
+      charge_rate_type: ChargeRateType;
+      charge_placement: ChargePlacement;
+      driver_pay_method: DriverPayMethod;
+      driver_pay_switch: DriverPaySwitch;
+      email_template_kind: EmailTemplateKind;
+      terms_kind: TermsKind;
     };
     CompositeTypes: Record<never, never>;
   };

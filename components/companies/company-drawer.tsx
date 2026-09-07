@@ -27,7 +27,7 @@ import { Button } from "@/components/ui/button";
 import { PROVINCES } from "@/lib/constants";
 import { useActionForm } from "@/lib/hooks/use-action-form";
 import { useListParams } from "@/lib/hooks/use-list-params";
-import { INDUSTRIES, toOptions } from "@/lib/taxonomy";
+import { toOptions } from "@/lib/taxonomy";
 import type { Tables } from "@/types/database";
 
 type Company = Tables<"companies">;
@@ -35,10 +35,12 @@ type Company = Tables<"companies">;
 export function CompanyDrawer({
   trigger,
   company,
+  industries,
   routed = false,
 }: {
   trigger?: ReactNode;
   company?: Company;
+  industries: string[];
   routed?: boolean;
 }) {
   const { setParams } = useListParams();
@@ -162,7 +164,7 @@ export function CompanyDrawer({
               name="industry"
               placeholder="Industry"
               defaultValue={company?.industry ?? undefined}
-              options={toOptions(INDUSTRIES)}
+              options={toOptions(industries)}
               errors={state.fieldErrors}
             />
 

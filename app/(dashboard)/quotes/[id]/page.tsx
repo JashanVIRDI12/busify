@@ -8,6 +8,7 @@ import { requireSession } from "@/lib/auth/session";
 import { siteUrl } from "@/lib/env";
 import { canWriteFinance } from "@/lib/permissions";
 import { getQuoteForBuilder } from "@/lib/queries/quote-builder";
+import { getOrganizationSettings } from "@/lib/queries/settings";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -84,6 +85,34 @@ export default async function QuoteBuilderPage({
     supabase.from("organization_members").select("user_id, role"),
   ]);
 
+  const [settings, { data: charges }, { data: rateCard }] = await Promise.all([
+    getOrganizationSettings(),
+    supabase
+      .from("custom_charges")
+      .select("id, name, rate_type, rate, tax_exempt")
+      .eq("category", "CHARGE")
+      .order("position")
+      .limit(100),
+    // The per-type default rows. A vehicle-specific override is a different
+    // row and is applied per vehicle, not at the type level.
+    supabase
+      .from("vehicle_rates")
+      .select("vehicle_type_id, hourly_rate, daily_rate, live_mile_rate")
+      .is("vehicle_id", null)
+      .limit(200),
+  ]);
+
+  /**
+   * The rate card wins over the legacy columns on `vehicle_types`.
+   *
+   * Both exist because rates used to live on the type itself; Settings →
+   * Vehicle Rates is now where an operator maintains them. Overlaying here
+   * means every part of the builder reads the rate card without knowing it.
+   */
+  const ratesByType = new Map(
+    (rateCard ?? []).map((rate) => [rate.vehicle_type_id, rate]),
+  );
+
   const { data: files } = await supabase
     .from("quote_files")
     .select("id, name, size_bytes")
@@ -109,15 +138,18 @@ export default async function QuoteBuilderPage({
       address: garage.address,
     })),
     contractTerms: contractTerms ?? [],
-    vehicleTypes: (vehicleTypes ?? []).map((type) => ({
-      id: type.id,
-      name: type.name,
-      default_capacity: type.default_capacity,
-      base_rate: Number(type.base_rate),
-      per_km_rate: Number(type.per_km_rate),
-      per_hour_rate: Number(type.per_hour_rate),
-      per_day_rate: Number(type.per_day_rate),
-    })),
+    vehicleTypes: (vehicleTypes ?? []).map((type) => {
+      const rate = ratesByType.get(type.id);
+      return {
+        id: type.id,
+        name: type.name,
+        default_capacity: type.default_capacity,
+        base_rate: Number(type.base_rate),
+        per_km_rate: Number(rate?.live_mile_rate ?? type.per_km_rate),
+        per_hour_rate: Number(rate?.hourly_rate ?? type.per_hour_rate),
+        per_day_rate: Number(rate?.daily_rate ?? type.per_day_rate),
+      };
+    }),
     vehicles: (vehicles ?? []).map((vehicle) => ({
       id: vehicle.id,
       name: vehicle.name,
@@ -125,6 +157,8 @@ export default async function QuoteBuilderPage({
       vehicle_type_id: vehicle.vehicle_type_id,
     })),
     province: organization.state,
+    eventTypes: settings.event_types,
+    customCharges: charges ?? [],
     gstNumber: organization.gst_hst_number,
   };
 

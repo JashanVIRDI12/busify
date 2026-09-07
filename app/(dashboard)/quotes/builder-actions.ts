@@ -94,6 +94,17 @@ function defaultPaymentMethods(quoteId: string, organizationId: string) {
   ];
 }
 
+/**
+ * Settings uses three rate types; the quote engine has five kinds. "Per
+ * quantity" is a flat rate multiplied by a quantity the operator sets on the
+ * quote, so it seeds as FLAT rather than needing a kind of its own.
+ */
+function chargeKind(
+  rateType: "FLAT" | "PER_QUANTITY" | "PERCENTAGE",
+): "FLAT" | "PERCENT" {
+  return rateType === "PERCENTAGE" ? "PERCENT" : "FLAT";
+}
+
 /** The seed HST/GST tax row for a new trip, from the place of supply. */
 function defaultTaxCharge(
   quoteTripId: string,
@@ -160,6 +171,25 @@ async function seedQuote(options: {
     request = data;
   }
 
+  // Everything a new quote inherits from Settings, read once up front. The
+  // point of the settings screens is that an operator configures this in
+  // January and never touches a new quote's boilerplate again.
+  const [{ data: settings }, { data: defaultTerms }] = await Promise.all([
+    supabase
+      .from("organization_settings")
+      .select(
+        "default_garage_id, pre_trip_arrival_minutes, spot_time_minutes, customer_visibility, enable_sales_tax",
+      )
+      .eq("organization_id", org.id)
+      .maybeSingle(),
+    supabase
+      .from("contract_terms")
+      .select("id")
+      .eq("kind", "CONTRACT")
+      .eq("is_default", true)
+      .maybeSingle(),
+  ]);
+
   const { data: quote, error } = await supabase
     .from("quotes")
     .insert({
@@ -171,6 +201,9 @@ async function seedQuote(options: {
       pipeline_status: "LEAD",
       currency: org.currency,
       tax_province: org.state,
+      created_by: session.user.id,
+      contract_terms_id: defaultTerms?.id ?? null,
+      customer_visibility: settings?.customer_visibility ?? "LINE_ITEM_CALCS",
     })
     .select("id")
     .single();
@@ -190,6 +223,8 @@ async function seedQuote(options: {
       trip_type: request ? (request.return_at ? "ROUND_TRIP" : "ONE_WAY") : null,
       passenger_count: request?.passenger_count ?? null,
       notes: request?.special_requirements ?? null,
+      departing_garage_id: settings?.default_garage_id ?? null,
+      returning_garage_id: settings?.default_garage_id ?? null,
     })
     .select("id")
     .single();
@@ -200,13 +235,48 @@ async function seedQuote(options: {
     throw new Error("Could not start a new quote.");
   }
 
+  // Charges an operator marked "add to every new quote". Positioned after the
+  // tax row so the seeded itemised charges keep their configured order.
+  const { data: standingCharges } = await supabase
+    .from("custom_charges")
+    .select("name, rate_type, rate, tax_exempt, note, placement")
+    .eq("category", "CHARGE")
+    .eq("default_on_quote", true)
+    .order("position")
+    .limit(25);
+
   await Promise.all([
     supabase
       .from("quote_payment_methods")
       .insert(defaultPaymentMethods(quote.id, org.id)),
-    supabase
-      .from("quote_trip_charges")
-      .insert(defaultTaxCharge(trip.id, org.id, org.state, org.gst_hst_number)),
+    // Sales tax is a setting: an operator who is not registered should not have
+    // to delete the line off every quote they build.
+    settings?.enable_sales_tax === false
+      ? Promise.resolve()
+      : supabase
+          .from("quote_trip_charges")
+          .insert(defaultTaxCharge(trip.id, org.id, org.state, org.gst_hst_number)),
+    standingCharges?.length
+      ? supabase.from("quote_trip_charges").insert(
+          standingCharges.map((charge, index) => ({
+            organization_id: org.id,
+            quote_trip_id: trip.id,
+            section:
+              charge.placement === "BASE_FARE"
+                ? ("BASE_FARE" as const)
+                : ("ITEMIZED" as const),
+            position: index,
+            label: charge.name,
+            kind: chargeKind(charge.rate_type),
+            rate: Number(charge.rate),
+            quantity: 1,
+            // A percentage row's amount is computed by the pricing engine from
+            // the subtotal, so it is seeded at zero rather than guessed here.
+            amount: charge.rate_type === "PERCENTAGE" ? 0 : Number(charge.rate),
+            taxable: !charge.tax_exempt,
+          })),
+        )
+      : Promise.resolve(),
   ]);
 
   if (request) {

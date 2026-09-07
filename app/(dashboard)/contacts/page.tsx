@@ -33,6 +33,7 @@ import {
   type SearchParamsInput,
 } from "@/lib/list-params";
 import { canManage, canWrite } from "@/lib/permissions";
+import { getIndustryNames } from "@/lib/queries/settings";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Contacts" };
@@ -67,7 +68,7 @@ export default async function ContactsPage({
 
   if (params.q) query = query.or(ilikeAcross(SEARCHABLE, params.q));
 
-  const [{ data: contacts, count, error }, { data: companies }] =
+  const [{ data: contacts, count, error }, { data: companies }, industries] =
     await Promise.all([
       query,
       supabase
@@ -75,6 +76,7 @@ export default async function ContactsPage({
         .select("id, name")
         .order("name", { ascending: true })
         .limit(500),
+      getIndustryNames(),
     ]);
 
   const rows = contacts ?? [];
@@ -94,6 +96,7 @@ export default async function ContactsPage({
         actions={
           writeAllowed ? (
             <ContactDrawer
+              industries={industries}
               companies={companyOptions}
               trigger={
                 <Button>
@@ -200,6 +203,7 @@ export default async function ContactsPage({
           key={editing.id}
           contact={editing}
           companies={companyOptions}
+          industries={industries}
           routed
         />
       )}

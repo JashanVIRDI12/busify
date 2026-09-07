@@ -11,17 +11,9 @@ import {
   validationError,
   type FormState,
 } from "@/lib/forms";
-import { canManage, ASSIGNABLE_ROLES } from "@/lib/permissions";
-import { updateOrganizationSchema } from "@/lib/validations/organization";
-import { uuid } from "@/lib/validations/shared";
 
 const profileSchema = z.object({
   full_name: z.string().trim().min(2, "Tell us your name").max(120),
-});
-
-const roleSchema = z.object({
-  memberId: uuid,
-  role: z.enum(["OWNER", ...ASSIGNABLE_ROLES] as [string, ...string[]]),
 });
 
 export async function updateProfileAction(
@@ -51,88 +43,5 @@ export async function updateProfileAction(
   return formSuccess("Profile updated.");
 }
 
-export async function updateOrganizationAction(
-  _prev: FormState,
-  formData: FormData,
-): Promise<FormState> {
-  const { session, supabase } = await actionContext();
 
-  if (!canManage(session.role)) {
-    return formError("Only owners and admins can change organization settings.");
-  }
 
-  const parsed = updateOrganizationSchema.safeParse(formDataToObject(formData));
-  if (!parsed.success) return validationError(parsed.error);
-
-  const { error } = await supabase
-    .from("organizations")
-    .update(parsed.data)
-    .eq("id", session.organization.id);
-
-  if (error) return databaseError(error);
-
-  revalidatePath("/", "layout");
-  return formSuccess("Organization updated.");
-}
-
-export async function updateMemberRoleAction(
-  _prev: FormState,
-  formData: FormData,
-): Promise<FormState> {
-  const { session, supabase } = await actionContext();
-
-  if (!canManage(session.role)) {
-    return formError("Only owners and admins can change roles.");
-  }
-
-  const parsed = roleSchema.safeParse(formDataToObject(formData));
-  if (!parsed.success) return validationError(parsed.error);
-
-  if (parsed.data.role === "OWNER" && session.role !== "OWNER") {
-    return formError("Only an owner can promote someone to owner.");
-  }
-
-  const { error } = await supabase
-    .from("organization_members")
-    .update({ role: parsed.data.role as never })
-    .eq("id", parsed.data.memberId);
-
-  if (error) {
-    return databaseError(error, {
-      "at least one OWNER":
-        "This is the only owner. Promote someone else to owner first.",
-    });
-  }
-
-  revalidatePath("/settings/organization");
-  return formSuccess("Role updated.");
-}
-
-export async function removeMemberAction(
-  _prev: FormState,
-  formData: FormData,
-): Promise<FormState> {
-  const { session, supabase } = await actionContext();
-
-  if (!canManage(session.role)) {
-    return formError("Only owners and admins can remove people.");
-  }
-
-  const id = uuid.safeParse(formData.get("id"));
-  if (!id.success) return formError("That member could not be found.");
-
-  const { error } = await supabase
-    .from("organization_members")
-    .delete()
-    .eq("id", id.data);
-
-  if (error) {
-    return databaseError(error, {
-      "at least one OWNER":
-        "This is the only owner. Promote someone else to owner first.",
-    });
-  }
-
-  revalidatePath("/settings/organization");
-  return formSuccess();
-}

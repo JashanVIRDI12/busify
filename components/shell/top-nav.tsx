@@ -106,15 +106,15 @@ export function TopNav({
             </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href="/settings">
+              <Link href="/settings/profile">
                 <UserRound className="size-4 text-ash" />
-                Profile
+                My Profile
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="/settings/organization">
+              <Link href="/settings">
                 <Settings className="size-4 text-ash" />
-                Organization
+                Company Settings
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />

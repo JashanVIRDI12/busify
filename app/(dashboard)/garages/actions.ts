@@ -19,7 +19,7 @@ const DUPLICATE_NAME = {
 };
 
 function revalidateGarages() {
-  revalidatePath("/garages");
+  revalidatePath("/settings/garages");
   revalidatePath("/vehicles");
   revalidatePath("/drivers");
 }

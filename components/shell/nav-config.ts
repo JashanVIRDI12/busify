@@ -8,7 +8,6 @@ import {
   Inbox,
   TicketCheck,
   LifeBuoy,
-  MapPin,
   Receipt,
   Users,
   UserSquare,
@@ -108,12 +107,6 @@ export const NAV: NavEntry[] = [
         href: "/tickets",
         icon: LifeBuoy,
         description: "Issues raised against a reservation",
-      },
-      {
-        label: "Garages",
-        href: "/garages",
-        icon: MapPin,
-        description: "Depots trips depart from and return to",
       },
       // Inbound demand and confirmed bookings do not have their own entry in
       // the top bar — they live under Operations so the bar stays six wide.

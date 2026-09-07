@@ -75,7 +75,7 @@ const INTAKE: { title: string; body: string; href?: string; action?: string }[] 
   {
     title: "Your public booking link",
     body: "Share one link, or put a button on your website. Submissions arrive with contact details already filled in.",
-    href: "/settings/api",
+    href: "/settings/integrations",
     action: "Set it up",
   },
   {
@@ -365,7 +365,7 @@ export default async function GuidePage() {
               </Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/settings/api">
+              <Link href="/settings/integrations">
                 <Code2 />
                 Set up your booking link
               </Link>

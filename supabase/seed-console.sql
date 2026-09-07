@@ -256,3 +256,89 @@ begin
   end loop;
 end;
 $$;
+
+-- ===========================================================================
+-- Settings demo data
+--
+-- The rate card, the reusable charges and the addresses an operator would have
+-- set up in their first week. Without these the quote builder opens on zeroes
+-- and the settings screens read as empty rather than as configurable.
+-- ===========================================================================
+
+do $$
+declare
+  v_abc uuid := 'aaaaaaaa-0000-4000-8000-000000000001';
+begin
+  -- Rates per vehicle type. The migration seeds these from the legacy columns
+  -- on vehicle_types; this sets the numbers an operator would actually quote.
+  update public.vehicle_rates r
+     set live_mile_rate = c.live,
+         dead_mile_rate = c.dead,
+         hourly_rate    = c.hourly,
+         minimum_hours  = 6,
+         daily_rate     = c.daily
+    from (values
+      ('Highway Coach', 5.00, 4.50, 200.00, 1800.00),
+      ('Mini Coach',    3.50, 3.00, 140.00, 1100.00),
+      ('Executive Van', 3.00, 2.50, 100.00,  600.00)
+    ) as c(type_name, live, dead, hourly, daily)
+    join public.vehicle_types vt
+      on vt.organization_id = v_abc and vt.name = c.type_name
+   where r.organization_id = v_abc
+     and r.vehicle_type_id = vt.id
+     and r.vehicle_id is null;
+
+  -- Charges, markups and taxes an operator maintains once and reuses.
+  insert into public.custom_charges
+    (organization_id, category, name, rate_type, rate, placement, tax_exempt, default_on_quote, position)
+  select v_abc, c.category::public.charge_category, c.name,
+         c.rate_type::public.charge_rate_type, c.rate,
+         'ITEMIZED'::public.charge_placement, c.tax_exempt, c.is_default, c.position
+  from (values
+    ('CHARGE', 'Extra Hours',           'PER_QUANTITY', 150.00, false, false, 0),
+    ('CHARGE', 'Highway 407 Toll',      'FLAT',         170.00, true,  false, 1),
+    ('CHARGE', 'Second Driver',         'FLAT',         700.00, false, false, 2),
+    ('CHARGE', 'Niagara Parking Permit','FLAT',         110.00, false, false, 3),
+    ('CHARGE', 'Airport Pickup Fee',    'FLAT',         106.95, false, false, 4),
+    ('CHARGE', 'Driver Accommodation',  'FLAT',         300.00, false, false, 5),
+    ('CHARGE', 'Fuel Surcharge',        'FLAT',        1200.00, false, false, 6),
+    ('CHARGE', 'Driver Gratuity',       'PERCENTAGE',    10.00, false, true,  7),
+    ('CHARGE', 'Tolls',                 'FLAT',         200.00, false, false, 8),
+    ('MARKUP', 'Peak Season',           'PERCENTAGE',    12.00, false, false, 0),
+    ('MARKUP', 'Cross-border',          'FLAT',         250.00, false, false, 1),
+    ('TAX',    'Ontario HST',           'PERCENTAGE',    13.00, false, true,  0)
+  ) as c(category, name, rate_type, rate, tax_exempt, is_default, position)
+  where not exists (
+    select 1 from public.custom_charges existing
+    where existing.organization_id = v_abc
+      and existing.category = c.category::public.charge_category
+      and existing.name = c.name
+  );
+
+  insert into public.saved_stops (organization_id, name, address, notes)
+  select v_abc, s.name, s.address, s.notes
+  from (values
+    ('Pearson Terminal 1', '6301 Silver Dart Dr, Mississauga, ON L5P 1B2',
+     'Coach pickup is on the arrivals level, column D.'),
+    ('Northfield Secondary School', '240 Bloor St W, Toronto, ON M5S 1V6',
+     'Enter from the staff lot. Do not block the bus loop before 15:30.'),
+    ('Blue Mountain Resort', '190 Gord Canning Dr, The Blue Mountains, ON',
+     'Drop at the Village gate; park in lot 4.')
+  ) as s(name, address, notes)
+  where not exists (
+    select 1 from public.saved_stops existing
+    where existing.organization_id = v_abc and existing.name = s.name
+  );
+
+  -- Quote-page terms, alongside the contract terms the core seed creates.
+  insert into public.contract_terms (organization_id, kind, name, body, is_default)
+  values (
+    v_abc, 'QUOTE', 'Quote Terms',
+    E'This quote is valid for 14 days from the date sent.\n'
+    'Prices are estimates based on the itinerary supplied and may change if it does.\n'
+    'A deposit is required to confirm the booking.',
+    true
+  )
+  on conflict (organization_id, kind, name) do nothing;
+end;
+$$;

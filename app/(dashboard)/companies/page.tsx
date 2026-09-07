@@ -33,6 +33,7 @@ import {
   type SearchParamsInput,
 } from "@/lib/list-params";
 import { canManage, canWrite } from "@/lib/permissions";
+import { getIndustryNames } from "@/lib/queries/settings";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Companies" };
@@ -58,7 +59,10 @@ export default async function CompaniesPage({
 
   if (params.q) query = query.or(ilikeAcross(SEARCHABLE, params.q));
 
-  const { data, count, error } = await query;
+  const [{ data, count, error }, industries] = await Promise.all([
+    query,
+    getIndustryNames(),
+  ]);
 
   const rows = data ?? [];
   const total = count ?? 0;
@@ -75,6 +79,7 @@ export default async function CompaniesPage({
         actions={
           writeAllowed ? (
             <CompanyDrawer
+              industries={industries}
               trigger={
                 <Button>
                   <Plus />
@@ -181,7 +186,14 @@ export default async function CompaniesPage({
         </DataTable>
       </TableCard>
 
-      {editing && <CompanyDrawer key={editing.id} company={editing} routed />}
+      {editing && (
+        <CompanyDrawer
+          key={editing.id}
+          company={editing}
+          industries={industries}
+          routed
+        />
+      )}
 
       <BulkActionBar
         noun="company"

@@ -54,6 +54,16 @@ export type BuilderLookups = {
   }[];
   province: string | null;
   gstNumber: string | null;
+  /** From Settings → General → Defaults, not a fixed list in the code. */
+  eventTypes: string[];
+  /** Reusable itemised charges from Settings → Custom Charges. */
+  customCharges: {
+    id: string;
+    name: string;
+    rate_type: "FLAT" | "PER_QUANTITY" | "PERCENTAGE";
+    rate: number;
+    tax_exempt: boolean;
+  }[];
 };
 
 type Reindexed<T extends { position: number }> = T;

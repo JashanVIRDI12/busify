@@ -243,6 +243,9 @@ begin
      '2. Toute annulation dans les 14 jours entraîne la perte de l''acompte.\n'
      '3. Les distances et heures indiquées sont estimatives.',
      true)
-  on conflict (organization_id, name) do nothing;
+  -- Terms are unique per (organization, kind, name): the settings migration
+  -- split contract terms from quote terms, and an operator may reasonably give
+  -- both the same name.
+  on conflict (organization_id, kind, name) do nothing;
 end;
 $$;

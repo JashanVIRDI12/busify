@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatStampDate } from "@/lib/datetime";
-import { EVENT_TYPES } from "@/lib/taxonomy";
+
 import {
   QUOTE_PIPELINE_STATUSES,
   QUOTE_PRIORITIES,
@@ -157,7 +157,7 @@ export function BuilderSidebar({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={NONE}>--</SelectItem>
-              {EVENT_TYPES.map((value) => (
+              {lookups.eventTypes.map((value) => (
                 <SelectItem key={value} value={value}>
                   {value}
                 </SelectItem>
