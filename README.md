@@ -231,11 +231,38 @@ never the server's. The dispatch timelines position bars in elapsed hours on
 real instants rather than wall-clock hours, so a board spanning a DST change
 does not shift every bar after the transition.
 
+### Quote to reservation
+
+The seam between selling and operating. A won quote becomes one reservation
+per trip tab, from either end: the customer accepting on the public page, or
+the operator picking **Convert to reservations** — plenty of charter work is
+agreed on the phone.
+
+Reservations are inserted one at a time, because `app.assign_trip_reference()`
+numbers each row by counting the siblings already present; a batch insert would
+see zero siblings for every row and hand them all the same number. The
+conversion is idempotent, so accepting twice cannot double-book a coach.
+
+### Email and documents
+
+`lib/mail/send.ts` posts to Resend over HTTP — no SMTP socket to hold open in a
+serverless function, and no dependency to keep current. **With no
+`RESEND_API_KEY` the message is logged, the quote is still stamped, and the
+console says plainly that nothing was delivered** rather than claiming it went
+out.
+
+Quote and invoice PDFs are built with `pdf-lib` rather than headless Chrome,
+which would cost seconds and hundreds of megabytes per document. Layout is
+therefore manual — one cursor, one `wrap()` measured against real font metrics.
+The invoice reuses the quote document: a charter invoice is the itinerary plus
+what is owed, and only the totals block differs.
+
 ### Money
 
 Stored as `numeric(12,2)` in major units. Quote totals are computed by
 application code and persisted — never derived in the browser, and never
-calculated by a model.
+calculated by a model. `trips.balance_due` is a generated column, so a list can
+never drift out of step with the payments that produced it.
 
 ### Service role is used for exactly two things
 
