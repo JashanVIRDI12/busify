@@ -93,7 +93,7 @@ export default async function PublicBookingPage({
         </div>
 
         <p className="mt-8 text-center text-xs text-muted-foreground">
-          VIABUS
+          Powered by Busify
         </p>
       </main>
     </div>

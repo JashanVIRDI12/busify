@@ -179,9 +179,9 @@ function StopRow({
       className={cn(
         "rounded-xl border p-4",
         isFirst
-          ? "border-emerald/30 bg-emerald/5"
+          ? "border-teal-200 bg-teal-50"
           : isLast
-            ? "border-interactive/25 bg-interactive/5"
+            ? "border-teal-200 bg-teal-50"
             : "border-bone bg-signal-white",
       )}
     >
@@ -300,7 +300,7 @@ function StopRow({
           <button
             type="button"
             onClick={() => setShowNotes(true)}
-            className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-emerald"
+            className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-teal-600"
           >
             <StickyNote className="size-3.5" /> Add Notes
           </button>

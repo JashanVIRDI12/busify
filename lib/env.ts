@@ -25,9 +25,6 @@ const serverSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: optional(z.string().min(1)),
   NEXT_PUBLIC_SITE_URL: optional(z.url()),
   OPENROUTER_API_KEY: optional(z.string().min(1)),
-
-  /** Slug of the single organization this deployment serves. */
-  VIABUS_ORG_SLUG: optional(z.string().min(1)),
 });
 
 let cached: z.infer<typeof serverSchema> | null = null;
@@ -41,7 +38,6 @@ export function serverEnv() {
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
     OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
-    VIABUS_ORG_SLUG: process.env.VIABUS_ORG_SLUG,
   });
 
   if (!parsed.success) {

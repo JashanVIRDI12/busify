@@ -256,7 +256,7 @@ export async function getDashboardMetrics(
       id: "customers",
       label: "Add a customer",
       description: "Who you quote, book and invoice.",
-      href: "/customers",
+      href: "/contacts",
       done: (customersResult.count ?? 0) > 0,
     },
     {

@@ -553,6 +553,76 @@ create trigger driver_pay_entries_set_updated_at
   for each row execute function app.set_updated_at();
 
 -- ---------------------------------------------------------------------------
+-- quote_files — the attachments panel on the quote builder
+--
+-- Bytes live in storage; this table is the index. Keeping the metadata in
+-- Postgres rather than listing the bucket means the panel can be rendered in
+-- the same round trip as the rest of the quote, and a file keeps its original
+-- name even though the object is stored under a generated one.
+-- ---------------------------------------------------------------------------
+create table public.quote_files (
+  id              uuid primary key default extensions.gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  quote_id        uuid not null,
+  name            text not null check (length(btrim(name)) > 0),
+  storage_path    text not null,
+  size_bytes      bigint not null default 0 check (size_bytes >= 0),
+  content_type    text,
+  uploaded_by     uuid references auth.users(id) on delete set null,
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now(),
+  unique (organization_id, id),
+  unique (storage_path),
+  foreign key (organization_id, quote_id)
+    references public.quotes (organization_id, id) on delete cascade
+);
+
+create index quote_files_quote_idx on public.quote_files (quote_id, created_at);
+
+create trigger quote_files_set_updated_at
+  before update on public.quote_files
+  for each row execute function app.set_updated_at();
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('quote-files', 'quote-files', false, 10 * 1024 * 1024, null)
+on conflict (id) do nothing;
+
+-- The policies in the storage migration list their buckets literally, so this
+-- bucket gets its own set rather than those being rewritten. Same rule, same
+-- path convention: the first segment of the object name is the tenant.
+create policy "storage: members read quote files"
+  on storage.objects for select to authenticated
+  using (
+    bucket_id = 'quote-files'
+    and app.is_org_member(app.storage_org_id(name), (select auth.uid()))
+  );
+
+create policy "storage: writers upload quote files"
+  on storage.objects for insert to authenticated
+  with check (
+    bucket_id = 'quote-files'
+    and app.can_write(app.storage_org_id(name), (select auth.uid()))
+  );
+
+create policy "storage: writers replace quote files"
+  on storage.objects for update to authenticated
+  using (
+    bucket_id = 'quote-files'
+    and app.can_write(app.storage_org_id(name), (select auth.uid()))
+  )
+  with check (
+    bucket_id = 'quote-files'
+    and app.can_write(app.storage_org_id(name), (select auth.uid()))
+  );
+
+create policy "storage: writers delete quote files"
+  on storage.objects for delete to authenticated
+  using (
+    bucket_id = 'quote-files'
+    and app.can_write(app.storage_org_id(name), (select auth.uid()))
+  );
+
+-- ---------------------------------------------------------------------------
 -- saved_views
 --
 -- The filter chips above every list. Stored per user rather than per
@@ -592,7 +662,8 @@ declare
     'tickets',
     'ticket_comments',
     'driver_pay_stubs',
-    'driver_pay_entries'
+    'driver_pay_entries',
+    'quote_files'
   ];
 begin
   foreach t in array tenant_tables loop

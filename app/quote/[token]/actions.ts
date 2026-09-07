@@ -93,7 +93,7 @@ export async function respondToQuoteAction(
       .eq("id", quote.id);
 
     revalidatePath("/quotes");
-    revalidatePath("/dashboard");
+    revalidatePath("/reports");
     return formSuccess("Thanks — we have let the operator know.");
   }
 
@@ -190,7 +190,7 @@ export async function respondToQuoteAction(
   revalidatePath("/quotes");
   revalidatePath("/bookings");
   revalidatePath("/reservations");
-  revalidatePath("/dashboard");
+  revalidatePath("/reports");
 
   return formSuccess("Accepted — your booking is confirmed with the operator.");
 }

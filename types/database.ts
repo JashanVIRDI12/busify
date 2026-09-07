@@ -505,6 +505,17 @@ type DriverPayEntryRow = Timestamps & {
   notes: string | null;
 };
 
+type QuoteFileRow = Timestamps & {
+  id: string;
+  organization_id: string;
+  quote_id: string;
+  name: string;
+  storage_path: string;
+  size_bytes: number;
+  content_type: string | null;
+  uploaded_by: string | null;
+};
+
 type SavedViewRow = Timestamps & {
   id: string;
   organization_id: string;
@@ -785,6 +796,15 @@ export type Database = {
             "driver_pay_stubs"
           >,
         ];
+      };
+      quote_files: {
+        Row: QuoteFileRow;
+        Insert: Insert<
+          QuoteFileRow,
+          "organization_id" | "quote_id" | "name" | "storage_path"
+        >;
+        Update: Update<QuoteFileRow>;
+        Relationships: [Rel<"quote_files_quote_fk", "quote_id", "quotes">];
       };
       saved_views: {
         Row: SavedViewRow;

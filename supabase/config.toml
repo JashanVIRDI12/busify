@@ -12,6 +12,13 @@ port = 54322
 shadow_port = 54320
 major_version = 17
 
+# Two files, applied in order: the core tenant fixture, then the console demo
+# data that depends on it. Kept apart so the tenancy fixture stays readable —
+# it is the one an isolation test is written against.
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql", "./seed-console.sql"]
+
 [studio]
 enabled = true
 port = 54323

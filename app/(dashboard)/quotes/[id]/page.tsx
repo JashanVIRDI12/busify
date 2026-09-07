@@ -84,6 +84,12 @@ export default async function QuoteBuilderPage({
     supabase.from("organization_members").select("user_id, role"),
   ]);
 
+  const { data: files } = await supabase
+    .from("quote_files")
+    .select("id, name, size_bytes")
+    .eq("quote_id", id)
+    .order("created_at", { ascending: true });
+
   const memberIds = (members ?? []).map((m) => m.user_id);
   const { data: profiles } = memberIds.length
     ? await supabase
@@ -131,7 +137,10 @@ export default async function QuoteBuilderPage({
       canEdit={canWriteFinance(role)}
       quoteNumber={data.quote.quote_number}
       publicUrl={`${siteUrl()}/quote/${data.quote.public_token}`}
+      organizationId={organization.id}
       createdAt={data.quote.created_at}
+      updatedAt={data.quote.updated_at}
+      files={files ?? []}
       initialCustomer={customerHit(data.customer)}
       initialBilling={customerHit(data.billingCustomer)}
     />

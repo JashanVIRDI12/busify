@@ -8,7 +8,7 @@ export type BreakdownRow = {
 };
 
 const BAR_TONE = {
-  success: "bg-emerald",
+  success: "bg-teal-500",
   primary: "bg-interactive",
   warning: "bg-amber",
   secondary: "bg-fog",

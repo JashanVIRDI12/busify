@@ -111,7 +111,7 @@ export function WelcomeTour() {
       }}
     >
       <DialogContent className="sm:max-w-lg" showCloseButton={false}>
-        <DialogTitle className="sr-only">Welcome to VIABUS</DialogTitle>
+        <DialogTitle className="sr-only">Welcome to Busify</DialogTitle>
         <DialogDescription className="sr-only">
           A short tour of how the product works.
         </DialogDescription>

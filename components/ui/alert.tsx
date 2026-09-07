@@ -10,7 +10,7 @@ const alertVariants = cva(
       variant: {
         default: "border-bone bg-signal-white text-ink [&>svg]:text-ash",
         info: "border-interactive/25 bg-interactive/5 text-ink [&>svg]:text-interactive",
-        success: "border-emerald/25 bg-emerald/6 text-ink [&>svg]:text-emerald",
+        success: "border-teal-200 bg-teal-50 text-ink [&>svg]:text-teal-600",
         warning: "border-amber/40 bg-amber/10 text-ink [&>svg]:text-amber",
         destructive:
           "border-destructive/25 bg-destructive/6 text-ink [&>svg]:text-destructive",

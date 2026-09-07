@@ -11,11 +11,11 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
-  const nextParam = searchParams.get("next") ?? "/dashboard";
+  const nextParam = searchParams.get("next") ?? "/reports";
   const next =
     nextParam.startsWith("/") && !nextParam.startsWith("//")
       ? nextParam
-      : "/dashboard";
+      : "/reports";
 
   if (!tokenHash || !type) {
     return NextResponse.redirect(

@@ -219,7 +219,7 @@ export function TripDetails({ trip }: { trip: QuoteTripInput }) {
             type="button"
             disabled={!canEdit}
             onClick={() => setShowContact(true)}
-            className="inline-flex items-center gap-1.5 text-body-sm font-semibold text-emerald disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 text-body-sm font-semibold text-teal-600 disabled:opacity-50"
           >
             <Plus className="size-4" /> Add Trip Contact
           </button>
@@ -227,7 +227,7 @@ export function TripDetails({ trip }: { trip: QuoteTripInput }) {
             type="button"
             disabled={!canEdit}
             onClick={() => addVehicle(trip.id)}
-            className="inline-flex items-center gap-1.5 text-body-sm font-semibold text-emerald disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 text-body-sm font-semibold text-teal-600 disabled:opacity-50"
           >
             <Plus className="size-4" /> Add Vehicle
           </button>

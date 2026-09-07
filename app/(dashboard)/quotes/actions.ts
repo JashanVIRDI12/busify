@@ -18,7 +18,7 @@ function revalidateQuote(id?: string) {
   revalidatePath("/quotes");
   if (id) revalidatePath(`/quotes/${id}`);
   revalidatePath("/trip-requests");
-  revalidatePath("/dashboard");
+  revalidatePath("/reports");
 }
 
 export async function sendQuoteAction(

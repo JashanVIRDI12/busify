@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { Logo } from "@/components/shared/logo";
+import { BrandMark } from "@/components/shell/brand-mark";
 
 export default function AuthLayout({
   children,
@@ -9,7 +9,7 @@ export default function AuthLayout({
     <div className="flex min-h-dvh flex-col bg-mist">
       <header className="px-6 py-6">
         <Link href="/" className="inline-flex rounded-xl outline-none">
-          <Logo />
+          <BrandMark />
         </Link>
       </header>
 

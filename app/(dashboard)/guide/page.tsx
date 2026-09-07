@@ -174,7 +174,7 @@ export default async function GuidePage() {
                 icon: Users,
                 title: "Customers",
                 body: "Who you quote and invoice. Optional — an enquiry from a stranger works without one.",
-                href: "/customers",
+                href: "/contacts",
               },
             ].map((step, index) => (
               <li key={step.title} className="flex items-start gap-4 py-4">

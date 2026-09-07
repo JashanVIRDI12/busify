@@ -158,7 +158,7 @@ function CustomerSearch({
           <button
             type="button"
             onClick={onCreate}
-            className="mt-1 flex w-full items-center gap-2 rounded-lg border-t border-bone px-3 py-2.5 text-body-sm font-semibold text-interactive"
+            className="mt-1 flex w-full items-center gap-2 rounded-lg border-t border-bone px-3 py-2.5 text-body-sm font-semibold text-teal-600"
           >
             <Plus className="size-4" /> Create new customer
           </button>
@@ -269,7 +269,7 @@ export function CustomerTab({
 
   return (
     <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
-      <div className="space-y-4 rounded-2xl border border-bone bg-mist/40 p-5">
+      <div className="space-y-4 rounded-lg border border-bone bg-mist p-5">
         <div className="flex items-center justify-between">
           <h3 className="text-body font-semibold text-ink">Select Company or Contact</h3>
         </div>
@@ -293,7 +293,7 @@ export function CustomerTab({
 
       <div className="space-y-4">
         {addBilling || billing ? (
-          <div className="space-y-3 rounded-2xl border border-bone bg-mist/40 p-5">
+          <div className="space-y-3 rounded-lg border border-bone bg-mist p-5">
             <div className="flex items-center justify-between">
               <h3 className="text-body font-semibold text-ink">Billing Contact</h3>
               {!billing && (
@@ -330,7 +330,7 @@ export function CustomerTab({
             disabled={!canEdit}
             onClick={() => setAddBilling(true)}
             className={cn(
-              "inline-flex items-center gap-2 text-body-sm font-semibold text-interactive",
+              "inline-flex items-center gap-2 text-body-sm font-semibold text-teal-600",
               "disabled:opacity-50",
             )}
           >
@@ -340,7 +340,7 @@ export function CustomerTab({
 
         {(customer || billing) && (
           <p className="flex items-center gap-2 text-[12px] text-ash">
-            <Check className="size-3.5 text-emerald" />
+            <Check className="size-3.5 text-teal-600" />
             {billing
               ? "Quote goes to the customer; invoices go to the billing contact."
               : "This customer receives the quote and the invoice."}

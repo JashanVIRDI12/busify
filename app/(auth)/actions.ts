@@ -20,8 +20,8 @@ import {
 
 /** Only ever redirect to a path on this origin. */
 function safeNext(next: unknown): string {
-  if (typeof next !== "string") return "/dashboard";
-  if (!next.startsWith("/") || next.startsWith("//")) return "/dashboard";
+  if (typeof next !== "string") return "/reports";
+  if (!next.startsWith("/") || next.startsWith("//")) return "/reports";
   return next;
 }
 
@@ -103,7 +103,7 @@ export async function resetPasswordAction(
   if (error) return formError(error.message);
 
   revalidatePath("/", "layout");
-  redirect("/dashboard");
+  redirect("/reports");
 }
 
 export async function resendVerificationAction(
@@ -117,7 +117,7 @@ export async function resendVerificationAction(
   const { error } = await supabase.auth.resend({
     type: "signup",
     email: parsed.data.email,
-    options: { emailRedirectTo: `${siteUrl()}/auth/callback?next=/dashboard` },
+    options: { emailRedirectTo: `${siteUrl()}/auth/callback?next=/quotes` },
   });
 
   if (error) return formError(error.message);

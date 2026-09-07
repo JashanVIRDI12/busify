@@ -16,7 +16,7 @@ export default async function LoginPage({
   return (
     <AuthCard
       title="Sign in"
-      description="VIABUS operations portal."
+      description="Charter operations, from quote to dispatch."
       // Staff accounts are created by an administrator, not self-service —
       // there is no signup route to link to.
       footer={

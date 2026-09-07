@@ -45,7 +45,7 @@ export type QuoteTotals = {
 function revalidateQuote(id: string) {
   revalidatePath("/quotes");
   revalidatePath(`/quotes/${id}`);
-  revalidatePath("/dashboard");
+  revalidatePath("/reports");
 }
 
 /**
@@ -858,7 +858,7 @@ export async function createCustomerForQuote(input: {
     return { ok: false, message: databaseError(error!).message ?? "Could not add." };
   }
 
-  revalidatePath("/customers");
+  revalidatePath("/contacts");
 
   return {
     ok: true,

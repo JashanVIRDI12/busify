@@ -13,19 +13,8 @@ const PUBLIC_PATHS = [
   "/auth/confirm",
   // Public booking intake — customers reach this without an account.
   "/book",
-  // Customer-facing quote, addressed by opaque token. Also the marketing
-  // site's own quote page, which rewrites to /quote.html.
+  // Customer-facing quote, addressed by an opaque token rather than a session.
   "/quote",
-  // Anonymous intake from the marketing site. Without this the form POST is
-  // redirected to /login and never reaches the database.
-  "/api/public",
-  // VIABUS marketing pages. These rewrite to static files in public/, but the
-  // extensionless URL still passes through here first.
-  "/about",
-  "/fleet",
-  "/routes",
-  "/corporate",
-  "/experience",
 ];
 
 function isPublicPath(pathname: string) {
@@ -81,7 +70,7 @@ export async function updateSession(request: NextRequest) {
 
   if (user && pathname === "/login") {
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
+    url.pathname = "/quotes";
     url.search = "";
     return NextResponse.redirect(url);
   }

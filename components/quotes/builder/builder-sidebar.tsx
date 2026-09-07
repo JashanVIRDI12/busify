@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronUp, FileText, Plus, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
+import { FilesPanel, type QuoteFile } from "@/components/quotes/builder/files-panel";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -12,9 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { formatDate } from "@/lib/datetime";
-import { cn } from "@/lib/utils";
+import { formatStampDate } from "@/lib/datetime";
+import { EVENT_TYPES } from "@/lib/taxonomy";
 import {
   QUOTE_PIPELINE_STATUSES,
   QUOTE_PRIORITIES,
@@ -26,8 +25,8 @@ const NONE = "__none__";
 
 const PIPELINE_LABELS: Record<string, string> = {
   LEAD: "Lead",
-  QUOTED: "Quoted",
-  FOLLOW_UP: "Follow up",
+  QUOTED: "Sent",
+  FOLLOW_UP: "Follow Up",
   WON: "Won",
   LOST: "Lost",
 };
@@ -39,25 +38,45 @@ const PRIORITY_LABELS: Record<string, string> = {
   URGENT: "Urgent",
 };
 
+/**
+ * `Label: value` on one line, left-aligned. The values are live controls rather
+ * than a read-only summary — this rail is where a quote's status actually gets
+ * changed, so a dropdown that looks like text is the point.
+ */
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-3 py-1.5">
-      <span className="shrink-0 text-[12px] font-medium text-ash">{label}</span>
-      <div className="min-w-0 text-right">{children}</div>
+    <div className="flex items-center gap-2 py-[3px]">
+      <span className="shrink-0 text-body-sm text-slate">{label}:</span>
+      <div className="min-w-0 flex-1">{children}</div>
     </div>
   );
 }
 
-export function BuilderSidebar({ createdAt }: { createdAt: string | null }) {
+/** A select styled to read as inline text until you reach for it. */
+const INLINE_TRIGGER =
+  "h-7 w-auto max-w-full gap-1 border-none px-1 text-body-sm font-medium text-teal-600 shadow-none hover:bg-mist data-[placeholder]:font-normal data-[placeholder]:text-fog";
+
+export function BuilderSidebar({
+  createdAt,
+  updatedAt,
+  quoteId,
+  organizationId,
+  files,
+}: {
+  createdAt: string | null;
+  updatedAt: string | null;
+  quoteId: string;
+  organizationId: string;
+  files: QuoteFile[];
+}) {
   const { state, setHeader, lookups, canEdit, timezone } = useBuilder();
   const { header } = state;
-  const [showFiles, setShowFiles] = useState(true);
   const [addingReferral, setAddingReferral] = useState(false);
   const [addingTag, setAddingTag] = useState(false);
 
   return (
-    <div className="space-y-5 text-body-sm">
-      <div className="divide-y divide-bone">
+    <div className="space-y-4 text-body-sm">
+      <div>
         <Row label="Quote Status">
           <Select
             value={header.pipeline_status}
@@ -66,7 +85,7 @@ export function BuilderSidebar({ createdAt }: { createdAt: string | null }) {
             }
             disabled={!canEdit}
           >
-            <SelectTrigger size="sm" className="h-7 border-none px-2 font-semibold text-interactive shadow-none">
+            <SelectTrigger size="sm" className={INLINE_TRIGGER}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -87,7 +106,7 @@ export function BuilderSidebar({ createdAt }: { createdAt: string | null }) {
             }
             disabled={!canEdit}
           >
-            <SelectTrigger size="sm" className="h-7 border-none px-2 shadow-none">
+            <SelectTrigger size="sm" className={INLINE_TRIGGER}>
               <SelectValue placeholder="None" />
             </SelectTrigger>
             <SelectContent>
@@ -111,7 +130,7 @@ export function BuilderSidebar({ createdAt }: { createdAt: string | null }) {
             }
             disabled={!canEdit}
           >
-            <SelectTrigger size="sm" className="h-7 border-none px-2 shadow-none">
+            <SelectTrigger size="sm" className={INLINE_TRIGGER}>
               <SelectValue placeholder="None" />
             </SelectTrigger>
             <SelectContent>
@@ -126,78 +145,90 @@ export function BuilderSidebar({ createdAt }: { createdAt: string | null }) {
         </Row>
 
         <Row label="Event">
-          <Input
-            value={header.event_name ?? ""}
-            onChange={(event) =>
-              setHeader({ event_name: event.target.value || null })
+          <Select
+            value={header.event_name ?? NONE}
+            onValueChange={(value) =>
+              setHeader({ event_name: value === NONE ? null : value })
             }
             disabled={!canEdit}
-            placeholder="—"
-            className="h-7 w-40 border-none px-2 text-right text-body-sm shadow-none"
-          />
+          >
+            <SelectTrigger size="sm" className={INLINE_TRIGGER}>
+              <SelectValue placeholder="--" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NONE}>--</SelectItem>
+              {EVENT_TYPES.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {value}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </Row>
 
         <Row label="Created Date">
-          <span className="text-slate">
-            {createdAt ? formatDate(createdAt, timezone) : "—"}
+          <span className="px-1 text-body-sm text-carbon">
+            {createdAt ? formatStampDate(createdAt, timezone) : "--"}
           </span>
         </Row>
-      </div>
 
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="text-[12px] font-medium text-ash">Referred By:</span>
-          {header.referred_by && !addingReferral ? (
-            <button
-              type="button"
-              className="text-body-sm text-ink hover:underline"
-              onClick={() => canEdit && setAddingReferral(true)}
-            >
-              {header.referred_by}
-            </button>
-          ) : addingReferral || header.referred_by ? (
+        <Row label="Last Activity">
+          <span className="px-1 text-body-sm text-carbon">
+            {updatedAt ? formatStampDate(updatedAt, timezone) : "--"}
+          </span>
+        </Row>
+
+        <Row label="Referred By">
+          {addingReferral || (header.referred_by && addingReferral) ? (
             <Input
               autoFocus
               defaultValue={header.referred_by ?? ""}
               disabled={!canEdit}
-              className="h-7 flex-1 px-2 text-body-sm"
+              className="h-7 px-2 text-body-sm"
               onBlur={(event) => {
                 setHeader({ referred_by: event.target.value.trim() || null });
                 setAddingReferral(false);
               }}
               onKeyDown={(event) => {
                 if (event.key === "Enter") event.currentTarget.blur();
+                if (event.key === "Escape") setAddingReferral(false);
               }}
             />
-          ) : (
+          ) : header.referred_by ? (
             <button
               type="button"
               disabled={!canEdit}
+              className="px-1 text-body-sm text-carbon hover:underline"
               onClick={() => setAddingReferral(true)}
-              className="inline-flex items-center gap-1 text-body-sm font-semibold text-interactive disabled:opacity-50"
             >
-              <Plus className="size-3.5" /> Add
+              {header.referred_by}
             </button>
+          ) : (
+            <AddButton disabled={!canEdit} onClick={() => setAddingReferral(true)} />
           )}
-        </div>
+        </Row>
 
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[12px] font-medium text-ash">Tags:</span>
+        <div className="flex flex-wrap items-center gap-1.5 py-[3px]">
+          <span className="shrink-0 text-body-sm text-slate">Tags:</span>
           {header.tags.map((tag) => (
-            <Badge key={tag} variant="secondary" className="gap-1">
+            <span
+              key={tag}
+              className="inline-flex items-center gap-1 rounded-full bg-teal-50 px-2 py-0.5 text-[11.5px] font-medium text-teal-700"
+            >
               {tag}
               {canEdit && (
                 <button
                   type="button"
                   onClick={() =>
-                    setHeader({ tags: header.tags.filter((t) => t !== tag) })
+                    setHeader({ tags: header.tags.filter((item) => item !== tag) })
                   }
                   aria-label={`Remove ${tag}`}
+                  className="text-teal-600/70 hover:text-teal-700"
                 >
                   <X className="size-3" />
                 </button>
               )}
-            </Badge>
+            </span>
           ))}
           {addingTag ? (
             <Input
@@ -216,51 +247,36 @@ export function BuilderSidebar({ createdAt }: { createdAt: string | null }) {
               }}
             />
           ) : (
-            <button
-              type="button"
-              disabled={!canEdit}
-              onClick={() => setAddingTag(true)}
-              className="inline-flex items-center gap-1 text-body-sm font-semibold text-interactive disabled:opacity-50"
-            >
-              <Plus className="size-3.5" /> Add
-            </button>
+            <AddButton disabled={!canEdit} onClick={() => setAddingTag(true)} />
           )}
         </div>
       </div>
 
-      <div className="border-t border-bone pt-4">
-        <button
-          type="button"
-          onClick={() => setShowFiles((open) => !open)}
-          className="flex w-full items-center gap-2 text-body-sm font-semibold text-ink"
-        >
-          {showFiles ? (
-            <ChevronUp className="size-4 text-ash" />
-          ) : (
-            <ChevronDown className="size-4 text-ash" />
-          )}
-          Files
-          <span className="ml-auto inline-flex items-center gap-1.5 text-[12px] font-normal text-ash">
-            <FileText className="size-3.5" /> 0/5
-          </span>
-        </button>
-        {showFiles && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                className={cn(
-                  "mt-3 inline-flex items-center gap-1.5 text-body-sm font-semibold text-interactive/60",
-                  "cursor-not-allowed",
-                )}
-              >
-                <Plus className="size-4" /> Add File
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>File uploads arrive in a later phase.</TooltipContent>
-          </Tooltip>
-        )}
-      </div>
+      <FilesPanel
+        quoteId={quoteId}
+        organizationId={organizationId}
+        files={files}
+        canEdit={canEdit}
+      />
     </div>
+  );
+}
+
+function AddButton({
+  disabled,
+  onClick,
+}: {
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className="inline-flex items-center gap-0.5 px-1 text-body-sm font-medium text-teal-600 transition-colors hover:text-teal-700 disabled:opacity-50"
+    >
+      <Plus className="size-3.5" /> Add
+    </button>
   );
 }

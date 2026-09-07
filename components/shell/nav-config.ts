@@ -5,6 +5,8 @@ import {
   FileText,
   GanttChartSquare,
   Building2,
+  Inbox,
+  TicketCheck,
   LifeBuoy,
   MapPin,
   Receipt,
@@ -113,9 +115,23 @@ export const NAV: NavEntry[] = [
         icon: MapPin,
         description: "Depots trips depart from and return to",
       },
+      // Inbound demand and confirmed bookings do not have their own entry in
+      // the top bar — they live under Operations so the bar stays six wide.
+      {
+        label: "Trip Requests",
+        href: "/trip-requests",
+        icon: Inbox,
+        description: "Enquiries from your public booking page",
+      },
+      {
+        label: "Bookings",
+        href: "/bookings",
+        icon: TicketCheck,
+        description: "Quotes the customer has accepted and paid",
+      },
     ],
   },
-  { label: "Reports", href: "/reports", matches: ["/dashboard"] },
+  { label: "Reports", href: "/reports" },
 ];
 
 /** Flattened lookup used by the mobile drawer and the command palette. */

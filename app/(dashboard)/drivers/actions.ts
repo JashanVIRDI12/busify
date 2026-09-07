@@ -21,7 +21,7 @@ const DUPLICATE_LICENSE = {
 
 function revalidateDrivers() {
   revalidatePath("/drivers");
-  revalidatePath("/dashboard");
+  revalidatePath("/reports");
 }
 
 export async function createDriverAction(

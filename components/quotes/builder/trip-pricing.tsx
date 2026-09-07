@@ -231,7 +231,7 @@ export function TripPricing({ trip }: { trip: QuoteTripInput }) {
                   key={basis}
                   className={`rounded-lg border p-2.5 transition-colors ${
                     selected
-                      ? "border-interactive bg-interactive/5"
+                      ? "border-teal-400 bg-teal-50"
                       : "border-bone"
                   }`}
                 >
@@ -249,7 +249,7 @@ export function TripPricing({ trip }: { trip: QuoteTripInput }) {
                     <span className="block text-[11px] font-semibold text-ash">
                       {BASE_FARE_BASIS_LABELS[basis]}
                       {selected && (
-                        <span className="ml-1 text-interactive">• used</span>
+                        <span className="ml-1 text-teal-600">• used</span>
                       )}
                     </span>
                     <span className="tabular block text-body-sm font-semibold text-ink">
@@ -278,7 +278,7 @@ export function TripPricing({ trip }: { trip: QuoteTripInput }) {
               type="button"
               disabled={!canEdit}
               onClick={() => addCharge(trip.id, "BASE_FARE")}
-              className="text-body-sm font-semibold text-emerald disabled:opacity-50"
+              className="text-body-sm font-semibold text-teal-600 disabled:opacity-50"
             >
               + Base Fare Charges
             </button>
@@ -328,7 +328,7 @@ export function TripPricing({ trip }: { trip: QuoteTripInput }) {
             type="button"
             disabled={!canEdit}
             onClick={() => addCharge(trip.id, "ITEMIZED")}
-            className="text-body-sm font-semibold text-emerald disabled:opacity-50"
+            className="text-body-sm font-semibold text-teal-600 disabled:opacity-50"
           >
             + Itemized Charges
           </button>
@@ -367,7 +367,7 @@ export function TripPricing({ trip }: { trip: QuoteTripInput }) {
             type="button"
             disabled={!canEdit}
             onClick={() => addCharge(trip.id, "TAX")}
-            className="text-body-sm font-semibold text-emerald disabled:opacity-50"
+            className="text-body-sm font-semibold text-teal-600 disabled:opacity-50"
           >
             + Taxes
           </button>
@@ -398,7 +398,7 @@ export function TripPricing({ trip }: { trip: QuoteTripInput }) {
       </div>
 
       {/* Right rail */}
-      <div className="space-y-4 rounded-2xl border border-bone bg-mist/40 p-5">
+      <div className="space-y-4 rounded-lg border border-bone bg-mist p-5">
         <div>
           <p className="text-body-sm font-semibold text-ink">
             Choose What Customers Will See

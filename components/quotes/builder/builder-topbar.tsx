@@ -19,7 +19,7 @@ function savedLabel(
   if (saving) return "Saving…";
   if (dirty) return "Unsaved changes";
   if (!lastSavedAt) return "Last saved: never";
-  const when = new Intl.DateTimeFormat("en-CA", {
+  const when = new Intl.DateTimeFormat("en-US", {
     timeZone: timezone,
     hour: "numeric",
     minute: "2-digit",
@@ -49,7 +49,7 @@ export function BuilderTopbar() {
           <Input
             autoFocus
             defaultValue={state.header.title}
-            className="h-9 max-w-md font-display text-heading-sm font-extrabold"
+            className="h-10 max-w-md text-heading-sm font-semibold"
             onBlur={(event) => {
               const next = event.target.value.trim() || "New Quote";
               setHeader({ title: next });
@@ -65,7 +65,7 @@ export function BuilderTopbar() {
             type="button"
             disabled={!canEdit}
             onClick={() => setEditingTitle(true)}
-            className="max-w-full truncate rounded font-display text-heading-sm font-extrabold text-onyx outline-none hover:text-ink disabled:cursor-default"
+            className="max-w-full truncate rounded text-heading-sm font-semibold text-ink outline-none disabled:cursor-default"
           >
             {state.header.title}
           </button>
@@ -74,30 +74,26 @@ export function BuilderTopbar() {
 
       <p
         className={cn(
-          "flex items-center gap-1.5 text-[12px] font-medium",
-          error
-            ? "text-destructive"
-            : dirty
-              ? "text-amber"
-              : "text-ash",
+          "flex items-center gap-1.5 text-[12.5px]",
+          error ? "text-destructive" : dirty ? "text-orange-600" : "text-slate",
         )}
       >
         {saving ? (
           <Loader2 className="size-3.5 animate-spin" aria-hidden />
         ) : !dirty && lastSavedAt ? (
-          <Check className="size-3.5 text-emerald" aria-hidden />
+          <Check className="size-3.5 text-teal-500" aria-hidden />
         ) : null}
         {error ?? savedLabel(saving, dirty, lastSavedAt, timezone)}
       </p>
 
       {canEdit && (
         <Button
-          variant="outline"
+          variant="quiet"
           onClick={() => void save()}
           loading={saving}
           disabled={!dirty && Boolean(lastSavedAt)}
         >
-          <Save />
+          <Save className="text-ash" />
           Save
         </Button>
       )}

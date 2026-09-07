@@ -412,7 +412,7 @@ export async function executeAction(
         };
       }
 
-      return { ok: true, message: `Added ${args.firstName}.`, href: `/customers` };
+      return { ok: true, message: `Added ${args.firstName}.`, href: `/contacts` };
     }
 
     case "createTripRequest": {

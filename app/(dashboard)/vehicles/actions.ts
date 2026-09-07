@@ -31,7 +31,7 @@ const DUPLICATE_TYPE_NAME = {
 function revalidateFleet() {
   revalidatePath("/vehicles");
   revalidatePath("/vehicles/types");
-  revalidatePath("/dashboard");
+  revalidatePath("/reports");
 }
 
 // ---------------------------------------------------------------------------

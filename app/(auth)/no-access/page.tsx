@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "No access" };
 
 /**
  * Where an authenticated user lands when their account is not a member of the
- * VIABUS organization.
+ * organization.
  *
  * Multi-tenant Busify sent this case to `/onboarding` so the user could create
  * their own organization. Here there is exactly one organization and nobody
@@ -19,7 +19,7 @@ export default function NoAccessPage() {
   return (
     <AuthCard
       title="No access yet"
-      description="Your account is signed in, but it has not been added to VIABUS."
+      description="Your account is signed in, but it has not been added to an organization yet."
     >
       <div className="space-y-4">
         <p className="text-sm text-muted-foreground">

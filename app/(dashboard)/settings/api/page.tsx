@@ -428,7 +428,7 @@ export default async function ApiIntegrationsPage() {
               The page is open to anyone, so it is built to give nothing away.
             </CardDescription>
           </div>
-          <ShieldCheck className="size-5 shrink-0 text-emerald" aria-hidden />
+          <ShieldCheck className="size-5 shrink-0 text-teal-600" aria-hidden />
         </CardHeader>
         <CardContent>
           <ul className="space-y-3 text-body-sm text-slate">
@@ -457,7 +457,7 @@ export default async function ApiIntegrationsPage() {
               <li key={title} className="flex gap-3">
                 <span
                   aria-hidden
-                  className="mt-2 size-1.5 shrink-0 rounded-full bg-emerald"
+                  className="mt-2 size-1.5 shrink-0 rounded-full bg-teal-500"
                 />
                 <span className="text-pretty">
                   <span className="font-semibold text-ink">{title}</span> {body}

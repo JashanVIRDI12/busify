@@ -20,7 +20,7 @@ function describePage(pathname: string): string {
   if (pathname.startsWith("/vehicles/types")) return "the vehicle types page";
   if (pathname.startsWith("/vehicles")) return "the fleet list";
   if (pathname.startsWith("/drivers")) return "the drivers list";
-  if (pathname.startsWith("/customers")) return "the customers list";
+  if (pathname.startsWith("/contacts")) return "the contacts list";
   if (pathname.startsWith("/settings")) return "the settings pages";
   return "the dashboard overview";
 }

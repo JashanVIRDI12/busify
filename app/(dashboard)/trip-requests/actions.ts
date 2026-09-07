@@ -23,7 +23,7 @@ import { uuid } from "@/lib/validations/shared";
 function revalidateRequests(id?: string) {
   revalidatePath("/trip-requests");
   if (id) revalidatePath(`/trip-requests/${id}`);
-  revalidatePath("/dashboard");
+  revalidatePath("/reports");
 }
 
 /** Stamp an operator note onto the existing thread rather than overwriting it. */

@@ -292,7 +292,7 @@ export default async function TripRequestDetailPage({
               )}
               {customer && (
                 <Button variant="outline" size="sm" asChild className="w-full">
-                  <Link href="/customers">View in customers</Link>
+                  <Link href="/contacts">View in contacts</Link>
                 </Button>
               )}
             </CardContent>

@@ -14,13 +14,9 @@ export const config = {
   matcher: [
     /*
      * Everything except static assets and image files — those never carry a
-     * session that needs refreshing.
-     *
-     * `/assets/*` and `.html` are the VIABUS marketing site, served straight
-     * out of `public/`. Those requests are anonymous by definition, and a home
-     * page pulling 364 sequence frames would otherwise mean 364 pointless
-     * session refreshes.
+     * session that needs refreshing, and running the proxy over them would put
+     * a Supabase round trip in front of every icon on the page.
      */
-    "/((?!_next/static|_next/image|assets/|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|html|mp4)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|mp4)$).*)",
   ],
 };

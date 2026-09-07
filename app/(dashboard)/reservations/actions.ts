@@ -30,7 +30,7 @@ function revalidateTrip(id: string) {
   revalidatePath("/reservations");
   revalidatePath(`/trips/${id}`);
   revalidatePath("/vehicles");
-  revalidatePath("/dashboard");
+  revalidatePath("/reports");
 }
 
 /**
@@ -265,6 +265,6 @@ export async function deleteTripAction(
 
   revalidatePath("/reservations");
   revalidatePath("/vehicles");
-  revalidatePath("/dashboard");
+  revalidatePath("/reports");
   return formSuccess();
 }
