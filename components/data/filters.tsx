@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { CalendarDays, ChevronDown, Search, SlidersHorizontal, X } from "lucide-react";
+import { CalendarDays, Check, ChevronDown, Search, SlidersHorizontal, X } from "lucide-react";
 
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Popover,
   PopoverContent,
@@ -181,9 +180,20 @@ export function MultiFilter({
                 key={option.value}
                 type="button"
                 onClick={() => toggle(option.value)}
+                aria-pressed={checked}
                 className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-body-sm text-carbon transition-colors hover:bg-mist"
               >
-                <Checkbox checked={checked} tabIndex={-1} className="pointer-events-none" />
+                <span
+                  aria-hidden
+                  className={cn(
+                    "flex size-[16px] shrink-0 items-center justify-center rounded-[4px] border",
+                    checked
+                      ? "border-orange-500 bg-orange-500 text-signal-white"
+                      : "border-cloud bg-signal-white",
+                  )}
+                >
+                  {checked ? <Check className="size-3 stroke-[3]" /> : null}
+                </span>
                 {option.label}
               </button>
             );
