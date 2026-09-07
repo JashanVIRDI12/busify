@@ -41,31 +41,46 @@ export function SelectionProvider({
   ids: string[];
   children: React.ReactNode;
 }) {
-  const [selected, setSelected] = React.useState<Set<string>>(new Set());
-
-  // A new page of results invalidates the selection: acting on rows that are no
-  // longer visible is the fastest way to delete the wrong thing.
   const key = ids.join(",");
-  React.useEffect(() => {
-    setSelected(new Set());
-  }, [key]);
+
+  /**
+   * A new page of results invalidates the selection: acting on rows that are no
+   * longer visible is the fastest way to delete the wrong thing.
+   *
+   * Reset during render rather than in an effect. An effect would let one frame
+   * paint with the stale selection still applied, which on a fast filter change
+   * means checkboxes visibly tick on rows the operator never chose.
+   */
+  const [state, setState] = React.useState({ key, selected: new Set<string>() });
+
+  // Setting state while rendering makes React discard this pass and re-run the
+  // component immediately with the new state, before anything is committed — so
+  // the stale selection below is never shown, and no extra frame is painted.
+  if (state.key !== key) {
+    setState({ key, selected: new Set() });
+  }
+
+  const { selected } = state;
 
   const value = React.useMemo<SelectionContextValue>(
     () => ({
       ids,
       selected,
       toggle: (id) =>
-        setSelected((current) => {
-          const next = new Set(current);
+        setState((current) => {
+          const next = new Set(current.selected);
           if (next.has(id)) next.delete(id);
           else next.add(id);
-          return next;
+          return { key: current.key, selected: next };
         }),
       toggleAll: () =>
-        setSelected((current) =>
-          current.size === ids.length ? new Set() : new Set(ids),
-        ),
-      clear: () => setSelected(new Set()),
+        setState((current) => ({
+          key: current.key,
+          selected:
+            current.selected.size === ids.length ? new Set() : new Set(ids),
+        })),
+      clear: () =>
+        setState((current) => ({ key: current.key, selected: new Set() })),
     }),
     [ids, selected],
   );
@@ -111,14 +126,23 @@ export function RowCheckbox({ id }: { id: string }) {
  * to the viewport rather than the table: on a 250-row page the selection is
  * usually made near the top and acted on after scrolling.
  */
+export type BulkAction = {
+  label: string;
+  /** Resolves to a message shown on success, or nothing. */
+  run: (ids: string[]) => Promise<{ ok: boolean; message?: string }>;
+  icon?: React.ReactNode;
+};
+
 export function BulkActionBar({
   noun,
   onDelete,
   canDelete = true,
+  actions = [],
 }: {
   noun: string;
   onDelete?: (ids: string[]) => Promise<{ ok: boolean; message?: string }>;
   canDelete?: boolean;
+  actions?: BulkAction[];
 }) {
   const { selected, clear } = useSelection();
   const [pending, startTransition] = React.useTransition();
@@ -138,6 +162,30 @@ export function BulkActionBar({
       <span className="text-body-sm font-medium">
         {count} {count === 1 ? noun : `${noun}s`} selected
       </span>
+
+      {actions.map((action) => (
+        <button
+          key={action.label}
+          type="button"
+          disabled={pending}
+          onClick={() => {
+            const ids = [...selected];
+            startTransition(async () => {
+              const result = await action.run(ids);
+              if (result.ok) {
+                toast.success(result.message ?? "Done");
+                clear();
+              } else {
+                toast.error(result.message ?? "That did not work.");
+              }
+            });
+          }}
+          className="flex items-center gap-1.5 rounded-full bg-signal-white/12 px-3.5 py-1.5 text-body-sm font-medium transition-colors hover:bg-signal-white/20 disabled:opacity-60"
+        >
+          {pending ? <Loader2 className="size-3.5 animate-spin" /> : action.icon}
+          {action.label}
+        </button>
+      ))}
 
       {onDelete && canDelete && (
         <button

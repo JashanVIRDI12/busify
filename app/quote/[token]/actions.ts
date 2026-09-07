@@ -189,7 +189,7 @@ export async function respondToQuoteAction(
 
   revalidatePath("/quotes");
   revalidatePath("/bookings");
-  revalidatePath("/trips");
+  revalidatePath("/reservations");
   revalidatePath("/dashboard");
 
   return formSuccess("Accepted — your booking is confirmed with the operator.");

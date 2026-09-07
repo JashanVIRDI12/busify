@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     for (const path of [
       "/dashboard",
       "/trip-requests",
-      "/trips",
+      "/reservations",
       "/customers",
       "/quotes",
       "/bookings",

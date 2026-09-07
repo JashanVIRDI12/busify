@@ -27,7 +27,7 @@ const BLOCKING_TRIP_STATUSES = [
 ] as const;
 
 function revalidateTrip(id: string) {
-  revalidatePath("/trips");
+  revalidatePath("/reservations");
   revalidatePath(`/trips/${id}`);
   revalidatePath("/vehicles");
   revalidatePath("/dashboard");
@@ -263,7 +263,7 @@ export async function deleteTripAction(
     await syncVehicleStatus(supabase, vehicleId);
   }
 
-  revalidatePath("/trips");
+  revalidatePath("/reservations");
   revalidatePath("/vehicles");
   revalidatePath("/dashboard");
   return formSuccess();

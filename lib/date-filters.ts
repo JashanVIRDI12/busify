@@ -54,7 +54,10 @@ function offsetMs(instant: Date, timeZone: string): number {
 }
 
 /** The calendar date in `timeZone` at `instant`, as [year, month, day]. */
-function civilDate(instant: Date, timeZone: string): [number, number, number] {
+export function civilDate(
+  instant: Date,
+  timeZone: string,
+): [number, number, number] {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone,
     year: "numeric",
@@ -71,7 +74,7 @@ function civilDate(instant: Date, timeZone: string): [number, number, number] {
 }
 
 /** Midnight local to `timeZone` on the given civil date, as a UTC instant. */
-function zonedMidnight(
+export function zonedMidnight(
   year: number,
   month: number,
   day: number,

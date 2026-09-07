@@ -4,6 +4,11 @@ import * as React from "react";
 import { ChevronDown } from "lucide-react";
 
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -127,6 +132,126 @@ export function SelectField({
           ))}
         </SelectContent>
       </Select>
+      <ErrorText messages={messages} />
+    </div>
+  );
+}
+
+/**
+ * A select you can type into.
+ *
+ * Used wherever the option list is data rather than a fixed vocabulary — a
+ * reservation number, a company, a contact. A plain `<select>` of 1,600
+ * reservations is unusable; this filters as you type and still submits a single
+ * hidden value, so the server side is identical to any other field.
+ */
+export function ComboField({
+  name,
+  placeholder,
+  options,
+  defaultValue,
+  errors,
+  className,
+  emptyText = "No matches",
+}: {
+  name: string;
+  placeholder: string;
+  options: { value: string; label: string; hint?: string }[];
+  defaultValue?: string;
+  errors?: FieldErrors;
+  className?: string;
+  emptyText?: string;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const [value, setValue] = React.useState(defaultValue ?? "");
+  const [search, setSearch] = React.useState("");
+  const messages = errors?.[name];
+
+  const current = options.find((option) => option.value === value);
+  const term = search.trim().toLowerCase();
+  const filtered = term
+    ? options.filter(
+        (option) =>
+          option.label.toLowerCase().includes(term) ||
+          option.hint?.toLowerCase().includes(term),
+      )
+    : options;
+
+  return (
+    <div className={className}>
+      <input type="hidden" name={name} value={value} />
+
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger
+          aria-invalid={messages ? true : undefined}
+          className={cn(
+            "flex h-11 w-full items-center justify-between gap-2 rounded-md border border-cloud bg-signal-white px-3.5 text-left text-body-sm transition-colors outline-none",
+            "hover:border-fog focus-visible:border-orange-400",
+            "aria-invalid:border-destructive",
+          )}
+        >
+          <span className={cn("truncate", current ? "text-ink" : "text-ash")}>
+            {current?.label ?? placeholder}
+          </span>
+          <ChevronDown className="size-4 shrink-0 text-ash" />
+        </PopoverTrigger>
+
+        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+          <input
+            autoFocus
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Type to filter"
+            aria-label="Filter options"
+            className="h-10 w-full border-b border-bone px-3 text-body-sm text-ink outline-none placeholder:text-ash"
+          />
+
+          <div className="scrollbar-slim max-h-64 overflow-y-auto p-1.5">
+            {value && (
+              <button
+                type="button"
+                onClick={() => {
+                  setValue("");
+                  setOpen(false);
+                }}
+                className="w-full rounded-lg px-2.5 py-2 text-left text-body-sm text-slate transition-colors hover:bg-mist"
+              >
+                Clear selection
+              </button>
+            )}
+
+            {filtered.length === 0 ? (
+              <p className="px-2.5 py-4 text-center text-body-sm text-ash">
+                {emptyText}
+              </p>
+            ) : (
+              filtered.slice(0, 200).map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => {
+                    setValue(option.value);
+                    setSearch("");
+                    setOpen(false);
+                  }}
+                  className={cn(
+                    "flex w-full flex-col gap-0.5 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-mist",
+                    option.value === value && "bg-orange-50",
+                  )}
+                >
+                  <span className="text-body-sm font-medium text-ink">
+                    {option.label}
+                  </span>
+                  {option.hint && (
+                    <span className="text-[11.5px] text-ash">{option.hint}</span>
+                  )}
+                </button>
+              ))
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
+
       <ErrorText messages={messages} />
     </div>
   );

@@ -301,7 +301,7 @@ export async function acceptTripRequestAction(
   }
 
   revalidateRequests(request.id);
-  revalidatePath("/trips");
+  revalidatePath("/reservations");
   return formSuccess("Accepted. The trip is on your schedule.");
 }
 

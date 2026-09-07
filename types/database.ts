@@ -365,6 +365,8 @@ type TripRow = Timestamps & {
   /** Generated column — read only; write `total_due` and `amount_paid`. */
   balance_due: number;
   payment_status: ReservationPaymentStatus;
+  /** Maintained by a trigger on trip_assignments; never written by the app. */
+  assignment_status: "UNASSIGNED" | "PARTIAL" | "ASSIGNED";
   invoice_sent_at: string | null;
   garage_arrival_at: string | null;
   spot_at: string | null;
@@ -446,6 +448,9 @@ type QuoteRow = Timestamps & {
   event_type: string | null;
   created_by: string | null;
   expires_at: string | null;
+  /** Denormalised from the first stop of the first trip, on every save. */
+  pickup_at: string | null;
+  pickup_address: string | null;
 };
 
 type TicketRow = Timestamps & {

@@ -12,8 +12,8 @@ import { cn } from "@/lib/utils";
 function describePage(pathname: string): string {
   if (pathname.startsWith("/trip-requests/")) return "a trip request detail page";
   if (pathname.startsWith("/trip-requests")) return "the trip requests list";
-  if (pathname.startsWith("/trips/")) return "a trip detail page";
-  if (pathname.startsWith("/trips")) return "the trips list";
+  if (pathname.startsWith("/reservations/")) return "a trip detail page";
+  if (pathname.startsWith("/reservations")) return "the trips list";
   if (pathname.startsWith("/quotes/")) return "a quote detail page";
   if (pathname.startsWith("/quotes")) return "the quotes list";
   if (pathname.startsWith("/bookings")) return "the bookings list";

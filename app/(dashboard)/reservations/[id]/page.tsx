@@ -93,7 +93,7 @@ export default async function TripDetailPage({
   return (
     <div className="space-y-6">
       <Button variant="ghost" size="sm" className="-ml-2" asChild>
-        <Link href="/trips">
+        <Link href="/reservations">
           <ArrowLeft />
           Back to trips
         </Link>

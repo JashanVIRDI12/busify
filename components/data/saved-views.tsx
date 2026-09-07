@@ -36,11 +36,9 @@ export type SystemView = { name: string; query: string; locked?: boolean };
  * paginating to page 2 would visually deselect the view you are still inside.
  */
 export function SavedViews({
-  resource,
   systemViews = [],
   views,
 }: {
-  resource: string;
   systemViews?: SystemView[];
   views: SavedView[];
 }) {

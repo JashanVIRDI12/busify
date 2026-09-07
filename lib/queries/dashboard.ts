@@ -207,7 +207,7 @@ export async function getDashboardMetrics(
       count: tripsMissingDriver,
       label: "upcoming trips have no driver",
       detail: "Assign a driver before dispatch.",
-      href: "/trips?missing=driver",
+      href: "/reservations?assignment=PARTIAL",
       tone: "destructive",
     },
     {

@@ -78,6 +78,23 @@ export function pageCount(total: number, per: number): number {
 }
 
 /**
+ * Narrow raw query-string values to a known set.
+ *
+ * Filters come off the URL, so anything can be in them. Passing an unchecked
+ * string straight into a Postgres enum comparison turns a typo in a bookmark
+ * into a 400 from the database; dropping unknown values instead just ignores
+ * that part of the filter.
+ */
+export function only<const T extends readonly string[]>(
+  values: string[] | undefined,
+  allowed: T,
+): T[number][] {
+  if (!values?.length) return [];
+  const permitted = new Set<string>(allowed);
+  return values.filter((value): value is T[number] => permitted.has(value));
+}
+
+/**
  * Postgrest `.or()` needs a comma-joined list of `column.op.value`, and any
  * literal comma inside the value would be read as a separator. Escaping is not
  * supported there, so the safe move is to strip the characters that break the

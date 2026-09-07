@@ -6,7 +6,7 @@ import { Ban, CheckCircle2, Flag, PlayCircle, Send } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 
-import { setTripStatusAction } from "@/app/(dashboard)/trips/actions";
+import { setTripStatusAction } from "@/app/(dashboard)/reservations/actions";
 import { Button } from "@/components/ui/button";
 import { idleFormState } from "@/lib/forms";
 import type { TripStatus } from "@/types/database";

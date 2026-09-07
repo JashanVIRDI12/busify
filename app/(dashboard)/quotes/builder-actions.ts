@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { actionContext, databaseError } from "@/lib/auth/guard";
+import { zonedTimeToUtc } from "@/lib/datetime";
 import type { FormState } from "@/lib/forms";
 import { canWriteFinance } from "@/lib/permissions";
 import { toMajor } from "@/lib/pricing";
@@ -45,6 +46,36 @@ function revalidateQuote(id: string) {
   revalidatePath("/quotes");
   revalidatePath(`/quotes/${id}`);
   revalidatePath("/dashboard");
+}
+
+/**
+ * The first pickup across the whole quote: the earliest trip's first stop.
+ *
+ * Trips are ordered by their tab position rather than by date, so "Trip 2" can
+ * legitimately run before "Trip 1" — the operator numbers tabs in the order
+ * they sold them. The list wants the date the customer travels first, so this
+ * takes the minimum rather than trip zero.
+ */
+function firstPickup(
+  input: QuoteBuilderInput,
+  timeZone: string,
+): { at: string | null; address: string | null } {
+  let best: { at: string; address: string | null } | null = null;
+
+  for (const trip of input.trips) {
+    const stop = [...trip.stops].sort((a, b) => a.position - b.position)[0];
+    if (!stop?.stop_date) continue;
+
+    const at = zonedTimeToUtc(
+      `${stop.stop_date}T${(stop.stop_time ?? "00:00").slice(0, 5)}`,
+      timeZone,
+    );
+    if (!at) continue;
+
+    if (!best || at < best.at) best = { at, address: stop.address ?? null };
+  }
+
+  return { at: best?.at ?? null, address: best?.address ?? null };
 }
 
 // ---------------------------------------------------------------------------
@@ -264,6 +295,7 @@ export async function saveQuoteBuilderAction(
   const rollup = rollUpQuote(priced.map((entry) => entry.result));
 
   const primaryTax = priced[0]?.result.taxes[0];
+  const pickup = firstPickup(input, session.organization.timezone);
 
   // --- Header ------------------------------------------------------------
   const header = input.header;
@@ -300,6 +332,10 @@ export async function saveQuoteBuilderAction(
       total: toMajor(rollup.total),
       deposit_amount: toMajor(rollup.dueNow),
       tax_rate_percent: primaryTax ? primaryTax.rate : 0,
+      // Denormalised so the quotes list can sort and filter on pickup without
+      // reaching through quote_trips into quote_trip_stops.
+      pickup_at: pickup.at,
+      pickup_address: pickup.address,
     })
     .eq("id", input.id);
 

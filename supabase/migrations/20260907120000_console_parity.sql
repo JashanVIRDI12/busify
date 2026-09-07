@@ -182,7 +182,17 @@ alter table public.quotes
   add column if not exists company_id uuid,
   add column if not exists event_type text,
   add column if not exists created_by uuid references auth.users(id) on delete set null,
-  add column if not exists expires_at timestamptz;
+  add column if not exists expires_at timestamptz,
+  -- Denormalised from the first stop of the first trip. The quotes list sorts
+  -- and filters on pickup date, and reaching two tables deep through an embed
+  -- to do that would make the most-used screen in the product the slowest.
+  -- The builder already recomputes everything server-side on save, so this is
+  -- written in the same statement as the rolled-up totals.
+  add column if not exists pickup_at      timestamptz,
+  add column if not exists pickup_address text;
+
+create index if not exists quotes_org_pickup_idx
+  on public.quotes (organization_id, pickup_at);
 
 alter table public.quotes
   drop constraint if exists quotes_company_fk;
@@ -311,6 +321,81 @@ $$;
 create trigger trips_assign_reference
   before insert on public.trips
   for each row execute function app.assign_trip_reference();
+
+-- ---------------------------------------------------------------------------
+-- Assignment status
+--
+-- The dispatch views exist to answer one question: what is not covered yet.
+-- Deriving that per row means a correlated count over trip_assignments on every
+-- render of a 1,600-row list, and "unassigned" cannot be expressed as a filter
+-- on an embedded resource at all. So it is maintained here, by the only
+-- statements that can change the answer.
+-- ---------------------------------------------------------------------------
+alter table public.trips
+  add column if not exists assignment_status text not null default 'UNASSIGNED'
+    check (assignment_status in ('UNASSIGNED', 'PARTIAL', 'ASSIGNED'));
+
+create index if not exists trips_org_assignment_idx
+  on public.trips (organization_id, assignment_status);
+
+create or replace function app.recompute_trip_assignment_status(p_trip uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_total    int;
+  v_complete int;
+begin
+  select count(*),
+         count(*) filter (where vehicle_id is not null and driver_id is not null)
+    into v_total, v_complete
+  from public.trip_assignments
+  where trip_id = p_trip;
+
+  update public.trips
+     set assignment_status = case
+           when v_total = 0 then 'UNASSIGNED'
+           when v_complete = v_total then 'ASSIGNED'
+           else 'PARTIAL'
+         end
+   where id = p_trip
+     -- Skip the write when nothing changed, so this does not fire the
+     -- last-activity trigger on every unrelated assignment edit.
+     and assignment_status is distinct from case
+           when v_total = 0 then 'UNASSIGNED'
+           when v_complete = v_total then 'ASSIGNED'
+           else 'PARTIAL'
+         end;
+end;
+$$;
+
+create or replace function app.sync_trip_assignment_status()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if tg_op = 'DELETE' then
+    perform app.recompute_trip_assignment_status(old.trip_id);
+    return old;
+  end if;
+
+  perform app.recompute_trip_assignment_status(new.trip_id);
+  -- An assignment moved between reservations: both ends need recomputing.
+  if tg_op = 'UPDATE' and old.trip_id <> new.trip_id then
+    perform app.recompute_trip_assignment_status(old.trip_id);
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger trip_assignments_sync_status
+  after insert or update or delete on public.trip_assignments
+  for each row execute function app.sync_trip_assignment_status();
 
 -- Any edit to a reservation is what the Last Activity column reports.
 create or replace function app.touch_trip_activity()

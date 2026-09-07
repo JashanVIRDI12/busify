@@ -1,204 +1,295 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FileText, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 
 import { createQuoteDraftAction } from "@/app/(dashboard)/quotes/builder-actions";
-import { EmptyState } from "@/components/shared/empty-state";
-import { FilterTabs, type FilterTab } from "@/components/shared/filter-tabs";
-import { ListShell } from "@/components/shared/list-shell";
-import { PageHeader } from "@/components/shared/page-header";
-import { SearchInput } from "@/components/shared/search-input";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  ClearFiltersButton,
+  DateFilter,
+  FilterBar,
+  MultiFilter,
+  SearchField,
+} from "@/components/data/filters";
+import { PageHeading } from "@/components/data/page-heading";
+import { SaveViewButton, SavedViews } from "@/components/data/saved-views";
+import {
+  RowCheckbox,
+  SelectAllCheckbox,
+  SelectionProvider,
+} from "@/components/data/selection";
+import {
+  QUOTE_PIPELINE_STATUS,
+  StatusPill,
+  pillFor,
+} from "@/components/data/status-pill";
+import {
+  Blank,
+  DataTable,
+  EmptyRow,
+  TBody,
+  TD,
+  TH,
+  THead,
+  TR,
+  TableCard,
+} from "@/components/data/table";
+import { TablePagination } from "@/components/data/table-pagination";
+import { Button } from "@/components/ui/button";
 import { requireSession } from "@/lib/auth/session";
-import { formatDate } from "@/lib/datetime";
-import { canWriteFinance } from "@/lib/permissions";
+import { resolveDateRange } from "@/lib/date-filters";
+import { formatStamp } from "@/lib/datetime";
+import {
+  filterValue,
+  ilikeAcross,
+  only,
+  pageCount,
+  parseListParams,
+  type SearchParamsInput,
+} from "@/lib/list-params";
+import { getPeople, peopleById } from "@/lib/queries/people";
+import { requestNow } from "@/lib/request-time";
+import { getSavedViews } from "@/lib/queries/saved-views";
 import { createClient } from "@/lib/supabase/server";
-import { formatMoney } from "@/lib/utils";
-import { QUOTE_STATUSES } from "@/lib/validations/quote";
-import type { QuoteStatus } from "@/types/database";
+import { QUOTE_PRIORITY_LABELS, enumOptions } from "@/lib/taxonomy";
+import { cn, formatMoney } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Quotes" };
 
-const STATUS_LABELS: Record<QuoteStatus, string> = {
-  DRAFT: "Draft",
-  SENT: "Sent",
-  VIEWED: "Viewed",
-  ACCEPTED: "Accepted",
-  DECLINED: "Declined",
-  EXPIRED: "Expired",
-};
+const PIPELINE_VALUES = ["LEAD", "QUOTED", "FOLLOW_UP", "WON", "LOST"] as const;
+const PRIORITY_VALUES = ["LOW", "NORMAL", "HIGH", "URGENT"] as const;
 
-const STATUS_TONE: Record<
-  QuoteStatus,
-  "default" | "secondary" | "success" | "warning" | "destructive" | "muted"
-> = {
-  DRAFT: "muted",
-  SENT: "default",
-  VIEWED: "warning",
-  ACCEPTED: "success",
-  DECLINED: "destructive",
-  EXPIRED: "muted",
-};
+const PIPELINE_OPTIONS = [
+  { value: "LEAD", label: "Lead" },
+  { value: "QUOTED", label: "Sent" },
+  { value: "FOLLOW_UP", label: "Follow Up" },
+  { value: "WON", label: "Won" },
+  { value: "LOST", label: "Lost" },
+];
+
+/**
+ * "Leads" is the view an operator lives in: everything still in play. It ships
+ * as a system chip rather than a saved view so a new organization has somewhere
+ * to start before anyone has saved anything.
+ */
+const SYSTEM_VIEWS = [
+  { name: "Leads", query: "status=LEAD,QUOTED,FOLLOW_UP&pickup=future", locked: true },
+  { name: "All Quotes", query: "" },
+];
 
 export default async function QuotesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string }>;
+  searchParams: Promise<SearchParamsInput>;
 }) {
-  const { role, organization } = await requireSession();
-  const { q, status } = await searchParams;
-  const activeStatus = QUOTE_STATUSES.includes(status as QuoteStatus)
-    ? (status as QuoteStatus)
-    : null;
+  const { organization } = await requireSession();
+  const resolved = await searchParams;
+  const params = parseListParams(resolved);
+  const zone = organization.timezone;
 
   const supabase = await createClient();
 
-  const [{ data: statusRows }, { data: customers }] = await Promise.all([
-    supabase.from("quotes").select("status"),
-    supabase
-      .from("customers")
-      .select("id, first_name, last_name, company")
-      .order("first_name"),
-  ]);
-
   let query = supabase
     .from("quotes")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(300);
+    .select("*, companies(id, name)", { count: "exact" })
+    .order(params.sort === "pickup" ? "pickup_at" : "created_at", {
+      ascending: params.dir === "asc",
+      nullsFirst: false,
+    })
+    .range(params.from, params.to);
 
-  if (activeStatus) query = query.eq("status", activeStatus);
-  if (q?.trim()) query = query.ilike("quote_number", `%${q.trim()}%`);
+  if (params.q) {
+    query = query.or(ilikeAcross(["reference", "title", "pickup_address"], params.q));
+  }
 
-  const { data, error } = await query;
-  const quotes = data ?? [];
+  const statuses = only(params.filters.status, PIPELINE_VALUES);
+  if (statuses.length) query = query.in("pipeline_status", statuses);
 
-  const customerName = new Map(
-    (customers ?? []).map((customer) => [
-      customer.id,
-      [customer.first_name, customer.last_name].filter(Boolean).join(" "),
+  const priorities = only(params.filters.priority, PRIORITY_VALUES);
+  if (priorities.length) query = query.in("priority", priorities);
+
+  const pickupRange = resolveDateRange(filterValue(params, "pickup"), zone);
+  if (pickupRange?.gte) query = query.gte("pickup_at", pickupRange.gte);
+  if (pickupRange?.lte) query = query.lte("pickup_at", pickupRange.lte);
+
+  const [{ data, count, error }, people, views] = await Promise.all([
+    query,
+    getPeople(),
+    getSavedViews("quotes"),
+  ]);
+
+  const rows = data ?? [];
+  const total = count ?? 0;
+  const names = peopleById(people);
+
+  // Quotes reach customers through two foreign keys, so the booking contact is
+  // read separately rather than embedded. One query for the whole page.
+  const contactIds = [
+    ...new Set(rows.map((row) => row.customer_id).filter((id): id is string => !!id)),
+  ];
+  const contacts = contactIds.length
+    ? ((
+        await supabase
+          .from("customers")
+          .select("id, first_name, last_name")
+          .in("id", contactIds)
+      ).data ?? [])
+    : [];
+  const contactName = Object.fromEntries(
+    contacts.map((contact) => [
+      contact.id,
+      [contact.first_name, contact.last_name].filter(Boolean).join(" "),
     ]),
   );
 
-  const counts = new Map<QuoteStatus, number>();
-  for (const row of statusRows ?? []) {
-    counts.set(row.status, (counts.get(row.status) ?? 0) + 1);
-  }
-
-  const tabs: FilterTab[] = [
-    { label: "All", value: null, count: statusRows?.length ?? 0 },
-    ...QUOTE_STATUSES.map((value) => ({
-      label: STATUS_LABELS[value],
-      value,
-      count: counts.get(value) ?? 0,
-    })),
-  ];
-
-  const writeAllowed = canWriteFinance(role);
+  const now = requestNow();
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <SelectionProvider ids={rows.map((row) => row.id)}>
+      <PageHeading
         title="Quotes"
-        description="Prices you have put in front of customers, and what came back."
+        count={total}
+        views={<SavedViews systemViews={SYSTEM_VIEWS} views={views} />}
         actions={
-          writeAllowed ? (
-            <form action={createQuoteDraftAction}>
-              <Button type="submit">
-                <Plus />
-                New quote
-              </Button>
-            </form>
-          ) : null
+          <form action={createQuoteDraftAction}>
+            <Button type="submit">
+              <Plus />
+              Add Quote
+            </Button>
+          </form>
         }
       />
 
-      <ListShell
-        toolbar={
-          <>
-            <FilterTabs tabs={tabs} />
-            <SearchInput placeholder="Search quote number…" />
-          </>
+      <FilterBar trailing={<SaveViewButton resource="quotes" />}>
+        <SearchField placeholder="Search" />
+        <MultiFilter
+          paramKey="status"
+          label="Quote Status"
+          options={PIPELINE_OPTIONS}
+        />
+        <MultiFilter
+          paramKey="priority"
+          label="Priority"
+          options={enumOptions(QUOTE_PRIORITY_LABELS)}
+        />
+        <DateFilter paramKey="pickup" label="Pickup Date" />
+        <ClearFiltersButton />
+      </FilterBar>
+
+      <TableCard
+        footer={
+          <TablePagination
+            page={params.page}
+            pageCount={pageCount(total, params.per)}
+            perPage={params.per}
+          />
         }
       >
-        {error ? (
-          <EmptyState
-            icon={FileText}
-            title="We could not load your quotes"
-            description="The request failed. Refresh the page, and if it keeps happening check your Supabase connection."
-          />
-        ) : quotes.length === 0 ? (
-          <EmptyState
-            icon={FileText}
-            title={q || activeStatus ? "No quotes match those filters" : "No quotes yet"}
-            description={
-              q || activeStatus
-                ? "Clear the search or pick a different status."
-                : "Price a trip request, or start a quote from scratch. Rates come from your vehicle types."
-            }
-          />
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Quote</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead className="text-right">Due on booking</TableHead>
-                <TableHead>Valid until</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {quotes.map((quote) => (
-                <TableRow key={quote.id}>
-                  <TableCell>
-                    <Link
-                      href={`/quotes/${quote.id}`}
-                      className="font-medium text-interactive hover:underline"
+        <DataTable className="min-w-[92rem]">
+          <THead>
+            <TH width="44px">
+              <SelectAllCheckbox />
+            </TH>
+            <TH>Quote ID</TH>
+            <TH>Quote Status</TH>
+            <TH>Sales Rep</TH>
+            <TH>Priority</TH>
+            <TH>Company</TH>
+            <TH>Booking Contact</TH>
+            <TH>Event Type</TH>
+            <TH>Pickup Date</TH>
+            <TH>First Pickup Address</TH>
+            <TH>Total</TH>
+            <TH>Created</TH>
+            <TH>Expiration Date</TH>
+            <TH>Created By</TH>
+          </THead>
+
+          <TBody>
+            {error ? (
+              <EmptyRow
+                colSpan={14}
+                message="Those quotes could not be loaded. Refresh to try again."
+              />
+            ) : rows.length === 0 ? (
+              <EmptyRow colSpan={14} message="No data found" />
+            ) : (
+              rows.map((quote) => {
+                const status = pillFor(QUOTE_PIPELINE_STATUS, quote.pipeline_status);
+                const expired =
+                  quote.expires_at !== null &&
+                  new Date(quote.expires_at).getTime() < now;
+
+                return (
+                  <TR key={quote.id}>
+                    <TD>
+                      <RowCheckbox id={quote.id} />
+                    </TD>
+                    <TD>
+                      <Link
+                        href={`/quotes/${quote.id}`}
+                        className="tabular font-medium hover:text-teal-600 hover:underline"
+                      >
+                        {quote.reference ?? quote.quote_number ?? "--"}
+                      </Link>
+                    </TD>
+                    <TD>
+                      <StatusPill label={status.label} tone={status.tone} />
+                    </TD>
+                    <TD>
+                      {quote.sales_rep_id ? (
+                        (names[quote.sales_rep_id] ?? <Blank />)
+                      ) : (
+                        <Blank />
+                      )}
+                    </TD>
+                    <TD>
+                      {quote.priority ? (
+                        (QUOTE_PRIORITY_LABELS[quote.priority] ?? quote.priority)
+                      ) : (
+                        <Blank />
+                      )}
+                    </TD>
+                    <TD>{quote.companies?.name ?? <Blank />}</TD>
+                    <TD>
+                      {(quote.customer_id && contactName[quote.customer_id]) || (
+                        <Blank />
+                      )}
+                    </TD>
+                    <TD>{quote.event_type ?? <Blank />}</TD>
+                    <TD className="tabular whitespace-nowrap">
+                      {quote.pickup_at ? formatStamp(quote.pickup_at, zone) : <Blank />}
+                    </TD>
+                    <TD className="max-w-[22rem] truncate">
+                      {quote.pickup_address ?? <Blank />}
+                    </TD>
+                    <TD className="tabular whitespace-nowrap">
+                      {formatMoney(quote.total, quote.currency, { precise: true })}
+                    </TD>
+                    <TD className="tabular whitespace-nowrap">
+                      {formatStamp(quote.created_at, zone)}
+                    </TD>
+                    <TD
+                      className={cn(
+                        "tabular whitespace-nowrap",
+                        expired && "text-orange-600",
+                      )}
                     >
-                      {quote.title || quote.quote_number || "Untitled quote"}
-                    </Link>
-                    <span className="tabular block text-xs text-muted-foreground">
-                      {quote.quote_number ?? "—"}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {quote.customer_id
-                      ? (customerName.get(quote.customer_id) ?? "—")
-                      : "—"}
-                  </TableCell>
-                  <TableCell className="tabular text-right font-medium">
-                    {formatMoney(Number(quote.total), quote.currency)}
-                  </TableCell>
-                  <TableCell className="tabular text-right text-muted-foreground">
-                    {formatMoney(Number(quote.deposit_amount), quote.currency)}
-                  </TableCell>
-                  <TableCell className="tabular text-muted-foreground">
-                    {quote.valid_until
-                      ? formatDate(`${quote.valid_until}T00:00:00Z`, organization.timezone)
-                      : "—"}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={STATUS_TONE[quote.status]}>
-                      {STATUS_LABELS[quote.status]}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </ListShell>
-    </div>
+                      {quote.expires_at ? formatStamp(quote.expires_at, zone) : ""}
+                    </TD>
+                    <TD>
+                      {quote.created_by ? (
+                        (names[quote.created_by] ?? <Blank />)
+                      ) : (
+                        <Blank />
+                      )}
+                    </TD>
+                  </TR>
+                );
+              })
+            )}
+          </TBody>
+        </DataTable>
+      </TableCard>
+    </SelectionProvider>
   );
 }

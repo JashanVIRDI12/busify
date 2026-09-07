@@ -60,7 +60,7 @@ const LIFECYCLE = [
     icon: Route,
     title: "You dispatch it",
     body: "Assign a coach and driver, then move the trip through confirmed, dispatched, under way and completed. Completing releases the vehicle.",
-    href: "/trips",
+    href: "/reservations",
     action: "Trips",
   },
 ] as const;

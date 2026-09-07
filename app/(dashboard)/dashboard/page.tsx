@@ -108,7 +108,7 @@ async function Overview({
       value: formatNumber(metrics.upcomingTrips),
       hint: "Scheduled, confirmed or dispatched.",
       icon: CalendarClock,
-      href: "/trips",
+      href: "/reservations",
     },
     {
       label: "Confirmed bookings",
