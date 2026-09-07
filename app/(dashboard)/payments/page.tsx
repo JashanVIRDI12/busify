@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Send } from "lucide-react";
+import { Mail, Send } from "lucide-react";
 
-import { markInvoicesSentAction } from "@/app/(dashboard)/payments/actions";
+import {
+  emailInvoicesAction,
+  markInvoicesSentAction,
+} from "@/app/(dashboard)/payments/actions";
 import {
   ClearFiltersButton,
   DateFilter,
@@ -250,7 +253,27 @@ export default async function PaymentsPage({
           canEdit
             ? [
                 {
-                  label: "Mark invoice sent",
+                  label: "Email invoice",
+                  icon: <Mail className="size-3.5" />,
+                  run: async (ids: string[]) => {
+                    const result = await emailInvoicesAction(ids);
+                    if (!result.ok) return { ok: false, message: result.message };
+
+                    const { sent, delivered, skipped } = result.data;
+                    const base = delivered
+                      ? `Emailed ${sent} invoice${sent === 1 ? "" : "s"}`
+                      : `Marked ${sent} sent — no mail provider is configured, so nothing was delivered`;
+
+                    return {
+                      ok: true,
+                      message: skipped.length
+                        ? `${base}. Skipped: ${skipped.join("; ")}`
+                        : base,
+                    };
+                  },
+                },
+                {
+                  label: "Mark sent",
                   icon: <Send className="size-3.5" />,
                   run: async (ids: string[]) => {
                     const result = await markInvoicesSentAction(ids);

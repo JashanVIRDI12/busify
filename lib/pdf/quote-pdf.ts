@@ -32,6 +32,8 @@ export type QuotePdfData = {
     logo: { bytes: Uint8Array; type: "png" | "jpg" } | null;
   };
   quote: {
+    /** "Quote" or "Invoice" — the word printed beside the reference. */
+    kind: string;
     reference: string;
     title: string;
     createdOn: string;
@@ -159,7 +161,7 @@ export async function renderQuotePdf(data: QuotePdfData): Promise<Uint8Array> {
   // Quote identity, right-hand column of the letterhead.
   const idSize = 9;
   const idLines = [
-    ["Quote", data.quote.reference],
+    [data.quote.kind, data.quote.reference],
     ["Date", data.quote.createdOn],
     ...(data.quote.validUntil ? [["Valid until", data.quote.validUntil]] : []),
   ];

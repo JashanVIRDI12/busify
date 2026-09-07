@@ -152,6 +152,7 @@ export async function getQuotePdfData(
       logo: await fetchLogo(organization.logo_url),
     },
     quote: {
+      kind: "Quote",
       reference: quote.reference ?? quote.quote_number ?? "Quote",
       title: quote.title,
       createdOn: formatStampDate(quote.created_at, zone),

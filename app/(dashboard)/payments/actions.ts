@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { actionContext } from "@/lib/auth/guard";
+import { firstNameOf, renderTemplate } from "@/lib/mail/render";
+import { mailConfigured, sendMail, type Attachment } from "@/lib/mail/send";
+import { renderQuotePdf, toBase64 } from "@/lib/pdf/quote-pdf";
 import { canWriteFinance } from "@/lib/permissions";
+import { getInvoicePdfData } from "@/lib/queries/invoice-pdf";
 import { uuid, type ActionResult } from "@/lib/validations/shared";
 
 const paymentInput = z.object({
@@ -61,7 +65,126 @@ export async function recordPaymentAction(
   return { ok: true, data: undefined };
 }
 
-/** Stamps the invoice as sent, which is what the reservations list reports. */
+/**
+ * Email the invoice for each selected reservation, then stamp it.
+ *
+ * Stamped only on success, and per reservation: a batch where the third
+ * address bounces should leave the first two recorded as sent and say plainly
+ * which one failed, rather than marking all five and losing the failure.
+ */
+export async function emailInvoicesAction(
+  tripIds: string[],
+): Promise<ActionResult<{ sent: number; delivered: boolean; skipped: string[] }>> {
+  const { session, supabase } = await actionContext();
+
+  if (!canWriteFinance(session.role)) {
+    return { ok: false, message: "Your role does not allow sending invoices." };
+  }
+
+  const parsed = uuid.array().min(1).max(50).safeParse(tripIds);
+  if (!parsed.success) {
+    return { ok: false, message: "That selection could not be read." };
+  }
+
+  const { data: template } = await supabase
+    .from("email_templates")
+    .select("subject, body, from_email, include_pdf")
+    .eq("kind", "INVOICE")
+    .maybeSingle();
+
+  const organization = session.organization;
+  const senderName =
+    (typeof session.user.user_metadata?.full_name === "string"
+      ? session.user.user_metadata.full_name
+      : null) ?? organization.name;
+
+  let sent = 0;
+  const skipped: string[] = [];
+
+  for (const tripId of parsed.data) {
+    const { data: trip } = await supabase
+      .from("trips")
+      .select("id, reference, customers(first_name, email)")
+      .eq("id", tripId)
+      .maybeSingle();
+
+    const label = trip?.reference ?? tripId.slice(0, 8);
+    const email = trip?.customers?.email;
+
+    if (!email) {
+      skipped.push(`${label} (no email on the contact)`);
+      continue;
+    }
+
+    const tokens = {
+      CONTACT_FIRST_NAME: firstNameOf(trip?.customers?.first_name, email),
+      SENDER_FULL_NAME: senderName,
+      COMPANY_NAME: organization.email_sender_name ?? organization.name,
+      QUOTE_LINK: null,
+      RESERVATION_ID: trip?.reference ?? label,
+    };
+
+    let attachments: Attachment[] | undefined;
+    if (template?.include_pdf !== false) {
+      try {
+        const data = await getInvoicePdfData(supabase, tripId);
+        if (data) {
+          attachments = [
+            {
+              filename: `${data.quote.reference}-invoice.pdf`,
+              content: toBase64(await renderQuotePdf(data)),
+              contentType: "application/pdf",
+            },
+          ];
+        }
+      } catch (error) {
+        console.error("Invoice PDF failed; sending without it", error);
+      }
+    }
+
+    const result = await sendMail({
+      to: email,
+      subject: renderTemplate(
+        template?.subject?.trim() || `Invoice ${label} from ${organization.name}`,
+        tokens,
+      ),
+      text: renderTemplate(
+        template?.body?.trim() ||
+          `Hi ${tokens.CONTACT_FIRST_NAME},\n\nYour invoice for reservation ${label} is attached.\n\nThanks,\n${senderName}`,
+        tokens,
+      ),
+      replyTo: template?.from_email ?? organization.email,
+      bcc: organization.bcc_email,
+      attachments,
+    });
+
+    if (!result.ok) {
+      skipped.push(`${label} (${result.message})`);
+      continue;
+    }
+
+    await supabase
+      .from("trips")
+      .update({ invoice_sent_at: new Date().toISOString() })
+      .eq("id", tripId);
+
+    sent += 1;
+  }
+
+  revalidatePath("/payments");
+  revalidatePath("/reservations");
+
+  if (sent === 0) {
+    return {
+      ok: false,
+      message: skipped[0] ?? "No invoices could be sent.",
+    };
+  }
+
+  return { ok: true, data: { sent, delivered: mailConfigured(), skipped } };
+}
+
+/** Stamps the invoice as sent without emailing — for invoices sent elsewhere. */
 export async function markInvoicesSentAction(
   ids: string[],
 ): Promise<ActionResult<void>> {
