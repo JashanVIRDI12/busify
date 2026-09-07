@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { signOutAction } from "@/app/(auth)/actions";
 import { AuthCard } from "@/components/auth/auth-card";
@@ -7,13 +8,9 @@ import { Button } from "@/components/ui/button";
 export const metadata: Metadata = { title: "No access" };
 
 /**
- * Where an authenticated user lands when their account is not a member of the
- * organization.
- *
- * Multi-tenant Busify sent this case to `/onboarding` so the user could create
- * their own organization. Here there is exactly one organization and nobody
- * self-serves into it, so the honest answer is that an administrator has to add
- * them — not a form that would create a second tenant.
+ * Fallback when an authenticated user has no organization membership and did
+ * not go through `/onboarding`. The usual path now sends them there to create
+ * one; this page remains for anyone who lands on the old URL.
  */
 export default function NoAccessPage() {
   return (
@@ -23,10 +20,13 @@ export default function NoAccessPage() {
     >
       <div className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Ask an administrator to add your account to the organization, then
-          sign in again. If you think this is a mistake, check that you used the
-          right email address.
+          Set up your charter company, or ask an administrator to add this
+          email to an existing organization.
         </p>
+
+        <Button asChild className="w-full">
+          <Link href="/onboarding">Set up your company</Link>
+        </Button>
 
         <form action={signOutAction}>
           <Button type="submit" variant="outline" className="w-full">

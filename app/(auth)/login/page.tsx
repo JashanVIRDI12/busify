@@ -17,16 +17,14 @@ export default async function LoginPage({
     <AuthCard
       title="Sign in"
       description="Charter operations, from quote to dispatch."
-      // Staff accounts are created by an administrator, not self-service —
-      // there is no signup route to link to.
       footer={
         <>
-          Need access?{" "}
+          New here?{" "}
           <Link
-            href="/"
+            href="/signup"
             className="font-medium text-interactive hover:underline"
           >
-            Contact your administrator
+            Create an account
           </Link>
         </>
       }

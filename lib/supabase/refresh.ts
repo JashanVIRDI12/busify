@@ -6,6 +6,7 @@ import type { Database } from "@/types/database";
 const PUBLIC_PATHS = [
   "/",
   "/login",
+  "/signup",
   "/forgot-password",
   "/reset-password",
   "/verify-email",
@@ -68,7 +69,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && pathname === "/login") {
+  if (user && (pathname === "/login" || pathname === "/signup")) {
     const url = request.nextUrl.clone();
     url.pathname = "/quotes";
     url.search = "";
