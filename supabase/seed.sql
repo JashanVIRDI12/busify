@@ -44,7 +44,14 @@ begin
     insert into auth.users (
       instance_id, id, aud, role, email, encrypted_password,
       email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
-      created_at, updated_at
+      created_at, updated_at,
+      -- GoTrue reads these as Go strings, not pointers. Left NULL — which is
+      -- what omitting them does — every query that touches the row fails with
+      -- "Database error finding users", and the account cannot sign in even
+      -- though it looks perfectly fine in the table.
+      confirmation_token, recovery_token, email_change,
+      email_change_token_new, email_change_token_current,
+      phone_change, phone_change_token, reauthentication_token
     )
     values (
       '00000000-0000-0000-0000-000000000000', u.id, 'authenticated', 'authenticated',
@@ -52,7 +59,8 @@ begin
       now(),
       jsonb_build_object('provider', 'email', 'providers', array['email']),
       jsonb_build_object('full_name', u.full_name),
-      now(), now()
+      now(), now(),
+      '', '', '', '', '', '', '', ''
     )
     on conflict (id) do nothing;
 
