@@ -1132,7 +1132,9 @@ export type Database = {
           "organization_id" | "quote_trip_id" | "section"
         >;
         Update: Update<QuoteTripChargeRow>;
-        Relationships: [];
+        Relationships: [
+          Rel<"quote_trip_charges_trip_fk", "quote_trip_id", "quote_trips">,
+        ];
       };
       quote_payment_methods: {
         Row: QuotePaymentMethodRow;

@@ -7,6 +7,8 @@ import {
   ChevronDown,
   Copy,
   ExternalLink,
+  FileText,
+  Mail,
   Link2,
   Send,
   Trash2,
@@ -19,6 +21,7 @@ import {
 } from "@/app/(dashboard)/quotes/builder-actions";
 import { deleteQuoteAction } from "@/app/(dashboard)/quotes/actions";
 import { convertQuoteAction } from "@/app/(dashboard)/quotes/convert-actions";
+import { emailQuoteAction } from "@/app/(dashboard)/quotes/send-actions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -90,6 +93,35 @@ export function BuilderActionsMenu() {
           {canEdit && (
             <>
               <DropdownMenuSeparator />
+              <DropdownMenuItem
+                disabled={pending}
+                onSelect={() =>
+                  startTransition(async () => {
+                    if (dirty) await save();
+                    const result = await emailQuoteAction(quoteId);
+
+                    if (!result.ok) {
+                      toast.error(result.message);
+                      return;
+                    }
+                    toast.success(
+                      result.data.delivered
+                        ? `Emailed to ${result.data.to}`
+                        : `Marked as sent. No mail provider is configured, so nothing was delivered to ${result.data.to}.`,
+                    );
+                    router.refresh();
+                  })
+                }
+              >
+                <Mail />
+                Email to customer
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <a href={`/quotes/${quoteId}/pdf`} target="_blank" rel="noreferrer">
+                  <FileText />
+                  Download PDF
+                </a>
+              </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => void send()}>
                 <Send />
                 Mark as sent

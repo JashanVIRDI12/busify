@@ -25,6 +25,11 @@ const serverSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: optional(z.string().min(1)),
   NEXT_PUBLIC_SITE_URL: optional(z.url()),
   OPENROUTER_API_KEY: optional(z.string().min(1)),
+
+  /** Resend API key. Absent means mail is logged rather than sent. */
+  RESEND_API_KEY: optional(z.string().min(1)),
+  /** The From address. Must be on a domain verified with the provider. */
+  MAIL_FROM: optional(z.string().min(3)),
 });
 
 let cached: z.infer<typeof serverSchema> | null = null;
@@ -38,6 +43,8 @@ export function serverEnv() {
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
     OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+    MAIL_FROM: process.env.MAIL_FROM,
   });
 
   if (!parsed.success) {
