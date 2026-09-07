@@ -14,6 +14,7 @@ import {
 import { PageHeader } from "@/components/shared/page-header";
 import { TripStatusBadge } from "@/components/shared/status-badge";
 import { AssignmentPanel } from "@/components/trips/assignment-panel";
+import { ReservationSummary } from "@/components/reservations/reservation-summary";
 import { TripStatusActions } from "@/components/trips/trip-status-actions";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,7 +26,7 @@ import {
 } from "@/components/ui/card";
 import { requireSession } from "@/lib/auth/session";
 import { formatDateTime, relativeDays } from "@/lib/datetime";
-import { canWrite } from "@/lib/permissions";
+import { canWrite, canWriteFinance } from "@/lib/permissions";
 import { getFleetAvailability } from "@/lib/queries/availability";
 import { getTrip } from "@/lib/queries/trips";
 import { formatNumber } from "@/lib/utils";
@@ -39,8 +40,8 @@ export async function generateMetadata({
   const detail = await getTrip(id);
   return {
     title: detail
-      ? `${detail.trip.pickup_location} → ${detail.trip.destination}`
-      : "Trip",
+      ? `${detail.trip.reference ?? detail.trip.pickup_location} · ${detail.trip.destination}`
+      : "Reservation",
   };
 }
 
@@ -95,15 +96,22 @@ export default async function TripDetailPage({
       <Button variant="ghost" size="sm" className="-ml-2" asChild>
         <Link href="/reservations">
           <ArrowLeft />
-          Back to trips
+          Back to reservations
         </Link>
       </Button>
 
       <PageHeader
-        eyebrow="Trip"
+        eyebrow="Reservation"
         title={`${trip.pickup_location} → ${trip.destination}`}
         description={`Departs ${formatDateTime(trip.departure_at, timeZone)} · ${relativeDays(trip.departure_at)}`}
         actions={<TripStatusBadge status={trip.status} />}
+      />
+
+      <ReservationSummary
+        trip={trip}
+        currency={organization.currency}
+        timeZone={timeZone}
+        canInvoice={canWriteFinance(role)}
       />
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
