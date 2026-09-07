@@ -37,8 +37,30 @@ create type public.reservation_payment_status as enum (
 -- ---------------------------------------------------------------------------
 -- Shared record numbering
 -- ---------------------------------------------------------------------------
-alter table public.document_counters
-  drop constraint if exists document_counters_kind_check;
+-- Drop by lookup rather than by name. The original constraint was declared
+-- inline, so its name is whatever Postgres generated; a `drop ... if exists`
+-- against a guessed name would silently do nothing and leave the old rule in
+-- place, and the first quote created would then fail on 'RECORD'.
+do $$
+declare
+  c record;
+begin
+  for c in
+    select con.conname
+    from pg_constraint con
+    join pg_class rel on rel.oid = con.conrelid
+    join pg_namespace nsp on nsp.oid = rel.relnamespace
+    where nsp.nspname = 'public'
+      and rel.relname = 'document_counters'
+      and con.contype = 'c'
+  loop
+    execute format(
+      'alter table public.document_counters drop constraint %I',
+      c.conname
+    );
+  end loop;
+end;
+$$;
 
 alter table public.document_counters
   add constraint document_counters_kind_check

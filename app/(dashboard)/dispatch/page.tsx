@@ -15,12 +15,26 @@ import {
 } from "@/lib/calendar";
 import { civilDate } from "@/lib/date-filters";
 import { formatStampTime } from "@/lib/datetime";
-import { filterValue, parseListParams, type SearchParamsInput } from "@/lib/list-params";
+import {
+  filterValue,
+  only,
+  parseListParams,
+  type SearchParamsInput,
+} from "@/lib/list-params";
 import { getDispatchTrips, tripEnd } from "@/lib/queries/dispatch";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Dispatch" };
+
+const STATUS_VALUES = [
+  "SCHEDULED",
+  "CONFIRMED",
+  "DISPATCHED",
+  "IN_PROGRESS",
+  "COMPLETED",
+  "CANCELLED",
+] as const;
 
 const STATUS_OPTIONS = [
   { value: "SCHEDULED", label: "New" },
@@ -62,9 +76,9 @@ export default async function DispatchPage({
       supabase.from("garages").select("id, name").order("name").limit(100),
     ]);
 
-  const status = filterValue(params, "status");
+  const statuses = only([filterValue(params, "status") ?? ""], STATUS_VALUES);
   const trips = await getDispatchTrips(grid.rangeStart, grid.rangeEnd, {
-    status: status ? [status] : undefined,
+    status: statuses.length ? statuses : undefined,
     assignment: filterValue(params, "assignment"),
     driverId: filterValue(params, "driver"),
     vehicleId: filterValue(params, "vehicle"),

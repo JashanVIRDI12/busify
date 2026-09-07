@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import type { TripStatus } from "@/types/database";
 
 export type DispatchAssignment = {
   id: string;
@@ -34,13 +35,21 @@ export type DispatchTrip = {
 };
 
 export type DispatchFilters = {
-  status?: string[];
+  status?: readonly TripStatus[];
   assignment?: string | null;
   driverId?: string | null;
   vehicleId?: string | null;
   vehicleTypeId?: string | null;
   garageId?: string | null;
 };
+
+const ASSIGNMENT_STATES = ["UNASSIGNED", "PARTIAL", "ASSIGNED"] as const;
+type AssignmentState = (typeof ASSIGNMENT_STATES)[number];
+
+/** Filters arrive off the URL, so an unknown value is dropped, not passed on. */
+function asAssignmentState(value: string | null | undefined): AssignmentState | null {
+  return ASSIGNMENT_STATES.find((state) => state === value) ?? null;
+}
 
 /**
  * Every reservation overlapping a window, with its vehicles and drivers.
@@ -81,11 +90,12 @@ export async function getDispatchTrips(
     .limit(limit);
 
   if (filters.status?.length) {
-    query = query.in("status", filters.status as never[]);
+    query = query.in("status", [...filters.status]);
   }
-  if (filters.assignment) {
-    query = query.eq("assignment_status", filters.assignment as never);
-  }
+
+  const assignment = asAssignmentState(filters.assignment);
+  if (assignment) query = query.eq("assignment_status", assignment);
+
   if (filters.garageId) query = query.eq("garage_id", filters.garageId);
 
   const { data, error } = await query;

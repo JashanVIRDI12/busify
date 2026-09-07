@@ -32,17 +32,25 @@ begin
   -- -------------------------------------------------------------------------
   -- Companies, and the contacts that belong to them
   -- -------------------------------------------------------------------------
+  -- Companies are deliberately *not* unique on name (two school boards really
+  -- do run separate accounts under one), so re-running the seed is guarded by
+  -- an explicit existence check rather than by `on conflict`.
   insert into public.companies (organization_id, name, email, phone, address_line1, city, province, postal_code, industry, groups)
-  values
-    (v_abc, 'Northfield Secondary School', 'office@northfield.test', '(416) 555-0301',
+  select v_abc, c.name, c.email, c.phone, c.address_line1, c.city, c.province, c.postal_code, c.industry, c.groups
+  from (values
+    ('Northfield Secondary School', 'office@northfield.test', '(416) 555-0301',
      '240 Bloor St W', 'Toronto', 'ON', 'M5S 1V6', 'School / School Board', array['School board']),
-    (v_abc, 'Aurora Technologies', 'ap@auroratech.test', '(647) 555-0302',
+    ('Aurora Technologies', 'ap@auroratech.test', '(647) 555-0302',
      '2000 Argentia Rd', 'Mississauga', 'ON', 'L5N 1P7', 'Corporate', array['Net 30']),
-    (v_abc, 'Lefebvre Wedding Co.', 'hello@lefebvre.test', '(905) 555-0303',
-     '360 James St N', 'Hamilton', 'ON', 'L8L 1H5', 'Wedding', array['{}']::text[]),
-    (v_abc, 'Sunburst Travel', 'ops@sunburstravel.test', '(289) 555-0304',
+    ('Lefebvre Wedding Co.', 'hello@lefebvre.test', '(905) 555-0303',
+     '360 James St N', 'Hamilton', 'ON', 'L8L 1H5', 'Wedding', '{}'::text[]),
+    ('Sunburst Travel', 'ops@sunburstravel.test', '(289) 555-0304',
      '1 St. Paul St', 'St. Catharines', 'ON', 'L2R 7L2', 'Tour Operator', array['Cross-border'])
-  on conflict do nothing;
+  ) as c(name, email, phone, address_line1, city, province, postal_code, industry, groups)
+  where not exists (
+    select 1 from public.companies existing
+    where existing.organization_id = v_abc and existing.name = c.name
+  );
 
   update public.customers c
      set company_id = co.id,
