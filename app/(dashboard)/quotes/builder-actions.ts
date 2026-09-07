@@ -17,7 +17,20 @@ import {
   type QuoteBuilderInput,
   type QuoteTripInput,
 } from "@/lib/validations/quote-builder";
-import type { TablesInsert } from "@/types/database";
+import type { TablesInsert, TablesUpdate } from "@/types/database";
+import type { PostgrestError } from "@supabase/supabase-js";
+
+/**
+ * PostgREST rejects writes that name a column it has not cached. A drifted
+ * hosted schema is missing `contract_terms_id` even though the app types it,
+ * which is why "New quote" was throwing PGRST204. Strip the unknown column
+ * and retry rather than failing the whole draft.
+ */
+function unknownColumn(error: PostgrestError | null): string | null {
+  if (error?.code !== "PGRST204" || !error.message) return null;
+  const match = error.message.match(/Could not find the '([^']+)' column/);
+  return match?.[1] ?? null;
+}
 
 type SaveResult =
   | { ok: true; savedAt: string; totals: QuoteTotals }
@@ -190,23 +203,36 @@ async function seedQuote(options: {
       .maybeSingle(),
   ]);
 
-  const { data: quote, error } = await supabase
-    .from("quotes")
-    .insert({
-      organization_id: org.id,
-      trip_request_id: request?.id ?? null,
-      customer_id: request?.customer_id ?? null,
-      title: "New Quote",
-      status: "DRAFT",
-      pipeline_status: "LEAD",
-      currency: org.currency,
-      tax_province: org.state,
-      created_by: session.user.id,
-      contract_terms_id: defaultTerms?.id ?? null,
-      customer_visibility: settings?.customer_visibility ?? "LINE_ITEM_CALCS",
-    })
-    .select("id")
-    .single();
+  const quoteInsert: TablesInsert<"quotes"> = {
+    organization_id: org.id,
+    trip_request_id: request?.id ?? null,
+    customer_id: request?.customer_id ?? null,
+    title: "New Quote",
+    status: "DRAFT",
+    pipeline_status: "LEAD",
+    currency: org.currency,
+    tax_province: org.state,
+    created_by: session.user.id,
+    contract_terms_id: defaultTerms?.id ?? null,
+    customer_visibility: settings?.customer_visibility ?? "LINE_ITEM_CALCS",
+  };
+
+  let quote: { id: string } | null = null;
+  let error: PostgrestError | null = null;
+  const insertPayload: Record<string, unknown> = { ...quoteInsert };
+
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const result = await supabase
+      .from("quotes")
+      .insert(insertPayload as TablesInsert<"quotes">)
+      .select("id")
+      .single();
+    quote = result.data;
+    error = result.error;
+    const column = unknownColumn(error);
+    if (!column || !(column in insertPayload)) break;
+    delete insertPayload[column];
+  }
 
   if (error || !quote) {
     console.error("Quote draft creation failed", error);
@@ -369,45 +395,54 @@ export async function saveQuoteBuilderAction(
 
   // --- Header ------------------------------------------------------------
   const header = input.header;
-  const { error: headerError } = await supabase
-    .from("quotes")
-    .update({
-      title: header.title,
-      pipeline_status: header.pipeline_status,
-      priority: header.priority,
-      sales_rep_id: header.sales_rep_id,
-      event_name: header.event_name,
-      referred_by: header.referred_by,
-      tags: header.tags,
-      customer_id: header.customer_id,
-      billing_customer_id: header.billing_customer_id,
-      customer_visibility: header.customer_visibility,
-      allow_instant_booking: header.allow_instant_booking,
-      allow_pay_later: header.allow_pay_later,
-      allow_full_card_payment: header.allow_full_card_payment,
-      po_number: header.po_number,
-      po_only: header.po_only,
-      payment_policy: header.payment_policy,
-      require_signature: header.require_signature,
-      expiry_days: header.expiry_days,
-      expiry_anchor: header.expiry_anchor,
-      contract_terms_id: header.contract_terms_id,
-      overage_basis: header.overage_basis,
-      overage_rate: header.overage_rate,
-      notes: header.notes,
-      // Rolled-up totals — the legacy columns the dashboard and public page read.
-      subtotal: toMajor(rollup.subtotal),
-      tax: toMajor(rollup.taxTotal),
-      discount: 0,
-      total: toMajor(rollup.total),
-      deposit_amount: toMajor(rollup.dueNow),
-      tax_rate_percent: primaryTax ? primaryTax.rate : 0,
-      // Denormalised so the quotes list can sort and filter on pickup without
-      // reaching through quote_trips into quote_trip_stops.
-      pickup_at: pickup.at,
-      pickup_address: pickup.address,
-    })
-    .eq("id", input.id);
+  const headerUpdate: Record<string, unknown> = {
+    title: header.title,
+    pipeline_status: header.pipeline_status,
+    priority: header.priority,
+    sales_rep_id: header.sales_rep_id,
+    event_name: header.event_name,
+    referred_by: header.referred_by,
+    tags: header.tags,
+    customer_id: header.customer_id,
+    billing_customer_id: header.billing_customer_id,
+    customer_visibility: header.customer_visibility,
+    allow_instant_booking: header.allow_instant_booking,
+    allow_pay_later: header.allow_pay_later,
+    allow_full_card_payment: header.allow_full_card_payment,
+    po_number: header.po_number,
+    po_only: header.po_only,
+    payment_policy: header.payment_policy,
+    require_signature: header.require_signature,
+    expiry_days: header.expiry_days,
+    expiry_anchor: header.expiry_anchor,
+    contract_terms_id: header.contract_terms_id,
+    overage_basis: header.overage_basis,
+    overage_rate: header.overage_rate,
+    notes: header.notes,
+    // Rolled-up totals — the legacy columns the dashboard and public page read.
+    subtotal: toMajor(rollup.subtotal),
+    tax: toMajor(rollup.taxTotal),
+    discount: 0,
+    total: toMajor(rollup.total),
+    deposit_amount: toMajor(rollup.dueNow),
+    tax_rate_percent: primaryTax ? primaryTax.rate : 0,
+    // Denormalised so the quotes list can sort and filter on pickup without
+    // reaching through quote_trips into quote_trip_stops.
+    pickup_at: pickup.at,
+    pickup_address: pickup.address,
+  };
+
+  let headerError: PostgrestError | null = null;
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const result = await supabase
+      .from("quotes")
+      .update(headerUpdate as TablesUpdate<"quotes">)
+      .eq("id", input.id);
+    headerError = result.error;
+    const column = unknownColumn(headerError);
+    if (!column || !(column in headerUpdate)) break;
+    delete headerUpdate[column];
+  }
 
   if (headerError) return saveError(databaseError(headerError));
 
