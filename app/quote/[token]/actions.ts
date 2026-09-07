@@ -9,6 +9,7 @@ import {
   validationError,
   type FormState,
 } from "@/lib/forms";
+import { convertQuoteToReservations } from "@/lib/quotes/convert";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { publicQuoteResponseSchema } from "@/lib/validations/quote";
 
@@ -98,60 +99,40 @@ export async function respondToQuoteAction(
   }
 
   // --- Accepted ------------------------------------------------------------
-  const request = quote.trip_request_id
-    ? (
-        await supabase
-          .from("trip_requests")
-          .select("*")
-          .eq("id", quote.trip_request_id)
-          .maybeSingle()
-      ).data
-    : null;
+  // Create the reservations first: if the booking insert then fails, the
+  // operator has work on the schedule rather than a paid booking with nothing
+  // behind it.
+  //
+  // Every accepted quote converts, whatever it came from. Previously only a
+  // quote seeded from a trip request produced a reservation, so a quote built
+  // in the builder — the normal path — was accepted into nothing and never
+  // reached the dispatch board.
+  const { data: organization } = await supabase
+    .from("organizations")
+    .select("timezone")
+    .eq("id", quote.organization_id)
+    .maybeSingle();
 
-  // Create the trip first: if the booking insert then fails, the operator has
-  // work on the schedule rather than a paid booking with nothing behind it.
-  let tripId: string | null = null;
+  const conversion = await convertQuoteToReservations(
+    supabase,
+    quote.id,
+    organization?.timezone ?? "America/Toronto",
+  );
 
-  if (request) {
-    const { data: existingTrip } = await supabase
-      .from("trips")
-      .select("id")
-      .eq("trip_request_id", request.id)
-      .maybeSingle();
+  if (!conversion.ok) {
+    console.error("Quote accept: conversion failed", conversion.message);
+    return formError(
+      "We could not confirm your booking. Please contact the operator directly.",
+    );
+  }
 
-    if (existingTrip) {
-      tripId = existingTrip.id;
-    } else {
-      const { data: trip, error: tripError } = await supabase
-        .from("trips")
-        .insert({
-          organization_id: quote.organization_id,
-          trip_request_id: request.id,
-          customer_id: quote.customer_id,
-          pickup_location: request.pickup_location,
-          destination: request.destination,
-          departure_at: request.departure_at,
-          return_at: request.return_at,
-          passenger_count: request.passenger_count,
-          status: "SCHEDULED",
-          notes: request.special_requirements,
-        })
-        .select("id")
-        .single();
+  const tripId = conversion.tripIds[0] ?? null;
 
-      if (tripError) {
-        console.error("Quote accept: trip creation failed", tripError);
-        return formError(
-          "We could not confirm your booking. Please contact the operator directly.",
-        );
-      }
-      tripId = trip.id;
-    }
-
+  if (quote.trip_request_id) {
     await supabase
       .from("trip_requests")
       .update({ status: "ACCEPTED" })
-      .eq("id", request.id);
+      .eq("id", quote.trip_request_id);
   }
 
   const total = Number(quote.total);
@@ -180,6 +161,7 @@ export async function respondToQuoteAction(
     .from("quotes")
     .update({
       status: "ACCEPTED",
+      pipeline_status: "WON",
       responded_at: respondedAt,
       notes: message
         ? `${quote.notes ? `${quote.notes}\n` : ""}Customer note: ${message}`

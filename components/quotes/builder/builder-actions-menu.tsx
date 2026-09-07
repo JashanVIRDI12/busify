@@ -2,7 +2,15 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Copy, ExternalLink, Link2, Send, Trash2 } from "lucide-react";
+import {
+  CalendarCheck,
+  ChevronDown,
+  Copy,
+  ExternalLink,
+  Link2,
+  Send,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -10,6 +18,7 @@ import {
   sendQuoteFromBuilder,
 } from "@/app/(dashboard)/quotes/builder-actions";
 import { deleteQuoteAction } from "@/app/(dashboard)/quotes/actions";
+import { convertQuoteAction } from "@/app/(dashboard)/quotes/convert-actions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -84,6 +93,34 @@ export function BuilderActionsMenu() {
               <DropdownMenuItem onSelect={() => void send()}>
                 <Send />
                 Mark as sent
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={pending}
+                onSelect={() =>
+                  startTransition(async () => {
+                    // Convert what is saved, not what is on screen.
+                    if (dirty) await save();
+                    const result = await convertQuoteAction(quoteId);
+
+                    if (!result.ok) {
+                      toast.error(result.message);
+                      return;
+                    }
+                    if (result.data.alreadyExisted) {
+                      toast.info("This quote is already on the schedule.");
+                    } else {
+                      toast.success(
+                        `Created ${result.data.created} reservation${
+                          result.data.created === 1 ? "" : "s"
+                        }`,
+                      );
+                    }
+                    router.push("/reservations");
+                  })
+                }
+              >
+                <CalendarCheck />
+                Convert to reservations
               </DropdownMenuItem>
               <DropdownMenuItem
                 onSelect={() =>
