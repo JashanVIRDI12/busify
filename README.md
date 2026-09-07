@@ -29,11 +29,26 @@ click; everything they touch daily is two.
 | **Reservations** | `/reservations`, `/reservations/[id]`       | Confirmed work: money owed, assignment state, invoice state      |
 | **Dispatch**     | `/board`, `/dispatch`, `/assignments`       | Today's runs beside the grid; month calendar; utilisation timeline |
 | **Contacts**     | `/contacts`, `/companies`                   | The people who book, and the accounts they book for             |
-| **Operations**   | `/vehicles`, `/drivers`, `/driver-pay`, `/tickets`, `/garages`, `/trip-requests`, `/bookings` | Fleet, roster, payroll, issues, depots, inbound demand |
+| **Operations**   | `/vehicles`, `/drivers`, `/driver-pay`, `/tickets`, `/trip-requests`, `/bookings` | Fleet, roster, payroll, issues, inbound demand |
 | **Reports**      | `/reports`, `/payments`                     | Where the business stands, and what is still owed                |
+| **Settings**     | `/settings/*`                               | Company, rate card, users, charges, garages, stops, pay, templates |
 
-Public, no account needed: `/book/[slug]` (booking enquiry form) and
-`/quote/[token]` (the customer's copy of a quote).
+Public, no account needed: `/book/[slug]` (booking enquiry form, and the
+embeddable quote widget) and `/quote/[token]` (the customer's copy of a quote).
+
+### Settings are load-bearing
+
+They are not a preferences screen. A new quote inherits its garage, its
+contract terms, its customer-visibility level and any charge marked *add to
+every new quote*; sales tax is only added when the operator says they are
+registered. `vehicle_rates` overlays the legacy per-type columns, so the whole
+builder reads the rate card without knowing it exists. The industry and
+event-type pickers read their tables rather than a list in the source.
+
+Writes under Settings are **manager-only**, one level above the general write
+permission — a dispatcher should not be able to change the rate card. Saved
+stops are the deliberate exception: a dispatcher mid-itinerary can keep the
+address they just typed.
 
 ---
 
@@ -221,6 +236,25 @@ does not shift every bar after the transition.
 Stored as `numeric(12,2)` in major units. Quote totals are computed by
 application code and persisted — never derived in the browser, and never
 calculated by a model.
+
+### Service role is used for exactly two things
+
+The public booking form (an anonymous caller writing a `trip_request`) and
+reading `auth.users` for invitations and last-sign-in times. Both scope by
+organization explicitly, because RLS will not do it for them.
+
+Inviting a user is the interesting one: the auth account is created through the
+admin client, but the membership row is inserted as the **caller**, so the
+database still decides whether they were allowed to. Doing the whole thing with
+service role would leave "only managers can invite" living in a TypeScript
+check, one edit from being an authorization hole.
+
+### Response headers
+
+Set in `next.config.ts` rather than in the proxy, so they cover static assets
+and cannot be dropped by a change to session handling. The console and the
+customer's copy of a quote refuse to be framed; `/book/*` deliberately allows
+it, because Settings hands the operator that URL to embed on their own site.
 
 ---
 
