@@ -45,8 +45,10 @@ export function FilterTabs({
             aria-selected={active}
             scroll={false}
             className={cn(
-              "flex shrink-0 items-center gap-2 rounded-full px-3 py-1.5 text-body-sm font-semibold transition-colors duration-150 outline-none",
-              active ? "bg-ink text-signal-white" : "text-slate hover:bg-ink/4 hover:text-ink",
+              "flex shrink-0 items-center gap-2 rounded-full border px-3 py-1 text-[12.5px] font-medium transition-colors duration-150 outline-none",
+              active
+                ? "border-orange-500 bg-orange-500 text-signal-white"
+                : "border-orange-300 bg-signal-white text-orange-600 hover:bg-orange-50",
             )}
           >
             {tab.label}
@@ -54,7 +56,7 @@ export function FilterTabs({
               <span
                 className={cn(
                   "tabular text-[12px] font-medium",
-                  active ? "text-signal-white/60" : "text-ash",
+                  active ? "text-signal-white/70" : "text-orange-400",
                 )}
               >
                 {tab.count}

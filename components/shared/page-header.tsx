@@ -11,9 +11,9 @@ type PageHeaderProps = {
 };
 
 /**
- * Display type: heavy Plus Jakarta with tight negative tracking. That weight
- * plus tracking combination is what makes the headings read as confident rather
- * than shy, and it is the brand's typographic signature.
+ * Heading for the pages that carry an explanation as well as a title — the
+ * settings screens and the detail views. Lists use `PageHeading` instead, which
+ * puts the result count on the title line and has no room for prose.
  */
 function PageHeader({
   title,
@@ -25,21 +25,23 @@ function PageHeader({
   return (
     <header
       className={cn(
-        "flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between",
+        "flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between",
         className,
       )}
     >
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         {eyebrow && <p className="meta-label">{eyebrow}</p>}
-        <h1 className="font-display text-heading-sm font-extrabold text-balance text-onyx">
+        <h1 className="text-heading-sm font-semibold text-balance text-ink">
           {title}
         </h1>
         {description && (
-          <p className="max-w-2xl text-body text-pretty text-slate">{description}</p>
+          <p className="max-w-2xl text-body-sm text-pretty text-slate">
+            {description}
+          </p>
         )}
       </div>
       {actions && (
-        <div className="flex shrink-0 flex-wrap items-center gap-3">{actions}</div>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
       )}
     </header>
   );
