@@ -984,6 +984,10 @@ export async function sendQuoteFromBuilder(
       sent_at: now.toISOString(),
       first_sent_at: firstSentAt,
       valid_until: validUntil,
+      // `valid_until` is the date the public quote page enforces; `expires_at`
+      // is the instant the console sorts and colours the list by. Both are
+      // written here so the two can never disagree about the same quote.
+      expires_at: validUntil ? `${validUntil}T23:59:59.000Z` : null,
     })
     .eq("id", quote.id);
 
