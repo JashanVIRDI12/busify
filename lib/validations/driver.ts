@@ -1,7 +1,13 @@
 import { z } from "zod";
 
 import { DRIVER_LICENCE_CLASSES } from "@/lib/constants";
-import { optionalDate, optionalEmail, optionalPhone, optionalText } from "./shared";
+import {
+  optionalDate,
+  optionalEmail,
+  optionalPhone,
+  optionalText,
+  optionalUuid,
+} from "./shared";
 
 export const DRIVER_STATUSES = [
   "ACTIVE",
@@ -45,6 +51,7 @@ export const driverSchema = z.object({
   air_brake_endorsement: checkbox,
   license_expires_on: optionalDate,
   status: z.enum(DRIVER_STATUSES).default("ACTIVE"),
+  garage_id: optionalUuid,
   notes: optionalText,
 });
 

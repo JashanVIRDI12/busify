@@ -58,6 +58,31 @@ export const optionalInt = (min: number, max: number, label: string) =>
 
 export const uuid = z.uuid("Expected a valid id");
 
+/**
+ * A `<Select>` that may be left unset.
+ *
+ * Radix Select cannot hold "" as a value, so "nothing chosen" arrives either as
+ * a missing field or as the `__none__` sentinel; both normalise to null.
+ */
+export const NONE = "__none__";
+
+export const optionalUuid = z
+  .string()
+  .trim()
+  .transform((value) => (value === "" || value === NONE ? null : value))
+  .nullable()
+  .default(null)
+  .refine(
+    (value) => value === null || z.uuid().safeParse(value).success,
+    "Choose an option from the list",
+  );
+
+/** An unchecked HTML checkbox submits nothing at all, hence the missing case. */
+export const checkboxValue = z
+  .union([z.literal("on"), z.literal("true"), z.literal("false"), z.literal("")])
+  .optional()
+  .transform((value) => value === "on" || value === "true");
+
 export type FieldErrors = Record<string, string[]>;
 
 export type ActionResult<T = void> =

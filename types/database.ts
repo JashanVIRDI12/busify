@@ -137,6 +137,23 @@ export type MaintenanceStatus =
   | "COMPLETED"
   | "CANCELLED";
 
+export type TicketStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+
+export type TicketSeverity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+
+export type DriverPayStatus =
+  | "DRAFT"
+  | "PENDING"
+  | "APPROVED"
+  | "PAID"
+  | "VOID";
+
+export type ReservationPaymentStatus =
+  | "UNPAID"
+  | "PARTIAL"
+  | "PAID"
+  | "REFUNDED";
+
 type Timestamps = {
   created_at: string;
   updated_at: string;
@@ -175,6 +192,25 @@ type OrganizationMemberRow = Timestamps & {
   role: OrgRole;
 };
 
+type CompanyRow = Timestamps & {
+  id: string;
+  organization_id: string;
+  name: string;
+  website: string | null;
+  email: string | null;
+  phone: string | null;
+  fax: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  city: string | null;
+  province: string | null;
+  postal_code: string | null;
+  country: string;
+  industry: string | null;
+  groups: string[];
+  notes: string | null;
+};
+
 type CustomerRow = Timestamps & {
   id: string;
   organization_id: string;
@@ -182,7 +218,18 @@ type CustomerRow = Timestamps & {
   last_name: string | null;
   email: string | null;
   phone: string | null;
+  /** Free-text company name, kept for rows imported before `company_id`. */
   company: string | null;
+  company_id: string | null;
+  job_title: string | null;
+  phone_extension: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  city: string | null;
+  province: string | null;
+  postal_code: string | null;
+  country: string;
+  industry: string | null;
   notes: string | null;
 };
 
@@ -203,7 +250,8 @@ type VehicleRow = Timestamps & {
   organization_id: string;
   vehicle_type_id: string | null;
   name: string;
-  registration_number: string;
+  /** The licence plate. Optional: fleet spreadsheets rarely carry it. */
+  registration_number: string | null;
   capacity: number;
   status: VehicleStatus;
   location: string | null;
@@ -211,6 +259,12 @@ type VehicleRow = Timestamps & {
   make: string | null;
   model: string | null;
   image_url: string | null;
+  garage_id: string | null;
+  vin: string | null;
+  amenities: string[];
+  /** A placeholder coach held for a booking; excluded from availability. */
+  is_mock: boolean;
+  external_ref: string | null;
   notes: string | null;
 };
 
@@ -241,6 +295,7 @@ type DriverRow = Timestamps & {
   air_brake_endorsement: boolean;
   license_expires_on: string | null;
   status: DriverStatus;
+  garage_id: string | null;
   notes: string | null;
 };
 
@@ -298,6 +353,24 @@ type TripRow = Timestamps & {
   passenger_count: number;
   status: TripStatus;
   notes: string | null;
+  // --- Reservation fields ---------------------------------------------------
+  /** The job number: inherited from the quote, suffixed per trip. */
+  reference: string | null;
+  quote_id: string | null;
+  company_id: string | null;
+  garage_id: string | null;
+  group_name: string | null;
+  total_due: number;
+  amount_paid: number;
+  /** Generated column — read only; write `total_due` and `amount_paid`. */
+  balance_due: number;
+  payment_status: ReservationPaymentStatus;
+  invoice_sent_at: string | null;
+  garage_arrival_at: string | null;
+  spot_at: string | null;
+  dropoff_at: string | null;
+  last_activity_at: string;
+  created_by: string | null;
 };
 
 type TripAssignmentRow = Timestamps & {
@@ -367,6 +440,77 @@ type QuoteRow = Timestamps & {
   overage_basis: QuoteOverageBasis | null;
   overage_rate: number | null;
   first_sent_at: string | null;
+  /** The job number shown in the console. Shared with the resulting trips. */
+  reference: string | null;
+  company_id: string | null;
+  event_type: string | null;
+  created_by: string | null;
+  expires_at: string | null;
+};
+
+type TicketRow = Timestamps & {
+  id: string;
+  organization_id: string;
+  reference: string | null;
+  trip_id: string | null;
+  title: string;
+  ticket_type: string | null;
+  status: TicketStatus;
+  severity: TicketSeverity;
+  assignee_id: string | null;
+  created_by: string | null;
+  body: string | null;
+  resolved_at: string | null;
+};
+
+type TicketCommentRow = Timestamps & {
+  id: string;
+  organization_id: string;
+  ticket_id: string;
+  author_id: string | null;
+  body: string;
+};
+
+type DriverPayStubRow = Timestamps & {
+  id: string;
+  organization_id: string;
+  reference: string;
+  driver_id: string;
+  status: DriverPayStatus;
+  total_pay: number;
+  payment_date: string | null;
+  period_start: string | null;
+  period_end: string | null;
+  notes: string | null;
+};
+
+type DriverPayEntryRow = Timestamps & {
+  id: string;
+  organization_id: string;
+  trip_id: string;
+  driver_id: string;
+  pay_stub_id: string | null;
+  status: DriverPayStatus;
+  rate_basis: "FLAT" | "HOURLY" | "DAILY" | "MILEAGE";
+  rate: number;
+  quantity: number;
+  total_pay: number;
+  starts_at: string | null;
+  ends_at: string | null;
+  notes: string | null;
+};
+
+type SavedViewRow = Timestamps & {
+  id: string;
+  organization_id: string;
+  user_id: string;
+  /** The list this view belongs to: "quotes", "reservations", "contacts"... */
+  resource: string;
+  name: string;
+  /** A URL query string, stored verbatim. */
+  query: string;
+  position: number;
+  is_shared: boolean;
 };
 
 type ContractTermsRow = Timestamps & {
@@ -537,6 +681,32 @@ type Insert<T, RequiredKeys extends keyof T> = Pick<T, RequiredKeys> &
 
 type Update<T> = Partial<T>;
 
+/**
+ * One foreign key, in the shape PostgREST's select-query type resolver reads.
+ *
+ * Only *forward* references are declared — the column lives on this table and
+ * points at another. That is what makes `.select("*, companies(name)")` resolve
+ * to a single embedded object rather than an array.
+ *
+ * A pair of tables joined by two different foreign keys (quotes has both
+ * `customer_id` and `billing_customer_id` into customers) is deliberately left
+ * undeclared: PostgREST cannot resolve that embed without a disambiguating
+ * hint at runtime, so allowing it in the types would only let the mistake reach
+ * production. Those relationships are read with a second query instead.
+ */
+type Rel<
+  Name extends string,
+  Column extends string,
+  Target extends string,
+  TargetColumn extends string = "id",
+> = {
+  foreignKeyName: Name;
+  columns: [Column];
+  isOneToOne: false;
+  referencedRelation: Target;
+  referencedColumns: [TargetColumn];
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -558,10 +728,66 @@ export type Database = {
         Update: Update<OrganizationMemberRow>;
         Relationships: [];
       };
+      companies: {
+        Row: CompanyRow;
+        Insert: Insert<CompanyRow, "organization_id" | "name">;
+        Update: Update<CompanyRow>;
+        Relationships: [];
+      };
       customers: {
         Row: CustomerRow;
         Insert: Insert<CustomerRow, "organization_id" | "first_name">;
         Update: Update<CustomerRow>;
+        Relationships: [Rel<"customers_company_fk", "company_id", "companies">];
+      };
+      tickets: {
+        Row: TicketRow;
+        Insert: Insert<TicketRow, "organization_id" | "title">;
+        Update: Update<TicketRow>;
+        Relationships: [Rel<"tickets_trip_fk", "trip_id", "trips">];
+      };
+      ticket_comments: {
+        Row: TicketCommentRow;
+        Insert: Insert<
+          TicketCommentRow,
+          "organization_id" | "ticket_id" | "body"
+        >;
+        Update: Update<TicketCommentRow>;
+        Relationships: [Rel<"ticket_comments_ticket_fk", "ticket_id", "tickets">];
+      };
+      driver_pay_stubs: {
+        Row: DriverPayStubRow;
+        Insert: Insert<
+          DriverPayStubRow,
+          "organization_id" | "reference" | "driver_id"
+        >;
+        Update: Update<DriverPayStubRow>;
+        Relationships: [Rel<"driver_pay_stubs_driver_fk", "driver_id", "drivers">];
+      };
+      driver_pay_entries: {
+        Row: DriverPayEntryRow;
+        Insert: Insert<
+          DriverPayEntryRow,
+          "organization_id" | "trip_id" | "driver_id"
+        >;
+        Update: Update<DriverPayEntryRow>;
+        Relationships: [
+          Rel<"driver_pay_entries_trip_fk", "trip_id", "trips">,
+          Rel<"driver_pay_entries_driver_fk", "driver_id", "drivers">,
+          Rel<
+            "driver_pay_entries_stub_fk",
+            "pay_stub_id",
+            "driver_pay_stubs"
+          >,
+        ];
+      };
+      saved_views: {
+        Row: SavedViewRow;
+        Insert: Insert<
+          SavedViewRow,
+          "organization_id" | "user_id" | "resource" | "name"
+        >;
+        Update: Update<SavedViewRow>;
         Relationships: [];
       };
       vehicle_types: {
@@ -572,12 +798,12 @@ export type Database = {
       };
       vehicles: {
         Row: VehicleRow;
-        Insert: Insert<
-          VehicleRow,
-          "organization_id" | "name" | "registration_number" | "capacity"
-        >;
+        Insert: Insert<VehicleRow, "organization_id" | "name" | "capacity">;
         Update: Update<VehicleRow>;
-        Relationships: [];
+        Relationships: [
+          Rel<"vehicles_type_fk", "vehicle_type_id", "vehicle_types">,
+          Rel<"vehicles_garage_fk", "garage_id", "garages">,
+        ];
       };
       vehicle_maintenance: {
         Row: VehicleMaintenanceRow;
@@ -592,7 +818,7 @@ export type Database = {
         Row: DriverRow;
         Insert: Insert<DriverRow, "organization_id" | "first_name">;
         Update: Update<DriverRow>;
-        Relationships: [];
+        Relationships: [Rel<"drivers_garage_fk", "garage_id", "garages">];
       };
       driver_documents: {
         Row: DriverDocumentRow;
@@ -636,13 +862,23 @@ export type Database = {
           | "passenger_count"
         >;
         Update: Update<TripRow>;
-        Relationships: [];
+        Relationships: [
+          Rel<"trips_customer_fk", "customer_id", "customers">,
+          Rel<"trips_company_fk", "company_id", "companies">,
+          Rel<"trips_quote_fk", "quote_id", "quotes">,
+          Rel<"trips_garage_fk", "garage_id", "garages">,
+          Rel<"trips_request_fk", "trip_request_id", "trip_requests">,
+        ];
       };
       trip_assignments: {
         Row: TripAssignmentRow;
         Insert: Insert<TripAssignmentRow, "organization_id" | "trip_id">;
         Update: Update<TripAssignmentRow>;
-        Relationships: [];
+        Relationships: [
+          Rel<"trip_assignments_trip_fk", "trip_id", "trips">,
+          Rel<"trip_assignments_vehicle_fk", "vehicle_id", "vehicles">,
+          Rel<"trip_assignments_driver_fk", "driver_id", "drivers">,
+        ];
       };
       trip_passengers: {
         Row: TripPassengerRow;
@@ -657,7 +893,14 @@ export type Database = {
         Row: QuoteRow;
         Insert: Insert<QuoteRow, "organization_id">;
         Update: Update<QuoteRow>;
-        Relationships: [];
+        // No `customers` relationship: quotes reach it through both
+        // `customer_id` and `billing_customer_id`, which PostgREST cannot
+        // disambiguate. Read the contact with a separate query.
+        Relationships: [
+          Rel<"quotes_company_fk", "company_id", "companies">,
+          Rel<"quotes_contract_terms_fk", "contract_terms_id", "contract_terms">,
+          Rel<"quotes_request_fk", "trip_request_id", "trip_requests">,
+        ];
       };
       quote_items: {
         Row: QuoteItemRow;
@@ -684,19 +927,23 @@ export type Database = {
         Row: QuoteTripRow;
         Insert: Insert<QuoteTripRow, "organization_id" | "quote_id">;
         Update: Update<QuoteTripRow>;
-        Relationships: [];
+        Relationships: [Rel<"quote_trips_quote_fk", "quote_id", "quotes">];
       };
       quote_trip_stops: {
         Row: QuoteTripStopRow;
         Insert: Insert<QuoteTripStopRow, "organization_id" | "quote_trip_id">;
         Update: Update<QuoteTripStopRow>;
-        Relationships: [];
+        Relationships: [
+          Rel<"quote_trip_stops_trip_fk", "quote_trip_id", "quote_trips">,
+        ];
       };
       quote_trip_vehicles: {
         Row: QuoteTripVehicleRow;
         Insert: Insert<QuoteTripVehicleRow, "organization_id" | "quote_trip_id">;
         Update: Update<QuoteTripVehicleRow>;
-        Relationships: [];
+        Relationships: [
+          Rel<"quote_trip_vehicles_trip_fk", "quote_trip_id", "quote_trips">,
+        ];
       };
       quote_trip_charges: {
         Row: QuoteTripChargeRow;
@@ -772,6 +1019,10 @@ export type Database = {
       quote_overage_basis: QuoteOverageBasis;
       booking_status: BookingStatus;
       maintenance_status: MaintenanceStatus;
+      ticket_status: TicketStatus;
+      ticket_severity: TicketSeverity;
+      driver_pay_status: DriverPayStatus;
+      reservation_payment_status: ReservationPaymentStatus;
     };
     CompositeTypes: Record<never, never>;
   };

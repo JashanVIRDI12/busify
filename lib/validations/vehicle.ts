@@ -1,6 +1,12 @@
 import { z } from "zod";
 
-import { optionalInt, optionalText } from "./shared";
+import { VEHICLE_AMENITIES } from "@/lib/taxonomy";
+import {
+  checkboxValue,
+  optionalInt,
+  optionalText,
+  optionalUuid,
+} from "./shared";
 
 export const VEHICLE_STATUSES = [
   "AVAILABLE",
@@ -22,11 +28,13 @@ export const vehicleSchema = z.object({
     .trim()
     .min(1, "Give the vehicle a name your dispatchers will recognize")
     .max(80),
-  registration_number: z
-    .string()
-    .trim()
-    .min(1, "Registration number is required")
-    .max(32),
+  /**
+   * The licence plate. Optional: fleets are usually first entered from a
+   * spreadsheet that has the coach number and nothing else, and refusing that
+   * import is worse than a blank plate.
+   */
+  registration_number: optionalText,
+  vin: optionalText,
   capacity: z.coerce
     .number<number>()
     .int("Capacity must be a whole number")
@@ -45,12 +53,22 @@ export const vehicleSchema = z.object({
       "Choose a valid vehicle type",
     ),
   status: z.enum(VEHICLE_STATUSES).default("AVAILABLE"),
+  garage_id: optionalUuid,
+  is_mock: checkboxValue,
   location: optionalText,
   year: optionalInt(1950, 2100, "Year"),
   make: optionalText,
   model: optionalText,
   notes: optionalText,
 });
+
+/** Amenity chips are submitted as repeated fields; unknown values are dropped. */
+export function readAmenities(values: FormDataEntryValue[]): string[] {
+  const allowed = new Set<string>(VEHICLE_AMENITIES);
+  return values
+    .filter((value): value is string => typeof value === "string")
+    .filter((value) => allowed.has(value));
+}
 
 export const vehicleTypeSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(80),

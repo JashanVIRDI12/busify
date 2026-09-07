@@ -146,3 +146,94 @@ export function tripWindow(departureAt: string, returnAt: string | null) {
   const end = returnAt ? new Date(returnAt) : new Date(start.getTime() + 86_400_000);
   return { start, end };
 }
+
+/* ---------------------------------------------------------------------------
+   Console table formats
+
+   Lists use US-style numeric dates with an explicit zone abbreviation. The
+   abbreviation is not decoration: an operator running Toronto to Winnipeg reads
+   these rows against two clocks, and "05:30 AM" alone is ambiguous to them.
+--------------------------------------------------------------------------- */
+
+/** `10/02/2026` */
+export function formatStampDate(
+  iso: string | null | undefined,
+  timeZone: string,
+  { shortYear = false }: { shortYear?: boolean } = {},
+): string {
+  if (!iso) return "";
+  const instant = new Date(iso);
+  if (Number.isNaN(instant.getTime())) return "";
+
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    month: "2-digit",
+    day: "2-digit",
+    year: shortYear ? "2-digit" : "numeric",
+  }).format(instant);
+}
+
+/** `02:00 PM` */
+export function formatStampTime(
+  iso: string | null | undefined,
+  timeZone: string,
+  { withZone = false }: { withZone?: boolean } = {},
+): string {
+  if (!iso) return "";
+  const instant = new Date(iso);
+  if (Number.isNaN(instant.getTime())) return "";
+
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+    ...(withZone ? { timeZoneName: "short" as const } : {}),
+  }).format(instant);
+}
+
+/** `10/02/2026 · 02:00 PM EDT` — the standard row stamp. */
+export function formatStamp(
+  iso: string | null | undefined,
+  timeZone: string,
+  {
+    shortYear = false,
+    withZone = true,
+  }: { shortYear?: boolean; withZone?: boolean } = {},
+): string {
+  if (!iso) return "";
+  const date = formatStampDate(iso, timeZone, { shortYear });
+  if (!date) return "";
+  return `${date} · ${formatStampTime(iso, timeZone, { withZone })}`;
+}
+
+/** `Tuesday, 06/02/26` — used either side of a pay period range. */
+export function formatWeekdayStamp(
+  iso: string | null | undefined,
+  timeZone: string,
+): string {
+  if (!iso) return "";
+  const instant = new Date(iso);
+  if (Number.isNaN(instant.getTime())) return "";
+
+  const weekday = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    weekday: "long",
+  }).format(instant);
+
+  return `${weekday}, ${formatStampDate(iso, timeZone, { shortYear: true })}`;
+}
+
+/** Minutes between two instants, floored at zero. */
+export function minutesBetween(startIso: string, endIso: string): number {
+  const start = new Date(startIso).getTime();
+  const end = new Date(endIso).getTime();
+  if (Number.isNaN(start) || Number.isNaN(end)) return 0;
+  return Math.max(0, Math.round((end - start) / 60_000));
+}
+
+/** `0h 0m` / `18h 45m` — the duration format the dispatch views use. */
+export function formatDuration(minutes: number): string {
+  const safe = Math.max(0, Math.round(minutes));
+  return `${Math.floor(safe / 60)}h ${safe % 60}m`;
+}

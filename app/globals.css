@@ -2,71 +2,59 @@
 @import "tw-animate-css";
 
 /* ===========================================================================
-   Busify AI — ClickUp-style design system
+   Busify — operations console design system
 
-   White canvas, hairline borders, fully-pill controls, and one filled near-black
-   CTA. Colour is surgical: violet is brand identity only, blue is interactive,
-   and everything structural is grayscale.
+   A warm off-white canvas carrying white cards. Two colours do all the work:
 
-   Elevation is negative space. Cards are defined by a 1px #e8e8e8 border or a
-   tonal shift, not by drop shadows — which is what makes the rare shadow and the
-   conic-gradient border feel dramatic.
+     orange  — identity and the single filled CTA per surface
+     teal    — every link, every "on" state, every positive status
+
+   Structure is grayscale hairlines. Density is high on purpose: these are
+   dispatch tables an operator scans for eight hours, so the type scale bottoms
+   out at 13px and table rows stay tight.
 =========================================================================== */
 
 :root {
   /* --- Palette ---------------------------------------------------------- */
   --signal-white: #ffffff;
-  --ink-black: #202020;
-  --onyx: #090c1d;
-  --carbon: #2a2a2a;
-  --slate: #646464;
-  --ash: #838383;
-  --fog: #b3b3b3;
-  --cloud: #d4d4d4;
-  --bone: #e8e8e8;
-  --mist: #f8f9fa;
-  --plaster: #e9ebf0;
-  --mercury: #eeeeee;
-  --brand-violet: #6647f0;
-  --signal-blue: #0091ff;
-  --mint: #6ee7b7;
-  --emerald: #00c07a;
-  --teal-tag: #16c0a4;
+  --ink-black: #1c1c1e;
+  --onyx: #101014;
+  --carbon: #35373b;
+  --slate: #5f636b;
+  --ash: #8b9098;
+  --fog: #b4b9c0;
+  --cloud: #d9dce1;
+  --bone: #ececee;
+  --mist: #f6f6f7;
+  --plaster: #f1f2f4;
+  --mercury: #e9eaec;
 
-  /* Derived from the conic gradient's warm stops — the source system has no
-     amber, but a dispatch board needs an unambiguous "attention" tone. */
-  --amber: #fd9a46;
-  /* Added deliberately: the source palette has no red. Using brand pink for
-     "delete permanently" would be worse than introducing one honest red. */
+  /* Identity, and the single filled action colour. */
+  --orange-50: #fff5ef;
+  --orange-100: #ffe8da;
+  --orange-200: #fdd2ba;
+  --orange-300: #f9b48f;
+  --orange-400: #fa9463;
+  --orange-500: #f97b41;
+  --orange-600: #ee6a2c;
+  --orange-700: #d4551a;
+
+  /* Interactive and affirmative. Links, toggles, confirmed states. */
+  --teal-50: #e9f7f4;
+  --teal-100: #cdeee8;
+  --teal-200: #9fdfd4;
+  --teal-400: #2fb5a4;
+  --teal-500: #12a594;
+  --teal-600: #0d8b7c;
+  --teal-700: #0a7062;
+
+  --violet-100: #e6e6f8;
+  --violet-500: #6366d8;
+
+  --amber: #f0a02a;
   --scarlet: #e5484d;
 
-  --gradient-rainbow-conic: conic-gradient(
-    from 90deg,
-    rgb(125, 91, 231) 19%,
-    rgb(188, 63, 218) 28%,
-    rgb(250, 36, 206) 37%,
-    rgb(251, 73, 165) 45%,
-    rgb(252, 109, 123) 52%,
-    rgb(253, 132, 97) 55%,
-    rgb(253, 154, 70) 58%,
-    rgb(246, 135, 198) 65%,
-    rgb(163, 160, 224) 80%,
-    rgb(79, 185, 250) 95%,
-    rgb(0, 145, 255) 100%
-  );
-  --gradient-primary: linear-gradient(
-    83deg,
-    rgb(64, 221, 255) -5%,
-    rgb(118, 18, 250) 51%,
-    rgb(250, 18, 227) 125%
-  );
-  --gradient-dark-fade: linear-gradient(rgb(17, 17, 17) 24%, rgb(0, 0, 0));
-
-  /* --- Semantic mapping --------------------------------------------------
-     The marketing surfaces sit on pure white per the brief. The dashboard sits
-     on Mist so that white cards with hairline borders still separate at the
-     density a dispatch board needs.
-  ----------------------------------------------------------------------- */
+  /* --- Semantic mapping -------------------------------------------------- */
   --background: var(--signal-white);
   --app-background: var(--mist);
   --foreground: var(--ink-black);
@@ -77,8 +65,7 @@
   --popover: var(--signal-white);
   --popover-foreground: var(--ink-black);
 
-  /* The one filled action colour. Never violet — that is brand identity only. */
-  --primary: var(--ink-black);
+  --primary: var(--orange-500);
   --primary-foreground: var(--signal-white);
 
   --secondary: var(--plaster);
@@ -87,57 +74,64 @@
   --muted: var(--mist);
   --muted-foreground: var(--slate);
 
-  --accent: var(--mist);
-  --accent-foreground: var(--ink-black);
+  --accent: var(--orange-50);
+  --accent-foreground: var(--orange-700);
 
-  --interactive: var(--signal-blue);
-  --brand: var(--brand-violet);
+  /* Blue never appears in this product. Teal is the interactive colour, which
+     is why link text and a Completed pill share a hue: both mean settled. */
+  --interactive: var(--teal-500);
+  --brand: var(--orange-500);
 
-  --success: var(--emerald);
+  --success: var(--teal-500);
   --success-foreground: var(--signal-white);
-  --warning: var(--amber);
-  --warning-foreground: var(--ink-black);
+  --warning: var(--orange-500);
+  --warning-foreground: var(--signal-white);
   --destructive: var(--scarlet);
   --destructive-foreground: var(--signal-white);
 
   --border: var(--bone);
   --border-hairline: var(--cloud);
   --input: var(--cloud);
-  --ring: var(--signal-blue);
+  --ring: var(--orange-500);
 
   --sidebar: var(--signal-white);
   --sidebar-foreground: var(--slate);
-  --sidebar-accent: var(--mist);
-  --sidebar-accent-foreground: var(--ink-black);
+  --sidebar-accent: var(--orange-50);
+  --sidebar-accent-foreground: var(--orange-700);
   --sidebar-border: var(--bone);
 
-  --chart-1: var(--brand-violet);
-  --chart-2: var(--signal-blue);
-  --chart-3: var(--emerald);
+  --chart-1: var(--orange-500);
+  --chart-2: var(--teal-500);
+  --chart-3: var(--violet-500);
   --chart-4: var(--amber);
-  --chart-5: var(--teal-tag);
+  --chart-5: var(--slate);
 
-  /* --- Shape: one relentless full-radius curve on every control ---------- */
-  --radius: 12px;
+  /* --- Shape ------------------------------------------------------------- */
+  --radius: 10px;
   --radius-tags: 100px;
   --radius-cards: 12px;
   --radius-badges: 9999px;
-  --radius-images: 16px;
-  --radius-inputs: 9px;
+  --radius-images: 14px;
+  --radius-inputs: 8px;
   --radius-buttons: 9999px;
-  --radius-large-cards: 20px;
+  --radius-large-cards: 16px;
 
-  /* --- Elevation: flat first. Three levels, used sparingly. -------------- */
-  --shadow-subtle:
-    rgba(0, 0, 0, 0.1) 0px 1px 3px 0px, rgba(0, 0, 0, 0.1) 0px 1px 2px -1px;
-  --shadow-sm: rgba(13, 21, 48, 0.04) 0px 4px 4px 0px;
+  /* --- Elevation ---------------------------------------------------------
+     Cards float a little here, unlike a hairline-only system. A dispatch table
+     is usually the only thing on the page, and the lift is what stops the white
+     panel from dissolving into the near-white canvas behind it.
+  ------------------------------------------------------------------------ */
+  --shadow-subtle: rgba(16, 16, 20, 0.04) 0px 1px 2px 0px;
+  --shadow-sm:
+    rgba(16, 16, 20, 0.05) 0px 1px 3px 0px,
+    rgba(16, 16, 20, 0.04) 0px 8px 24px -14px;
   --shadow-layered:
-    rgba(18, 43, 165, 0.04) 0px 1px 1px -0.5px,
-    rgba(18, 43, 165, 0.04) 0px 3px 3px -1.5px,
-    rgba(18, 43, 165, 0.04) 0px 6px 6px -3px,
-    rgba(18, 43, 165, 0.04) 0px 12px 12px -6px;
+    rgba(16, 16, 20, 0.06) 0px 2px 6px -1px,
+    rgba(16, 16, 20, 0.05) 0px 12px 32px -12px;
+  --shadow-drawer: rgba(16, 16, 20, 0.14) -12px 0px 40px -18px;
 
-  --page-max-width: 1200px;
+  --page-max-width: 1600px;
+  --topnav-height: 56px;
 }
 
 @theme inline {
@@ -153,11 +147,29 @@
   --color-mist: var(--mist);
   --color-plaster: var(--plaster);
   --color-mercury: var(--mercury);
-  --color-brand: var(--brand-violet);
-  --color-interactive: var(--signal-blue);
-  --color-mint: var(--mint);
-  --color-emerald: var(--emerald);
-  --color-teal: var(--teal-tag);
+
+  --color-orange-50: var(--orange-50);
+  --color-orange-100: var(--orange-100);
+  --color-orange-200: var(--orange-200);
+  --color-orange-300: var(--orange-300);
+  --color-orange-400: var(--orange-400);
+  --color-orange-500: var(--orange-500);
+  --color-orange-600: var(--orange-600);
+  --color-orange-700: var(--orange-700);
+
+  --color-teal-50: var(--teal-50);
+  --color-teal-100: var(--teal-100);
+  --color-teal-200: var(--teal-200);
+  --color-teal-400: var(--teal-400);
+  --color-teal-500: var(--teal-500);
+  --color-teal-600: var(--teal-600);
+  --color-teal-700: var(--teal-700);
+  --color-teal: var(--teal-500);
+
+  --color-violet-100: var(--violet-100);
+  --color-violet-500: var(--violet-500);
+  --color-brand: var(--brand);
+  --color-interactive: var(--interactive);
   --color-amber: var(--amber);
 
   --color-background: var(--background);
@@ -202,40 +214,40 @@
   --radius-xl: var(--radius-images);
   --radius-2xl: var(--radius-large-cards);
 
-  /* Plus Jakarta for display and controls; Inter for body and small text;
-     Sometype Mono for the uppercase meta labels. */
-  --font-display: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  /* One geometric family throughout. Weight, not typeface, carries hierarchy. */
+  --font-display: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-sometype), ui-monospace, monospace;
 
   --text-meta: 10px;
   --text-meta--line-height: 1.5;
   --text-meta--letter-spacing: 0.08em;
-  --text-body-sm: 14px;
-  --text-body-sm--line-height: 1.5;
-  --text-body-sm--letter-spacing: -0.01em;
-  --text-body: 16px;
+  --text-body-sm: 13px;
+  --text-body-sm--line-height: 1.45;
+  --text-body-sm--letter-spacing: 0;
+  --text-body: 14px;
   --text-body--line-height: 1.5;
-  --text-body--letter-spacing: -0.01em;
-  --text-subheading: 20px;
-  --text-subheading--line-height: 1.4;
-  --text-subheading--letter-spacing: -0.02em;
-  --text-heading-sm: 34px;
+  --text-body--letter-spacing: 0;
+  --text-subheading: 18px;
+  --text-subheading--line-height: 1.35;
+  --text-subheading--letter-spacing: -0.01em;
+  --text-heading-sm: 26px;
   --text-heading-sm--line-height: 1.2;
-  --text-heading-sm--letter-spacing: -0.04em;
-  --text-heading: 48px;
+  --text-heading-sm--letter-spacing: -0.02em;
+  --text-heading: 34px;
   --text-heading--line-height: 1.15;
-  --text-heading--letter-spacing: -0.035em;
-  --text-heading-lg: 60px;
+  --text-heading--letter-spacing: -0.025em;
+  --text-heading-lg: 44px;
   --text-heading-lg--line-height: 1.1;
-  --text-heading-lg--letter-spacing: -0.035em;
-  --text-display: 80px;
+  --text-heading-lg--letter-spacing: -0.03em;
+  --text-display: 60px;
   --text-display--line-height: 1.05;
-  --text-display--letter-spacing: -0.04em;
+  --text-display--letter-spacing: -0.035em;
 
   --shadow-subtle: var(--shadow-subtle);
   --shadow-card: var(--shadow-sm);
   --shadow-layered: var(--shadow-layered);
+  --shadow-drawer: var(--shadow-drawer);
 }
 
 @layer base {
@@ -244,18 +256,16 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
-    font-feature-settings: "calt" 0;
+    @apply bg-app text-foreground antialiased;
   }
 
-  /* Blue is the interactive colour throughout — never the CTA fill. */
   :focus-visible {
-    outline: 2px solid var(--signal-blue);
+    outline: 2px solid var(--orange-500);
     outline-offset: 2px;
   }
 
   ::selection {
-    background: color-mix(in srgb, var(--signal-blue) 22%, transparent);
+    background: color-mix(in srgb, var(--orange-500) 24%, transparent);
     color: var(--ink-black);
   }
 
@@ -268,98 +278,88 @@
    Surfaces
 --------------------------------------------------------------------------- */
 
-/** White card, hairline border, no shadow. The system default. */
+/** The standard white content panel: 12px radius, soft lift, no visible border. */
 @utility panel {
+  border-radius: var(--radius-cards);
+  background-color: var(--signal-white);
+  box-shadow: var(--shadow-sm);
+}
+
+@utility panel-lg {
+  border-radius: var(--radius-large-cards);
+  background-color: var(--signal-white);
+  box-shadow: var(--shadow-layered);
+}
+
+/** Hairline-only variant, for panels nested inside another panel. */
+@utility panel-flat {
   border-radius: var(--radius-cards);
   border: 1px solid var(--bone);
   background-color: var(--signal-white);
 }
 
-@utility panel-lg {
-  border-radius: var(--radius-large-cards);
-  border: 1px solid var(--bone);
-  background-color: var(--signal-white);
-}
-
-/** Tonal band that breaks the white rhythm between sections. */
 @utility band {
   background-color: var(--plaster);
 }
 
-/** Uppercase monospaced meta label — the technical voice. */
 @utility meta-label {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  line-height: 1.5;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 11px;
+  line-height: 1.4;
+  font-weight: 500;
   color: var(--ash);
 }
 
-/** Display type: heavy Plus Jakarta with tight tracking. */
 @utility display-type {
   font-family: var(--font-display);
-  font-weight: 700;
-  letter-spacing: -0.04em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 /* ---------------------------------------------------------------------------
-   The rotating conic border — the brand's single expressive moment.
-   At most one per viewport, per the brief.
+   Controls
+
+   Filter controls here are stacked: a small dim label sits above the current
+   value inside one bordered box. It reads as a single object at a glance, which
+   is what lets six of them sit in a row without shouting.
 --------------------------------------------------------------------------- */
-@property --conic-angle {
-  syntax: "<angle>";
-  initial-value: 90deg;
-  inherits: false;
-}
 
-@keyframes conic-spin {
-  to {
-    --conic-angle: 450deg;
+@utility field-stack {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 46px;
+  border-radius: var(--radius-inputs);
+  border: 1px solid var(--cloud);
+  background-color: var(--signal-white);
+  padding: 5px 12px;
+  text-align: left;
+  transition: border-color 0.15s ease;
+
+  &:hover {
+    border-color: var(--fog);
   }
 }
 
-@utility conic-ring {
-  position: relative;
-  isolation: isolate;
-
-  &::before {
-    content: "";
-    position: absolute;
-    inset: -2px;
-    border-radius: inherit;
-    z-index: -1;
-    background: conic-gradient(
-      from var(--conic-angle),
-      rgb(125, 91, 231) 19%,
-      rgb(188, 63, 218) 28%,
-      rgb(250, 36, 206) 37%,
-      rgb(251, 73, 165) 45%,
-      rgb(252, 109, 123) 52%,
-      rgb(253, 132, 97) 55%,
-      rgb(253, 154, 70) 58%,
-      rgb(246, 135, 198) 65%,
-      rgb(163, 160, 224) 80%,
-      rgb(79, 185, 250) 95%,
-      rgb(0, 145, 255) 100%
-    );
-    animation: conic-spin 3s linear infinite;
-  }
+@utility field-stack-label {
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--ash);
 }
 
-@utility gradient-text {
-  background-image: var(--gradient-primary);
-  background-clip: text;
-  color: transparent;
+@utility field-stack-value {
+  font-size: 13px;
+  line-height: 1.4;
+  font-weight: 500;
+  color: var(--ink-black);
 }
 
 /* ---------------------------------------------------------------------------
-   Motion — 0.45s settle, 0.15s for hover feedback.
+   Motion
 --------------------------------------------------------------------------- */
 @keyframes settle-in {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -368,23 +368,41 @@
 }
 
 @utility settle-1 {
-  animation: settle-in 0.45s cubic-bezier(0.33, 1, 0.68, 1) 0ms backwards;
+  animation: settle-in 0.32s cubic-bezier(0.33, 1, 0.68, 1) 0ms backwards;
 }
 @utility settle-2 {
-  animation: settle-in 0.45s cubic-bezier(0.33, 1, 0.68, 1) 60ms backwards;
+  animation: settle-in 0.32s cubic-bezier(0.33, 1, 0.68, 1) 50ms backwards;
 }
 @utility settle-3 {
-  animation: settle-in 0.45s cubic-bezier(0.33, 1, 0.68, 1) 120ms backwards;
+  animation: settle-in 0.32s cubic-bezier(0.33, 1, 0.68, 1) 100ms backwards;
 }
 @utility settle-4 {
-  animation: settle-in 0.45s cubic-bezier(0.33, 1, 0.68, 1) 180ms backwards;
+  animation: settle-in 0.32s cubic-bezier(0.33, 1, 0.68, 1) 150ms backwards;
 }
 
 @media (prefers-reduced-motion: reduce) {
   [class*="settle-"] {
     animation: none;
   }
-  .conic-ring::before {
-    animation: none;
+}
+
+/* Dispatch timelines scroll horizontally for days at a time, so a grabbable
+   scrollbar is a feature there. Everywhere else it should recede. */
+@utility scrollbar-slim {
+  scrollbar-width: thin;
+  scrollbar-color: var(--cloud) transparent;
+
+  &::-webkit-scrollbar {
+    height: 10px;
+    width: 10px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--cloud);
+    border-radius: 9999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
   }
 }
