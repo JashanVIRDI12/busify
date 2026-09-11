@@ -9,11 +9,11 @@ import { createClient } from "@/lib/supabase/server";
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const code = searchParams.get("code");
-  const nextParam = searchParams.get("next") ?? "/reports";
+  const nextParam = searchParams.get("next") ?? "/quotes";
   const next =
     nextParam.startsWith("/") && !nextParam.startsWith("//")
       ? nextParam
-      : "/reports";
+      : "/quotes";
 
   if (!code) {
     return NextResponse.redirect(

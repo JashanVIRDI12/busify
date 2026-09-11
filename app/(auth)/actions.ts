@@ -21,8 +21,8 @@ import {
 
 /** Only ever redirect to a path on this origin. */
 function safeNext(next: unknown): string {
-  if (typeof next !== "string") return "/reports";
-  if (!next.startsWith("/") || next.startsWith("//")) return "/reports";
+  if (typeof next !== "string") return "/quotes";
+  if (!next.startsWith("/") || next.startsWith("//")) return "/quotes";
   return next;
 }
 
@@ -133,7 +133,7 @@ export async function resetPasswordAction(
   if (error) return formError(error.message);
 
   revalidatePath("/", "layout");
-  redirect("/reports");
+  redirect("/quotes");
 }
 
 export async function resendVerificationAction(
