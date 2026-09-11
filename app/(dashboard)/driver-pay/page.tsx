@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Receipt } from "lucide-react";
 
-import { issuePayStubsAction } from "@/app/(dashboard)/driver-pay/actions";
+import { PayBulkBar } from "@/components/driver-pay/pay-bulk-bar";
 import {
   ClearFiltersButton,
   DateFilter,
@@ -14,7 +13,6 @@ import {
 import { PageHeading } from "@/components/data/page-heading";
 import { PageTabs } from "@/components/data/page-tabs";
 import {
-  BulkActionBar,
   RowCheckbox,
   SelectAllCheckbox,
   SelectionProvider,
@@ -375,30 +373,7 @@ export default async function DriverPayPage({
         </TableCard>
       </div>
 
-      <BulkActionBar
-        noun="pay row"
-        actions={
-          canEdit
-            ? [
-                {
-                  label: "Issue pay stubs",
-                  icon: <Receipt className="size-3.5" />,
-                  run: async (ids: string[]) => {
-                    const result = await issuePayStubsAction(ids);
-                    return result.ok
-                      ? {
-                          ok: true,
-                          message: `Issued ${result.data.stubs} pay ${
-                            result.data.stubs === 1 ? "stub" : "stubs"
-                          }`,
-                        }
-                      : { ok: false, message: result.message };
-                  },
-                },
-              ]
-            : []
-        }
-      />
+      <PayBulkBar canEdit={canEdit} />
     </SelectionProvider>
   );
 }

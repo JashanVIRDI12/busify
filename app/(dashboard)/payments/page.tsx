@@ -1,11 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Mail, Send } from "lucide-react";
 
-import {
-  emailInvoicesAction,
-  markInvoicesSentAction,
-} from "@/app/(dashboard)/payments/actions";
+import { PaymentsBulkBar } from "@/components/payments/payments-bulk-bar";
 import {
   ClearFiltersButton,
   DateFilter,
@@ -15,7 +11,6 @@ import {
 } from "@/components/data/filters";
 import { PageHeading } from "@/components/data/page-heading";
 import {
-  BulkActionBar,
   RowCheckbox,
   SelectAllCheckbox,
   SelectionProvider,
@@ -247,45 +242,7 @@ export default async function PaymentsPage({
         </DataTable>
       </TableCard>
 
-      <BulkActionBar
-        noun="reservation"
-        actions={
-          canEdit
-            ? [
-                {
-                  label: "Email invoice",
-                  icon: <Mail className="size-3.5" />,
-                  run: async (ids: string[]) => {
-                    const result = await emailInvoicesAction(ids);
-                    if (!result.ok) return { ok: false, message: result.message };
-
-                    const { sent, delivered, skipped } = result.data;
-                    const base = delivered
-                      ? `Emailed ${sent} invoice${sent === 1 ? "" : "s"}`
-                      : `Marked ${sent} sent — no mail provider is configured, so nothing was delivered`;
-
-                    return {
-                      ok: true,
-                      message: skipped.length
-                        ? `${base}. Skipped: ${skipped.join("; ")}`
-                        : base,
-                    };
-                  },
-                },
-                {
-                  label: "Mark sent",
-                  icon: <Send className="size-3.5" />,
-                  run: async (ids: string[]) => {
-                    const result = await markInvoicesSentAction(ids);
-                    return result.ok
-                      ? { ok: true, message: "Invoices marked as sent" }
-                      : { ok: false, message: result.message };
-                  },
-                },
-              ]
-            : []
-        }
-      />
+      <PaymentsBulkBar canEdit={canEdit} />
     </SelectionProvider>
   );
 }
