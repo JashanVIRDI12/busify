@@ -59,21 +59,26 @@ export default async function VehicleRatesPage({
   const rows = data ?? [];
   const manageAllowed = canManage(role);
 
+  // Typed, not picked. On a new organization there are no vehicle types yet,
+  // so a dropdown here is an empty list in front of the first thing an operator
+  // needs to do. A name they type that does not exist becomes a vehicle type;
+  // a vehicle has to already exist, because a real coach needs a plate and a
+  // capacity that cannot be invented from a rate row.
   const fields: FieldSpec[] = [
     {
-      kind: "select",
-      name: "vehicle_type_id",
+      kind: "combo",
+      name: "vehicle_type_name",
       label: "Vehicle Type",
-      options: (types ?? []).map((type) => ({ value: type.id, label: type.name })),
+      required: true,
+      suggestions: (types ?? []).map((type) => type.name),
+      hint: "Type a new name to create the vehicle type.",
     },
     {
-      kind: "select",
-      name: "vehicle_id",
+      kind: "combo",
+      name: "vehicle_name",
       label: "Vehicle (leave blank for the type default)",
-      options: (vehicles ?? []).map((vehicle) => ({
-        value: vehicle.id,
-        label: vehicle.name,
-      })),
+      suggestions: (vehicles ?? []).map((vehicle) => vehicle.name),
+      hint: "Leave blank to set the rate for every vehicle of this type.",
     },
     { kind: "money", name: "live_mile_rate", label: "Live Mile", half: true },
     { kind: "money", name: "dead_mile_rate", label: "Dead Mile", half: true },
@@ -179,7 +184,13 @@ export default async function VehicleRatesPage({
           title="Edit Rate"
           action={saveVehicleRateAction}
           fields={[{ kind: "hidden", name: "id", value: editing.id }, ...fields]}
-          values={editing}
+          // The row carries the type and vehicle as embeds; the form works in
+          // names, so flatten them for the two combo fields to prefill from.
+          values={{
+            ...editing,
+            vehicle_type_name: editing.vehicle_types?.name ?? "",
+            vehicle_name: editing.vehicles?.name ?? "",
+          }}
           routed
         />
       )}

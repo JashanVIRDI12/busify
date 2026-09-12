@@ -50,5 +50,8 @@ export async function createOrganizationAction(
   }
 
   revalidatePath("/", "layout");
-  redirect("/quotes");
+  // Not /quotes. A brand-new organization has no rate card, so the builder
+  // would price every quote at zero — and an empty list is a poor first screen
+  // besides. /setup is the short list of things that have to be true first.
+  redirect("/setup");
 }

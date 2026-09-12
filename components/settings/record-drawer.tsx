@@ -40,6 +40,25 @@ export type FieldSpec =
       required?: boolean;
       half?: boolean;
     }
+  | {
+      /**
+       * Type a name, with the existing ones offered as suggestions.
+       *
+       * A plain select is unusable on a brand-new organization: the first rate
+       * an operator adds is for a vehicle type that does not exist yet, so the
+       * dropdown is empty and there is nothing to pick. Typing works from
+       * nothing; what the action does with an unrecognised name is its own
+       * business — create it, or refuse and say why.
+       */
+      kind: "combo";
+      name: string;
+      label: string;
+      suggestions: string[];
+      defaultValue?: string;
+      hint?: string;
+      required?: boolean;
+      half?: boolean;
+    }
   | { kind: "textarea"; name: string; label: string; rows?: number }
   | { kind: "toggle"; name: string; label: string; description?: string }
   | { kind: "hidden"; name: string; value: string };
@@ -137,6 +156,30 @@ export function RecordDrawer({
                 }
 
                 const span = "half" in field && field.half ? "" : "col-span-2";
+
+                if (field.kind === "combo") {
+                  const listId = `${field.name}-options`;
+                  return (
+                    <div key={field.name} className={span}>
+                      <TextField
+                        name={field.name}
+                        placeholder={field.label}
+                        required={field.required}
+                        list={listId}
+                        defaultValue={initial(field.name) || field.defaultValue}
+                        errors={state.fieldErrors}
+                      />
+                      <datalist id={listId}>
+                        {field.suggestions.map((suggestion) => (
+                          <option key={suggestion} value={suggestion} />
+                        ))}
+                      </datalist>
+                      {field.hint && (
+                        <p className="mt-1.5 text-[12px] text-ash">{field.hint}</p>
+                      )}
+                    </div>
+                  );
+                }
 
                 if (field.kind === "select") {
                   return (

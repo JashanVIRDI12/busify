@@ -49,7 +49,72 @@ export async function saveVehicleRateAction(
   const { session, supabase } = await actionContext();
   if (!canManage(session.role)) return formError(DENIED);
 
-  const parsed = vehicleRateSchema.safeParse(formDataToObject(formData));
+  const orgId = session.organization.id;
+  const raw = formDataToObject(formData);
+
+  // The form works in names, not ids — a dropdown of vehicle types is empty on
+  // a new organization, which made the first rate impossible to add. Resolve
+  // what was typed back to ids here.
+  const typeName = (raw.vehicle_type_name ?? "").trim();
+  const vehicleName = (raw.vehicle_name ?? "").trim();
+
+  if (!typeName) {
+    return formError("Name a vehicle type.", {
+      vehicle_type_name: ["Name a vehicle type."],
+    });
+  }
+
+  const { data: existingType } = await supabase
+    .from("vehicle_types")
+    .select("id")
+    .ilike("name", typeName)
+    .maybeSingle();
+
+  let vehicleTypeId = existingType?.id ?? null;
+
+  // A type nobody has created yet is the normal case here, not an error: a
+  // vehicle type is just a name and its rates, so typing one creates it.
+  if (!vehicleTypeId) {
+    const { data: created, error: createError } = await supabase
+      .from("vehicle_types")
+      .insert({ organization_id: orgId, name: typeName })
+      .select("id")
+      .single();
+
+    if (createError || !created) {
+      return databaseError(createError ?? null, {
+        duplicate: "A vehicle type with that name already exists.",
+      });
+    }
+    vehicleTypeId = created.id;
+  }
+
+  // A vehicle is not created here. A real coach needs a plate and a capacity,
+  // and inventing either from a rate row would put a phantom vehicle in the
+  // fleet. Blank means "the default for every vehicle of this type".
+  let vehicleId: string | null = null;
+  if (vehicleName) {
+    const { data: vehicle } = await supabase
+      .from("vehicles")
+      .select("id")
+      .ilike("name", vehicleName)
+      .maybeSingle();
+
+    if (!vehicle) {
+      return formError(`No vehicle called "${vehicleName}".`, {
+        vehicle_name: [
+          "Add it under Operations → Vehicles first, or leave this blank to rate the whole type.",
+        ],
+      });
+    }
+    vehicleId = vehicle.id;
+  }
+
+  const parsed = vehicleRateSchema.safeParse({
+    ...raw,
+    vehicle_type_id: vehicleTypeId,
+    vehicle_id: vehicleId ?? "",
+  });
   if (!parsed.success) return validationError(parsed.error);
 
   const rawId = formData.get("id");
