@@ -9,7 +9,7 @@ import type { QuoteFile } from "@/components/quotes/builder/files-panel";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { CustomerHit } from "@/app/(dashboard)/quotes/builder-actions";
-import type { QuoteBuilderData } from "@/lib/queries/quote-builder";
+import type { QuoteBuilderInput } from "@/lib/validations/quote-builder";
 
 import {
   QuoteBuilderProvider,
@@ -255,7 +255,7 @@ function BuilderShell({
 }
 
 export function QuoteBuilder({
-  data,
+  initialState,
   lookups,
   currency,
   timezone,
@@ -269,7 +269,7 @@ export function QuoteBuilder({
   initialCustomer,
   initialBilling,
 }: {
-  data: QuoteBuilderData;
+  initialState: QuoteBuilderInput;
   lookups: BuilderLookups;
   currency: string;
   timezone: string;
@@ -285,7 +285,8 @@ export function QuoteBuilder({
 }) {
   return (
     <QuoteBuilderProvider
-      data={data}
+      initialState={initialState}
+      lastSavedAt={updatedAt}
       lookups={lookups}
       currency={currency}
       timezone={timezone}
@@ -294,7 +295,7 @@ export function QuoteBuilder({
       publicUrl={publicUrl}
     >
       <BuilderShell
-        quoteId={data.quote.id}
+        quoteId={initialState.id}
         organizationId={organizationId}
         createdAt={createdAt}
         updatedAt={updatedAt}

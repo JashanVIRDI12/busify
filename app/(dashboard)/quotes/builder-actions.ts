@@ -10,7 +10,11 @@ import { canWriteFinance } from "@/lib/permissions";
 import { toMajor } from "@/lib/pricing";
 import { rollUpQuote, type TripPricingResult } from "@/lib/pricing/quote";
 import { priceTripInput } from "@/lib/quotes/compute";
-import { defaultTaxRate, describeTaxRate } from "@/lib/tax/canada";
+import {
+  chargeKind,
+  defaultPaymentMethods,
+  defaultTaxCharge,
+} from "@/lib/quotes/defaults";
 import { uuid } from "@/lib/validations/shared";
 import {
   quoteBuilderSchema,
@@ -94,55 +98,6 @@ function firstPickup(
 // ---------------------------------------------------------------------------
 // Create — a blank draft, or one seeded from a trip request
 // ---------------------------------------------------------------------------
-
-/** Card / Bank / Check / Wire / Other, in the order Busify shows them. */
-function defaultPaymentMethods(quoteId: string, organizationId: string) {
-  const base = { organization_id: organizationId, quote_id: quoteId };
-  return [
-    { ...base, method: "CARD" as const, position: 0, enabled: true, online_processing: true },
-    { ...base, method: "BANK" as const, position: 1, enabled: true, online_processing: true },
-    { ...base, method: "CHECK" as const, position: 2, enabled: true, online_processing: false },
-    { ...base, method: "WIRE" as const, position: 3, enabled: false, online_processing: false },
-    { ...base, method: "OTHER" as const, position: 4, enabled: false, online_processing: false },
-  ];
-}
-
-/**
- * Settings uses three rate types; the quote engine has five kinds. "Per
- * quantity" is a flat rate multiplied by a quantity the operator sets on the
- * quote, so it seeds as FLAT rather than needing a kind of its own.
- */
-function chargeKind(
-  rateType: "FLAT" | "PER_QUANTITY" | "PERCENTAGE",
-): "FLAT" | "PERCENT" {
-  return rateType === "PERCENTAGE" ? "PERCENT" : "FLAT";
-}
-
-/** The seed HST/GST tax row for a new trip, from the place of supply. */
-function defaultTaxCharge(
-  quoteTripId: string,
-  organizationId: string,
-  province: string | null,
-  gstNumber: string | null,
-): TablesInsert<"quote_trip_charges"> {
-  const rate = defaultTaxRate(province);
-  const label = gstNumber
-    ? `${describeTaxRate(rate, province)}# ${gstNumber}`
-    : describeTaxRate(rate, province);
-
-  return {
-    organization_id: organizationId,
-    quote_trip_id: quoteTripId,
-    section: "TAX",
-    position: 0,
-    label,
-    kind: "PERCENT",
-    rate,
-    quantity: 1,
-    amount: 0,
-    taxable: false,
-  };
-}
 
 async function seedQuote(options: {
   seedFromRequestId?: string;
@@ -379,8 +334,31 @@ export async function saveQuoteBuilderAction(
     .eq("id", input.id)
     .maybeSingle();
 
-  if (loadError || !existing) {
+  if (loadError) {
     return { ok: false, message: "This quote no longer exists." };
+  }
+
+  // No row yet: this is the first save of a quote built on /quotes/new.
+  //
+  // The builder generated the id client-side, and everything below upserts by
+  // id, so the only thing missing is the parent row. Creating it here rather
+  // than when the operator clicked "Add Quote" is the whole point: a quote
+  // number is drawn from the organization's counter, and a quote abandoned
+  // before its first save should not consume one — nor leave an empty Lead
+  // sitting in the pipeline.
+  if (!existing) {
+    const { error: createError } = await supabase.from("quotes").insert({
+      id: input.id,
+      organization_id: orgId,
+      title: input.header.title?.trim() || "New Quote",
+      status: "DRAFT",
+      pipeline_status: input.header.pipeline_status ?? "LEAD",
+      currency: session.organization.currency,
+      tax_province: session.organization.state,
+      created_by: session.user.id,
+    });
+
+    if (createError) return saveError(databaseError(createError));
   }
 
   // --- Price every trip, server-side --------------------------------------

@@ -72,7 +72,10 @@ export function BuilderActionsMenu() {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
+          {/* A quote gets its public token from the database, so there is no
+              customer link to copy or preview until the first save. */}
           <DropdownMenuItem
+            disabled={!publicUrl}
             onSelect={() => {
               navigator.clipboard.writeText(publicUrl).then(
                 () => toast.success("Customer link copied."),
@@ -81,14 +84,16 @@ export function BuilderActionsMenu() {
             }}
           >
             <Link2 />
-            Copy customer link
+            {publicUrl ? "Copy customer link" : "Copy customer link — save first"}
           </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <a href={publicUrl} target="_blank" rel="noreferrer">
-              <ExternalLink />
-              Preview as customer
-            </a>
-          </DropdownMenuItem>
+          {publicUrl && (
+            <DropdownMenuItem asChild>
+              <a href={publicUrl} target="_blank" rel="noreferrer">
+                <ExternalLink />
+                Preview as customer
+              </a>
+            </DropdownMenuItem>
+          )}
 
           {canEdit && (
             <>

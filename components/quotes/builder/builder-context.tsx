@@ -10,6 +10,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useRouter } from "next/navigation";
 
 import { saveQuoteBuilderAction } from "@/app/(dashboard)/quotes/builder-actions";
 import { computeQuote, type QuoteComputed } from "@/lib/quotes/compute";
@@ -19,9 +20,7 @@ import {
   newStop,
   newTrip,
   newVehicle,
-  toBuilderState,
 } from "@/lib/quotes/builder-model";
-import type { QuoteBuilderData } from "@/lib/queries/quote-builder";
 import type {
   QuoteBuilderInput,
   QuoteChargeInput,
@@ -134,7 +133,8 @@ export function useBuilder(): BuilderValue {
 }
 
 export function QuoteBuilderProvider({
-  data,
+  initialState,
+  lastSavedAt: initialSavedAt,
   lookups,
   currency,
   timezone,
@@ -143,7 +143,9 @@ export function QuoteBuilderProvider({
   publicUrl,
   children,
 }: {
-  data: QuoteBuilderData;
+  initialState: QuoteBuilderInput;
+  /** null for a quote that has never been saved — i.e. /quotes/new. */
+  lastSavedAt: string | null;
   lookups: BuilderLookups;
   currency: string;
   timezone: string;
@@ -152,16 +154,19 @@ export function QuoteBuilderProvider({
   publicUrl: string;
   children: ReactNode;
 }) {
-  const [state, setState] = useState<QuoteBuilderInput>(() => toBuilderState(data));
+  const [state, setState] = useState<QuoteBuilderInput>(initialState);
   const [savedFingerprint, setSavedFingerprint] = useState(() =>
-    builderFingerprint(toBuilderState(data)),
+    // An unsaved quote must read as dirty immediately: comparing it against its
+    // own opening state would leave Save disabled on a quote that does not
+    // exist yet. A sentinel no real fingerprint can equal does that.
+    initialSavedAt === null ? "" : builderFingerprint(initialState),
   );
   const [saving, setSaving] = useState(false);
   // A quote reopened days later was saved then, not "never".
-  const [lastSavedAt, setLastSavedAt] = useState<string | null>(
-    data.quote.updated_at ?? null,
-  );
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(initialSavedAt);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const isNew = useRef(initialSavedAt === null);
   const [activeTripId, setActiveTripId] = useState(
     () => state.trips[0]?.id ?? "",
   );
@@ -188,6 +193,13 @@ export function QuoteBuilderProvider({
       if (result.ok) {
         setSavedFingerprint(fp);
         setLastSavedAt(result.savedAt);
+        // The first save is what turned /quotes/new into a real quote. Swap the
+        // URL for the one the operator can bookmark, share and reload, without
+        // a navigation that would throw away the state they just saved.
+        if (isNew.current) {
+          isNew.current = false;
+          router.replace(`/quotes/${snapshot.id}`);
+        }
         return true;
       }
       setError(result.message);
@@ -199,11 +211,17 @@ export function QuoteBuilderProvider({
       inFlight.current = false;
       setSaving(false);
     }
-  }, [canEdit]);
+  }, [canEdit, router]);
 
   // Debounced autosave — 1.5s after the operator stops changing things.
+  //
+  // Never before the first save, though. A quote on /quotes/new reads as dirty
+  // from the moment it mounts, so autosaving it would create the row 1.5s after
+  // the operator arrived and put an empty Lead back in the pipeline — the exact
+  // thing opening the builder without writing was meant to stop. The first save
+  // is deliberate; autosave takes over once the quote actually exists.
   useEffect(() => {
-    if (!canEdit || !dirty) return;
+    if (!canEdit || !dirty || isNew.current) return;
     const timer = setTimeout(() => void save(), 1500);
     return () => clearTimeout(timer);
   }, [fingerprint, dirty, canEdit, save]);

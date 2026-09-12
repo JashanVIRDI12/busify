@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 
-import { createQuoteDraftAction } from "@/app/(dashboard)/quotes/builder-actions";
 import {
   ClearFiltersButton,
   DateFilter,
@@ -150,12 +149,12 @@ export default async function QuotesPage({
         count={total}
         views={<SavedViews systemViews={SYSTEM_VIEWS} views={views} />}
         actions={
-          <form action={createQuoteDraftAction}>
-            <Button type="submit">
+          <Button asChild>
+            <Link href="/quotes/new">
               <Plus />
               Add Quote
-            </Button>
-          </form>
+            </Link>
+          </Button>
         }
       />
 

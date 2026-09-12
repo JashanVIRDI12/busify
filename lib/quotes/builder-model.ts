@@ -170,6 +170,98 @@ export function toBuilderState(data: QuoteBuilderData): QuoteBuilderInput {
   };
 }
 
+/**
+ * A quote that does not exist yet.
+ *
+ * "Add Quote" used to insert a row and redirect to it, which is why an
+ * abandoned click left an empty Lead in the pipeline holding a quote number
+ * nobody would ever use. The new-quote screen builds this instead and holds it
+ * in memory; the first save is what creates the row, and the number is drawn
+ * then. The id is generated here because every child upserts by id, so the
+ * whole tree can be saved in one round trip once it does become real.
+ */
+export function blankQuoteState(options: {
+  province: string | null;
+  gstNumber: string | null;
+  customerVisibility: QuoteBuilderInput["header"]["customer_visibility"];
+  contractTermsId: string | null;
+  defaultGarageId: string | null;
+  enableSalesTax: boolean;
+  standingCharges?: {
+    name: string;
+    rate_type: "FLAT" | "PER_QUANTITY" | "PERCENTAGE";
+    rate: number;
+    tax_exempt: boolean;
+  }[];
+}): QuoteBuilderInput {
+  const trip = newTrip(0, options.province, options.gstNumber);
+
+  trip.departing_garage_id = options.defaultGarageId;
+  trip.returning_garage_id = options.defaultGarageId;
+
+  // Sales tax is a setting: an operator who is not registered should not have
+  // to delete the line off every quote they build.
+  if (!options.enableSalesTax) {
+    trip.charges = trip.charges.filter((charge) => charge.section !== "TAX");
+  }
+
+  // Charges an operator marked "add to every new quote", after the tax row so
+  // the seeded itemised charges keep their configured order.
+  for (const [index, charge] of (options.standingCharges ?? []).entries()) {
+    trip.charges.push({
+      id: crypto.randomUUID(),
+      position: trip.charges.length + index,
+      section: "ITEMIZED",
+      label: charge.name,
+      kind: charge.rate_type === "PERCENTAGE" ? "PERCENT" : "FLAT",
+      // A percentage row's amount is computed by the pricing engine from the
+      // subtotal, so it carries only its rate here.
+      rate: charge.rate,
+      quantity: 1,
+      taxable: !charge.tax_exempt,
+    });
+  }
+
+  return {
+    id: crypto.randomUUID(),
+    header: {
+      title: "New Quote",
+      pipeline_status: "LEAD",
+      priority: null,
+      sales_rep_id: null,
+      event_name: null,
+      referred_by: null,
+      tags: [],
+      customer_id: null,
+      billing_customer_id: null,
+      customer_visibility: options.customerVisibility,
+      allow_instant_booking: true,
+      allow_pay_later: false,
+      allow_full_card_payment: true,
+      po_number: null,
+      po_only: false,
+      payment_policy: null,
+      require_signature: false,
+      expiry_days: null,
+      expiry_anchor: "LAST_SENT",
+      contract_terms_id: options.contractTermsId,
+      overage_basis: null,
+      overage_rate: null,
+      notes: null,
+    },
+    trips: [trip],
+    paymentMethods: PAYMENT_METHOD_ORDER.map((method, index) => ({
+      id: crypto.randomUUID(),
+      method,
+      position: index,
+      enabled: method === "CARD" || method === "BANK" || method === "CHECK",
+      online_processing: method === "CARD" || method === "BANK",
+      processing_fee_percent: 0,
+      customer_note: null,
+    })),
+  };
+}
+
 /** A stable string that changes whenever any savable field changes. */
 export function builderFingerprint(state: QuoteBuilderInput): string {
   return JSON.stringify(state);
