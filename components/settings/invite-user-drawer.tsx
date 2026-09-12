@@ -11,6 +11,7 @@ import {
   SelectField,
   TextField,
 } from "@/components/data/form-fields";
+import { CopyBlock } from "@/components/settings/copy-block";
 import {
   DrawerBody,
   DrawerFooter,
@@ -33,12 +34,18 @@ const ROLES = ["ADMIN", "DISPATCHER", "STAFF", "ACCOUNTANT", "DRIVER"] as const;
 export function InviteUserDrawer() {
   const [open, setOpen] = useState(false);
 
+  // A link only comes back when there is no mail provider to send it. In that
+  // case the drawer stays open: closing it would throw away the one copy of a
+  // link the operator now has to deliver themselves.
   const { state, formAction, reset } = useActionForm(inviteUserAction, {
     onSuccess: (result) => {
       toast.success(result.message ?? "Invitation sent");
-      setOpen(false);
+      if (!result.data?.inviteUrl) setOpen(false);
     },
   });
+
+  const inviteUrl =
+    state.status === "success" ? state.data?.inviteUrl : undefined;
 
   return (
     <>
@@ -98,17 +105,31 @@ export function InviteUserDrawer() {
               </dl>
             </div>
 
-            <p className="text-[12px] text-ash">
-              They will get an email invitation and choose their own password.
-              Nobody here ever sees it.
-            </p>
+            {inviteUrl ? (
+              <div className="space-y-2">
+                <CopyBlock
+                  code={inviteUrl}
+                  label="Invitation link"
+                  language="text"
+                />
+                <p className="text-[12px] text-ash">
+                  Send this to them yourself. It signs them in once so they can
+                  set a password, then it stops working.
+                </p>
+              </div>
+            ) : (
+              <p className="text-[12px] text-ash">
+                They will get an email invitation and choose their own password.
+                Nobody here ever sees it.
+              </p>
+            )}
           </DrawerBody>
 
           <DrawerFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Cancel
+              {inviteUrl ? "Done" : "Cancel"}
             </Button>
-            <SubmitButton />
+            {!inviteUrl && <SubmitButton />}
           </DrawerFooter>
         </DrawerForm>
       </SideDrawer>
