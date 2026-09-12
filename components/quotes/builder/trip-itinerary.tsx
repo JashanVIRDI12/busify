@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
+  SelectEmpty,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -62,11 +63,19 @@ function GarageRow({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={NONE}>No garage</SelectItem>
-            {lookups.garages.map((garage) => (
-              <SelectItem key={garage.id} value={garage.id}>
-                {garage.name}
-              </SelectItem>
-            ))}
+            {lookups.garages.length === 0 ? (
+              <SelectEmpty
+                message="No garages yet. Dead miles are measured from one."
+                href="/settings/garages"
+                linkLabel="Add a garage"
+              />
+            ) : (
+              lookups.garages.map((garage) => (
+                <SelectItem key={garage.id} value={garage.id}>
+                  {garage.name}
+                </SelectItem>
+              ))
+            )}
           </SelectContent>
         </Select>
         <Input

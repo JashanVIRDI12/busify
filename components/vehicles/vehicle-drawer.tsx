@@ -112,6 +112,11 @@ export function VehicleDrawer({
                   value: type.id,
                   label: type.name,
                 }))}
+                emptyHint={{
+                  message: "No vehicle types yet.",
+                  href: "/vehicles/types",
+                  linkLabel: "Create one",
+                }}
                 errors={state.fieldErrors}
               />
             </DrawerRow>
@@ -170,6 +175,11 @@ export function VehicleDrawer({
                   value: garage.id,
                   label: garage.name,
                 }))}
+                emptyHint={{
+                  message: "No garages yet.",
+                  href: "/settings/garages",
+                  linkLabel: "Add a garage",
+                }}
                 errors={state.fieldErrors}
               />
             </DrawerRow>

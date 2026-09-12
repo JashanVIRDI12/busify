@@ -153,6 +153,11 @@ export function TicketDrawer({
                 value: person.id,
                 label: person.name,
               }))}
+              emptyHint={{
+                message: "No teammates to assign to yet.",
+                href: "/settings/users",
+                linkLabel: "Invite someone",
+              }}
               errors={state.fieldErrors}
             />
 

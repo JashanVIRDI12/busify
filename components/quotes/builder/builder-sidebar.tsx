@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
+  SelectEmpty,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -111,11 +112,19 @@ export function BuilderSidebar({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={NONE}>None</SelectItem>
-              {lookups.salesReps.map((rep) => (
-                <SelectItem key={rep.id} value={rep.id}>
-                  {rep.name}
-                </SelectItem>
-              ))}
+              {lookups.salesReps.length === 0 ? (
+                <SelectEmpty
+                  message="No teammates yet."
+                  href="/settings/users"
+                  linkLabel="Invite someone"
+                />
+              ) : (
+                lookups.salesReps.map((rep) => (
+                  <SelectItem key={rep.id} value={rep.id}>
+                    {rep.name}
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
         </Row>
@@ -153,15 +162,23 @@ export function BuilderSidebar({
             disabled={!canEdit}
           >
             <SelectTrigger size="sm" className={INLINE_TRIGGER}>
-              <SelectValue placeholder="--" />
+              <SelectValue placeholder="None" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={NONE}>--</SelectItem>
-              {lookups.eventTypes.map((value) => (
-                <SelectItem key={value} value={value}>
-                  {value}
-                </SelectItem>
-              ))}
+              <SelectItem value={NONE}>None</SelectItem>
+              {lookups.eventTypes.length === 0 ? (
+                <SelectEmpty
+                  message="No event types yet."
+                  href="/settings/industries"
+                  linkLabel="Add event types"
+                />
+              ) : (
+                lookups.eventTypes.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {value}
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
         </Row>

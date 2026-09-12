@@ -180,6 +180,11 @@ export function ContactDrawer({
                 value: company.id,
                 label: company.name,
               }))}
+              emptyHint={{
+                message: "No companies yet. A contact can stand on their own.",
+                href: "/companies",
+                linkLabel: "Add a company",
+              }}
               errors={state.fieldErrors}
             />
 

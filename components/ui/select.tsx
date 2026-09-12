@@ -128,9 +128,51 @@ function SelectSeparator({
   );
 }
 
+/**
+ * What a dropdown says when it has nothing to offer.
+ *
+ * A select fed by the operator's own data — vehicle types, garages, terms — is
+ * empty on a new organization, and an empty Radix popover is a blank rectangle
+ * with no explanation and no way out. This says what is missing and links to
+ * the screen that fixes it.
+ *
+ * The link opens in a new tab on purpose: these sit inside the quote builder
+ * and inside drawers holding unsaved edits, and navigating away would throw
+ * that work on the floor.
+ */
+function SelectEmpty({
+  message,
+  href,
+  linkLabel,
+}: {
+  message: string;
+  href?: string;
+  linkLabel?: string;
+}) {
+  return (
+    <div className="px-2.5 py-2.5 text-[12px] leading-snug text-ash">
+      <p>{message}</p>
+      {href && (
+        <a
+          href={href}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-1 inline-block font-medium text-interactive hover:underline"
+          // Radix would otherwise treat the click as a selection attempt and
+          // close the popover before the anchor ever fires.
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          {linkLabel ?? "Add one"} →
+        </a>
+      )}
+    </div>
+  );
+}
+
 export {
   Select,
   SelectContent,
+  SelectEmpty,
   SelectGroup,
   SelectItem,
   SelectLabel,

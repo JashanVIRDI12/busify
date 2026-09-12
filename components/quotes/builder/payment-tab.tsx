@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
+  SelectEmpty,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -159,11 +160,19 @@ function ContractTermsDialog() {
         </SelectTrigger>
         <SelectContent>
           <SelectItem value={NONE}>No contract terms</SelectItem>
-          {lookups.contractTerms.map((entry) => (
-            <SelectItem key={entry.id} value={entry.id}>
-              {entry.name}
-            </SelectItem>
-          ))}
+          {lookups.contractTerms.length === 0 ? (
+            <SelectEmpty
+              message="No contract terms yet. These are what the customer agrees to at checkout."
+              href="/settings/templates"
+              linkLabel="Write your terms"
+            />
+          ) : (
+            lookups.contractTerms.map((entry) => (
+              <SelectItem key={entry.id} value={entry.id}>
+                {entry.name}
+              </SelectItem>
+            ))
+          )}
         </SelectContent>
       </Select>
       {current && (

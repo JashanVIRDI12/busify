@@ -138,6 +138,11 @@ export function DriverDrawer({
                   value: garage.id,
                   label: garage.name,
                 }))}
+                emptyHint={{
+                  message: "No garages yet.",
+                  href: "/settings/garages",
+                  linkLabel: "Add a garage",
+                }}
                 errors={state.fieldErrors}
               />
               <SelectField

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
+  SelectEmpty,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -159,12 +160,20 @@ export function TripDetails({ trip }: { trip: QuoteTripInput }) {
                 <SelectValue placeholder="Select Vehicle" />
               </SelectTrigger>
               <SelectContent>
-                {lookups.vehicleTypes.map((type) => (
-                  <SelectItem key={type.id} value={type.id}>
-                    {type.name}
-                    {type.default_capacity ? ` · ${type.default_capacity} seats` : ""}
-                  </SelectItem>
-                ))}
+                {lookups.vehicleTypes.length === 0 ? (
+                  <SelectEmpty
+                    message="No vehicle types yet. Quotes price from the rates on a type, so this is the first thing to set up."
+                    href="/vehicles/types"
+                    linkLabel="Create a vehicle type"
+                  />
+                ) : (
+                  lookups.vehicleTypes.map((type) => (
+                    <SelectItem key={type.id} value={type.id}>
+                      {type.name}
+                      {type.default_capacity ? ` · ${type.default_capacity} seats` : ""}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
 

@@ -11,6 +11,7 @@ import {
 import {
   Select,
   SelectContent,
+  SelectEmpty,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -103,6 +104,7 @@ export function SelectField({
   errors,
   className,
   disabled,
+  emptyHint,
 }: {
   name: string;
   placeholder: string;
@@ -111,6 +113,8 @@ export function SelectField({
   errors?: FieldErrors;
   className?: string;
   disabled?: boolean;
+  /** Shown instead of a blank popover when there is nothing to choose from. */
+  emptyHint?: { message: string; href?: string; linkLabel?: string };
 }) {
   const messages = errors?.[name];
 
@@ -125,11 +129,15 @@ export function SelectField({
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
-          {options.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
+          {options.length === 0 && emptyHint ? (
+            <SelectEmpty {...emptyHint} />
+          ) : (
+            options.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))
+          )}
         </SelectContent>
       </Select>
       <ErrorText messages={messages} />
