@@ -1,23 +1,20 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Plus_Jakarta_Sans, Sometype_Mono } from "next/font/google";
+import { Poppins, Sometype_Mono } from "next/font/google";
 
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 import "./globals.css";
 
-// Plus Jakarta carries display and controls; Inter carries body and small text;
-// Sometype Mono is the technical voice for uppercase meta labels.
-const jakarta = Plus_Jakarta_Sans({
-  variable: "--font-jakarta",
+/**
+ * One family carries the whole console. Poppins' geometric roundness is what
+ * keeps a screen that is 90% data table from reading as a spreadsheet, and its
+ * tall x-height survives the 13px table size the density demands.
+ */
+const poppins = Poppins({
+  variable: "--font-poppins",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  display: "swap",
-});
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -30,11 +27,11 @@ const sometype = Sometype_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Busify AI — Charter operations, run properly",
-    template: "%s · Busify AI",
+    default: "Busify",
+    template: "%s · Busify",
   },
   description:
-    "Fleet, drivers, customers, quotes and bookings for charter bus and motorcoach operators.",
+    "Quotes, reservations, dispatch and fleet operations for charter bus operators.",
 };
 
 export const viewport: Viewport = {
@@ -47,10 +44,8 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body
-        className={`${jakarta.variable} ${inter.variable} ${sometype.variable} font-sans`}
-      >
-        <TooltipProvider>{children}</TooltipProvider>
+      <body className={`${poppins.variable} ${sometype.variable} font-sans`}>
+        <TooltipProvider delayDuration={200}>{children}</TooltipProvider>
         <Toaster />
       </body>
     </html>

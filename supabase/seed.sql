@@ -44,7 +44,14 @@ begin
     insert into auth.users (
       instance_id, id, aud, role, email, encrypted_password,
       email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
-      created_at, updated_at
+      created_at, updated_at,
+      -- GoTrue reads these as Go strings, not pointers. Left NULL — which is
+      -- what omitting them does — every query that touches the row fails with
+      -- "Database error finding users", and the account cannot sign in even
+      -- though it looks perfectly fine in the table.
+      confirmation_token, recovery_token, email_change,
+      email_change_token_new, email_change_token_current,
+      phone_change, phone_change_token, reauthentication_token
     )
     values (
       '00000000-0000-0000-0000-000000000000', u.id, 'authenticated', 'authenticated',
@@ -52,7 +59,8 @@ begin
       now(),
       jsonb_build_object('provider', 'email', 'providers', array['email']),
       jsonb_build_object('full_name', u.full_name),
-      now(), now()
+      now(), now(),
+      '', '', '', '', '', '', '', ''
     )
     on conflict (id) do nothing;
 
@@ -208,5 +216,44 @@ begin
   insert into public.customers (organization_id, first_name, last_name, email, phone, company)
   values (v_xyz, 'Lena', 'Fischer', 'lena@harbourgroup.test', '+1 450 555 0402', 'Harbour Group')
   on conflict do nothing;
+
+  -- -------------------------------------------------------------------------
+  -- Quote builder support: daily rates, garages, contract terms
+  -- -------------------------------------------------------------------------
+  update public.vehicle_types set per_day_rate = case name
+    when 'Highway Coach' then 1650
+    when 'Mini Coach'    then 950
+    when 'Executive Van' then 650
+    else per_day_rate end
+  where organization_id = v_abc;
+
+  update public.vehicle_types set per_day_rate = 1750
+  where organization_id = v_xyz and name = 'Autocar de tourisme';
+
+  insert into public.garages (organization_id, name, address, city, province, postal_code, is_default)
+  values
+    (v_abc, 'Etobicoke Garage', '480 Carlingview Drive', 'Toronto', 'ON', 'M9W 5G6', true),
+    (v_abc, 'Pearson Lot',      '6301 Silver Dart Drive', 'Mississauga', 'ON', 'L5P 1B2', false),
+    (v_xyz, 'Garage Lachine',   '1250 rue Notre-Dame Ouest', 'Montréal', 'QC', 'H3C 1K5', true)
+  on conflict (organization_id, name) do nothing;
+
+  insert into public.contract_terms (organization_id, name, body, is_default)
+  values
+    (v_abc, 'Standard Charter Agreement',
+     E'1. A deposit confirms the reservation. The balance is due 14 days before departure.\n'
+     '2. Cancellations inside 14 days forfeit the deposit; inside 72 hours are billed in full.\n'
+     '3. Quoted distances and hours are estimates. Overage is billed at the rate on this quote.\n'
+     '4. The operator carries $5,000,000 commercial liability insurance. A certificate is available on request.\n'
+     '5. Passengers are responsible for any damage beyond normal wear. Smoking is not permitted on board.',
+     true),
+    (v_xyz, 'Entente de nolisement standard',
+     E'1. Un acompte confirme la réservation. Le solde est dû 14 jours avant le départ.\n'
+     '2. Toute annulation dans les 14 jours entraîne la perte de l''acompte.\n'
+     '3. Les distances et heures indiquées sont estimatives.',
+     true)
+  -- Terms are unique per (organization, kind, name): the settings migration
+  -- split contract terms from quote terms, and an operator may reasonably give
+  -- both the same name.
+  on conflict (organization_id, kind, name) do nothing;
 end;
 $$;

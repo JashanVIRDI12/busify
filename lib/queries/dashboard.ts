@@ -10,7 +10,7 @@ import type {
 export type DashboardMetrics = {
   revenueThisMonth: number;
   currency: string;
-  confirmedBookings: number;
+  newReservations: number;
   pendingRequests: number;
   upcomingTrips: number;
   customers: number;
@@ -64,8 +64,10 @@ const EMPTY_DRIVER_STATUS: Record<DriverStatus, number> = {
   INACTIVE: 0,
 };
 
-function startOfMonthISO(now = new Date()) {
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+function startOfMonthISO(now = new Date(), monthsAhead = 0) {
+  return new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + monthsAhead, 1),
+  ).toISOString();
 }
 
 function plusDaysISO(days: number, now = new Date()) {
@@ -85,6 +87,7 @@ export async function getDashboardMetrics(
   const supabase = await createClient();
   const now = new Date();
   const monthStart = startOfMonthISO(now);
+  const nextMonthStart = startOfMonthISO(now, 1);
   const nowISO = now.toISOString();
   const in30Days = plusDaysISO(30, now);
 
@@ -95,7 +98,8 @@ export async function getDashboardMetrics(
     requestsResult,
     tripsResult,
     quotesResult,
-    bookingsResult,
+    monthTripsResult,
+    newReservationsResult,
     expiringLicensesResult,
     vehicleTypesResult,
   ] = await Promise.all([
@@ -109,9 +113,18 @@ export async function getDashboardMetrics(
       .gte("departure_at", nowISO)
       .in("status", ["SCHEDULED", "CONFIRMED", "DISPATCHED"]),
     supabase.from("quotes").select("status"),
+    // Revenue is what the reservations on the books this month are invoiced
+    // at. Reservations are the operational record every quote converts into;
+    // the older bookings table only holds online-widget bookings.
     supabase
-      .from("bookings")
-      .select("total_amount, status, created_at")
+      .from("trips")
+      .select("total_due, status")
+      .gte("departure_at", monthStart)
+      .lt("departure_at", nextMonthStart)
+      .neq("status", "CANCELLED"),
+    supabase
+      .from("trips")
+      .select("id", { count: "exact", head: true })
       .gte("created_at", monthStart),
     supabase
       .from("drivers")
@@ -153,10 +166,10 @@ export async function getDashboardMetrics(
     (q) => q.status === "SENT" || q.status === "VIEWED",
   ).length;
 
-  const bookings = bookingsResult.data ?? [];
-  const revenueThisMonth = bookings
-    .filter((b) => b.status === "CONFIRMED" || b.status === "COMPLETED")
-    .reduce((sum, b) => sum + Number(b.total_amount ?? 0), 0);
+  const revenueThisMonth = (monthTripsResult.data ?? []).reduce(
+    (sum, trip) => sum + Number(trip.total_due ?? 0),
+    0,
+  );
 
   const upcomingTripIds = (tripsResult.data ?? []).map((t) => t.id);
 
@@ -207,7 +220,7 @@ export async function getDashboardMetrics(
       count: tripsMissingDriver,
       label: "upcoming trips have no driver",
       detail: "Assign a driver before dispatch.",
-      href: "/trips?missing=driver",
+      href: "/reservations?assignment=PARTIAL",
       tone: "destructive",
     },
     {
@@ -256,7 +269,7 @@ export async function getDashboardMetrics(
       id: "customers",
       label: "Add a customer",
       description: "Who you quote, book and invoice.",
-      href: "/customers",
+      href: "/contacts",
       done: (customersResult.count ?? 0) > 0,
     },
     {
@@ -273,7 +286,7 @@ export async function getDashboardMetrics(
   return {
     revenueThisMonth,
     currency,
-    confirmedBookings: bookings.filter((b) => b.status === "CONFIRMED").length,
+    newReservations: newReservationsResult.count ?? 0,
     pendingRequests:
       (requestCounts.NEW ?? 0) +
       (requestCounts.REVIEWING ?? 0) +

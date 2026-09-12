@@ -6,16 +6,15 @@ import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * Every button is a full pill. That single relentless radius is the system's
- * most consistent geometric choice, so nothing here ever gets a smaller corner.
- *
- * The filled variant is near-black (#202020), never the brand violet — violet
- * is identity only, and promoting it to a CTA is explicitly out of bounds.
+ * Every button is a full pill. Orange is the only fill, and a surface gets at
+ * most one of it: the page's primary action. Everything else that still needs
+ * to look clickable takes the orange *outline*, which is why `outline` here is
+ * chromatic rather than the usual neutral gray.
  */
 const buttonVariants = cva(
   [
-    "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full",
-    "font-display font-bold tracking-[-0.01em]",
+    "inline-flex shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-full",
+    "font-medium",
     "transition-colors duration-150 outline-none",
     "disabled:pointer-events-none disabled:opacity-45",
     "[&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4",
@@ -23,24 +22,26 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-ink text-signal-white hover:bg-carbon",
-        // Neutral outline — the structural default at 1px #e8e8e8.
+        default:
+          "bg-orange-500 text-signal-white shadow-subtle hover:bg-orange-600",
         outline:
-          "border border-bone bg-signal-white text-ink hover:bg-mist hover:border-cloud",
-        // Chromatic outline: blue signals interactive, without filling.
-        interactive:
-          "border border-interactive bg-signal-white text-interactive hover:bg-interactive/6",
+          "border border-orange-500 bg-signal-white text-orange-600 hover:bg-orange-50",
+        // The one neutral outline, for actions that must not compete.
+        quiet:
+          "border border-cloud bg-signal-white text-carbon hover:border-fog hover:bg-mist",
+        teal: "bg-teal-500 text-signal-white hover:bg-teal-600",
         secondary: "bg-plaster text-ink hover:bg-mercury",
-        ghost: "bg-transparent text-carbon hover:bg-ink/4",
-        link: "bg-transparent text-interactive underline-offset-4 hover:underline",
+        ghost: "bg-transparent text-slate hover:bg-mist hover:text-ink",
+        link: "bg-transparent text-teal-600 underline-offset-4 hover:underline",
         destructive:
-          "border border-destructive/35 bg-signal-white text-destructive hover:bg-destructive hover:text-destructive-foreground hover:border-destructive",
+          "border border-destructive/40 bg-signal-white text-destructive hover:border-destructive hover:bg-destructive hover:text-destructive-foreground",
       },
       size: {
-        default: "h-10 px-6 text-body-sm",
-        sm: "h-8 gap-1.5 px-4 text-body-sm",
-        lg: "h-12 px-8 text-body",
-        icon: "size-10",
+        default: "h-[38px] px-4 text-body-sm",
+        sm: "h-8 gap-1 px-3 text-body-sm",
+        xs: "h-7 gap-1 px-2.5 text-[12px]",
+        lg: "h-11 px-6 text-body",
+        icon: "size-[38px]",
         "icon-sm": "size-8",
       },
     },

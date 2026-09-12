@@ -16,7 +16,7 @@ import type {
 type Tone = "go" | "active" | "attention" | "dormant" | "stopped";
 
 const TONE_STYLE: Record<Tone, string> = {
-  go: "bg-mint text-[#065f46]",
+  go: "bg-teal-100 text-teal-700",
   active: "bg-interactive/12 text-interactive",
   attention: "bg-amber/18 text-[#8a4b12]",
   dormant: "bg-plaster text-slate",
@@ -24,7 +24,7 @@ const TONE_STYLE: Record<Tone, string> = {
 };
 
 const DOT_STYLE: Record<Tone, string> = {
-  go: "bg-emerald",
+  go: "bg-teal-500",
   active: "bg-interactive",
   attention: "bg-amber",
   dormant: "bg-ash",

@@ -67,7 +67,7 @@ export function BookingLink({ url }: { url: string }) {
         </div>
 
         <Link
-          href="/settings/api"
+          href="/settings/integrations"
           className="group flex items-center gap-3 rounded-xl border border-bone px-4 py-3.5 transition-colors duration-150 hover:border-cloud hover:bg-mist"
         >
           <span className="min-w-0 flex-1">

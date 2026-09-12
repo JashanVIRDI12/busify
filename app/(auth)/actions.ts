@@ -3,7 +3,6 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
-import { landingPath } from "@/lib/auth/session";
 import { siteUrl } from "@/lib/env";
 import {
   formDataToObject,
@@ -20,13 +19,10 @@ import {
   signUpSchema,
 } from "@/lib/validations/auth";
 
-/**
- * An explicit post-login destination, or null to fall back to the user's role
- * landing page. Only ever a path on this origin.
- */
-function explicitNext(next: unknown): string | null {
-  if (typeof next !== "string" || next === "") return null;
-  if (!next.startsWith("/") || next.startsWith("//")) return null;
+/** Only ever redirect to a path on this origin. */
+function safeNext(next: unknown): string {
+  if (typeof next !== "string") return "/quotes";
+  if (!next.startsWith("/") || next.startsWith("//")) return "/quotes";
   return next;
 }
 
@@ -82,14 +78,14 @@ export async function signInAction(
   }
 
   revalidatePath("/", "layout");
-  redirect(explicitNext(formData.get("next")) ?? (await landingPath()));
+  redirect(safeNext(formData.get("next")));
 }
 
-export async function signOutAction(redirectTo?: string) {
+export async function signOutAction() {
   const supabase = await createClient();
   await supabase.auth.signOut();
   revalidatePath("/", "layout");
-  redirect(redirectTo === "/driver/login" ? "/driver/login" : "/login");
+  redirect("/login");
 }
 
 export async function forgotPasswordAction(
@@ -137,7 +133,7 @@ export async function resetPasswordAction(
   if (error) return formError(error.message);
 
   revalidatePath("/", "layout");
-  redirect("/dashboard");
+  redirect("/quotes");
 }
 
 export async function resendVerificationAction(

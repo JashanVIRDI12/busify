@@ -103,7 +103,7 @@ export function RequestActions({
           </p>
           {status === "ACCEPTED" && tripId && (
             <Button asChild className="w-full" size="lg">
-              <Link href={`/trips/${tripId}`}>
+              <Link href={`/reservations/${tripId}`}>
                 <Route />
                 Open the trip
               </Link>

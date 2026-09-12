@@ -12,7 +12,7 @@ import {
 } from "@/lib/forms";
 import { canManage, canWrite } from "@/lib/permissions";
 import { driverSchema } from "@/lib/validations/driver";
-import { uuid } from "@/lib/validations/shared";
+import { uuid, type ActionResult } from "@/lib/validations/shared";
 
 const DUPLICATE_LICENSE = {
   drivers_org_license_unique:
@@ -21,7 +21,7 @@ const DUPLICATE_LICENSE = {
 
 function revalidateDrivers() {
   revalidatePath("/drivers");
-  revalidatePath("/dashboard");
+  revalidatePath("/reports");
 }
 
 export async function createDriverAction(
@@ -94,4 +94,29 @@ export async function deleteDriverAction(
 
   revalidateDrivers();
   return formSuccess();
+}
+
+/** Bulk delete from the table's selection bar. */
+export async function deleteDriversAction(
+  ids: string[],
+): Promise<ActionResult<void>> {
+  const { session, supabase } = await actionContext();
+
+  if (!canManage(session.role)) {
+    return { ok: false, message: "Only owners and admins can delete drivers." };
+  }
+
+  const parsed = uuid.array().max(500).safeParse(ids);
+  if (!parsed.success) {
+    return { ok: false, message: "That selection could not be read." };
+  }
+
+  const { error } = await supabase.from("drivers").delete().in("id", parsed.data);
+
+  if (error) {
+    return { ok: false, message: databaseError(error).message ?? "Delete failed." };
+  }
+
+  revalidateDrivers();
+  return { ok: true, data: undefined };
 }

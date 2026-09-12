@@ -6,7 +6,7 @@ import { Ban, CheckCircle2, Flag, PlayCircle, Send } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 
-import { setTripStatusAction } from "@/app/(dashboard)/trips/actions";
+import { setTripStatusAction } from "@/app/(dashboard)/reservations/actions";
 import { Button } from "@/components/ui/button";
 import { idleFormState } from "@/lib/forms";
 import type { TripStatus } from "@/types/database";
@@ -30,10 +30,14 @@ export function TripStatusActions({
   tripId,
   status,
   canEdit,
+  hasVehicle,
+  hasDriver,
 }: {
   tripId: string;
   status: TripStatus;
   canEdit: boolean;
+  hasVehicle: boolean;
+  hasDriver: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -68,6 +72,20 @@ export function TripStatusActions({
   const closed = status === "COMPLETED" || status === "CANCELLED";
   const step = NEXT_STEP[status];
 
+  // The server refuses to put an unstaffed trip on the road. Saying so on the
+  // button, and naming what is missing, beats letting the click fail.
+  const missing =
+    !hasVehicle && !hasDriver
+      ? "a vehicle and a driver"
+      : !hasVehicle
+        ? "a vehicle"
+        : !hasDriver
+          ? "a driver"
+          : null;
+  const blocked =
+    missing !== null &&
+    (step?.status === "DISPATCHED" || step?.status === "IN_PROGRESS");
+
   if (closed) {
     return (
       <div className="space-y-3">
@@ -96,6 +114,7 @@ export function TripStatusActions({
           className="w-full"
           size="lg"
           loading={pending && target === step.status}
+          disabled={blocked}
           onClick={() => move(step.status, `${step.label} done.`)}
         >
           <step.icon />
@@ -114,9 +133,10 @@ export function TripStatusActions({
         Cancel trip
       </Button>
 
-      {status === "CONFIRMED" && (
+      {blocked && (
         <p className="pt-1 text-xs text-muted-foreground text-pretty">
-          Dispatch is blocked until the trip has both a vehicle and a driver.
+          Assign {missing} to {step?.status === "DISPATCHED" ? "dispatch" : "start"}{" "}
+          this trip.
         </p>
       )}
     </div>

@@ -27,7 +27,7 @@ import { requireSession } from "@/lib/auth/session";
 import { ROLE_DESCRIPTIONS, ROLE_LABELS } from "@/lib/permissions";
 import type { OrgRole } from "@/types/database";
 
-export const metadata: Metadata = { title: "How Busify works" };
+export const metadata: Metadata = { title: "How VIABUS works" };
 
 const LIFECYCLE = [
   {
@@ -60,7 +60,7 @@ const LIFECYCLE = [
     icon: Route,
     title: "You dispatch it",
     body: "Assign a coach and driver, then move the trip through confirmed, dispatched, under way and completed. Completing releases the vehicle.",
-    href: "/trips",
+    href: "/reservations",
     action: "Trips",
   },
 ] as const;
@@ -75,7 +75,7 @@ const INTAKE: { title: string; body: string; href?: string; action?: string }[] 
   {
     title: "Your public booking link",
     body: "Share one link, or put a button on your website. Submissions arrive with contact details already filled in.",
-    href: "/settings/api",
+    href: "/settings/integrations",
     action: "Set it up",
   },
   {
@@ -101,7 +101,7 @@ export default async function GuidePage() {
     <div className="space-y-6">
       <PageHeader
         eyebrow="Guide"
-        title="How Busify works"
+        title="How VIABUS works"
         description={`Everything ${organization.name} can do today, in the order you will actually use it. Nothing here is aspirational — if it is on this page, it works.`}
       />
 
@@ -174,7 +174,7 @@ export default async function GuidePage() {
                 icon: Users,
                 title: "Customers",
                 body: "Who you quote and invoice. Optional — an enquiry from a stranger works without one.",
-                href: "/customers",
+                href: "/contacts",
               },
             ].map((step, index) => (
               <li key={step.title} className="flex items-start gap-4 py-4">
@@ -365,7 +365,7 @@ export default async function GuidePage() {
               </Link>
             </Button>
             <Button variant="outline" asChild>
-              <Link href="/settings/api">
+              <Link href="/settings/integrations">
                 <Code2 />
                 Set up your booking link
               </Link>

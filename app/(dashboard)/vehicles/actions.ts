@@ -11,8 +11,12 @@ import {
   type FormState,
 } from "@/lib/forms";
 import { canManage, canWrite } from "@/lib/permissions";
-import { vehicleSchema, vehicleTypeSchema } from "@/lib/validations/vehicle";
-import { uuid } from "@/lib/validations/shared";
+import {
+  readAmenities,
+  vehicleSchema,
+  vehicleTypeSchema,
+} from "@/lib/validations/vehicle";
+import { uuid, type ActionResult } from "@/lib/validations/shared";
 
 const DUPLICATE_REGISTRATION = {
   vehicles_organization_id_registration_number_key:
@@ -27,7 +31,7 @@ const DUPLICATE_TYPE_NAME = {
 function revalidateFleet() {
   revalidatePath("/vehicles");
   revalidatePath("/vehicles/types");
-  revalidatePath("/dashboard");
+  revalidatePath("/reports");
 }
 
 // ---------------------------------------------------------------------------
@@ -50,6 +54,7 @@ export async function createVehicleAction(
   const { error } = await supabase.from("vehicles").insert({
     organization_id: session.organization.id,
     ...parsed.data,
+    amenities: readAmenities(formData.getAll("amenities")),
   });
 
   if (error) return databaseError(error, DUPLICATE_REGISTRATION);
@@ -76,13 +81,41 @@ export async function updateVehicleAction(
 
   const { error } = await supabase
     .from("vehicles")
-    .update(parsed.data)
+    .update({
+      ...parsed.data,
+      amenities: readAmenities(formData.getAll("amenities")),
+    })
     .eq("id", id.data);
 
   if (error) return databaseError(error, DUPLICATE_REGISTRATION);
 
   revalidateFleet();
   return formSuccess();
+}
+
+/** Bulk delete from the table's selection bar. */
+export async function deleteVehiclesAction(
+  ids: string[],
+): Promise<ActionResult<void>> {
+  const { session, supabase } = await actionContext();
+
+  if (!canManage(session.role)) {
+    return { ok: false, message: "Only owners and admins can delete vehicles." };
+  }
+
+  const parsed = uuid.array().max(500).safeParse(ids);
+  if (!parsed.success) {
+    return { ok: false, message: "That selection could not be read." };
+  }
+
+  const { error } = await supabase.from("vehicles").delete().in("id", parsed.data);
+
+  if (error) {
+    return { ok: false, message: databaseError(error).message ?? "Delete failed." };
+  }
+
+  revalidateFleet();
+  return { ok: true, data: undefined };
 }
 
 export async function deleteVehicleAction(

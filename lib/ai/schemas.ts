@@ -12,11 +12,19 @@ export const searchTripsSchema = z.object({
     .string()
     .max(120)
     .optional()
-    .describe("Free text to match against pickup or destination."),
+    .describe(
+      "Free text to match against the reservation number, group name, pickup or destination.",
+    ),
   status: z
     .enum(["SCHEDULED", "CONFIRMED", "DISPATCHED", "IN_PROGRESS", "COMPLETED", "CANCELLED"])
     .optional()
     .describe("Restrict to one trip status."),
+  crew: z
+    .enum(["NO_DRIVER", "NO_VEHICLE", "UNCREWED", "CREWED"])
+    .optional()
+    .describe(
+      "Restrict by crew: NO_DRIVER (no driver assigned), NO_VEHICLE (no vehicle assigned), UNCREWED (missing either), CREWED (has both).",
+    ),
   from: z
     .string()
     .optional()
@@ -147,9 +155,29 @@ export const emptySchema = z.object({});
  * output shape, and the model would be told to send what our code produces
  * rather than what it accepts.
  */
+/**
+ * Keywords removed before a schema is offered to the model.
+ *
+ * Gemini decodes function calls against the declared schemas, and one keyword
+ * it cannot compile poisons every tool, not just the one that carries it: the
+ * lookahead regex Zod emits for `.email()` turned every call into
+ * MALFORMED_FUNCTION_CALL. None of these are needed by the model — every
+ * argument is parsed by the same Zod schema on the server before it is used.
+ */
+const MODEL_UNSAFE_KEYWORDS = new Set(["$schema", "pattern", "format"]);
+
+function stripUnsafe(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stripUnsafe);
+  if (value === null || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter(([key]) => !MODEL_UNSAFE_KEYWORDS.has(key))
+      .map(([key, entry]) => [key, stripUnsafe(entry)]),
+  );
+}
+
 export function toParameters(schema: z.ZodType): Record<string, unknown> {
-  return z.toJSONSchema(schema, { io: "input", target: "draft-7" }) as Record<
-    string,
-    unknown
-  >;
+  return stripUnsafe(
+    z.toJSONSchema(schema, { io: "input", target: "draft-7" }),
+  ) as Record<string, unknown>;
 }

@@ -88,6 +88,13 @@ export async function runAssistant({
     });
 
     if (result.toolCalls.length === 0) {
+      if (!result.content?.trim()) {
+        console.warn("Assistant: empty reply", {
+          round,
+          finishReason: result.finishReason,
+          steps: steps.map((step) => step.tool),
+        });
+      }
       return {
         reply:
           result.content?.trim() ||

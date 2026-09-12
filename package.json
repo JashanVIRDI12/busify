@@ -8,12 +8,13 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test:datetime": "TZ=UTC node scripts/check-datetime.ts",
+    "test:datetime": "node scripts/check-datetime.ts",
     "test:pricing": "node scripts/check-pricing.ts",
     "test": "npm run test:datetime && npm run test:pricing && npm run test:tax",
-    "db:push": "supabase db push",
-    "db:reset": "supabase db reset",
-    "db:types": "supabase gen types typescript --local > types/database.ts",
+    "db:push": "npx supabase db push",
+    "db:reset": "npx supabase db reset",
+    "db:types": "npx supabase gen types typescript --local > types/database.ts",
+    "demo:refresh": "npx supabase db query --linked -f supabase/demo-refresh.sql",
     "test:tax": "node scripts/check-tax.ts"
   },
   "dependencies": {
@@ -41,6 +42,7 @@
     "lucide-react": "^1.31.0",
     "next": "^16.3.0",
     "next-themes": "^0.4.6",
+    "pdf-lib": "^1.17.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-hook-form": "^7.85.0",
@@ -61,8 +63,5 @@
     "tailwindcss": "^4.3.3",
     "tw-animate-css": "^1.4.0",
     "typescript": "^6.0.3"
-  },
-  "allowScripts": {
-    "unrs-resolver@1.12.2": true
   }
 }

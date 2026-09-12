@@ -1,6 +1,11 @@
 import type { ReactNode } from "react";
 
-/** White panel, 12px radius, hairline border. No shadow. */
+/**
+ * White panel for the lists that have not moved to `TableCard` yet — trip
+ * requests, bookings and vehicle types. Same surface treatment as the console
+ * tables so the two do not read as different products while the migration
+ * finishes.
+ */
 export function ListShell({
   toolbar,
   children,
@@ -11,15 +16,15 @@ export function ListShell({
   footer?: ReactNode;
 }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-bone bg-signal-white">
+    <div className="panel overflow-hidden">
       {toolbar && (
-        <div className="flex flex-col gap-4 border-b border-bone px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between">
           {toolbar}
         </div>
       )}
-      {children}
+      <div className="scrollbar-slim overflow-x-auto">{children}</div>
       {footer && (
-        <div className="border-t border-bone bg-mist px-5 py-3.5">
+        <div className="px-4 py-3">
           <p className="text-[12px] text-ash">{footer}</p>
         </div>
       )}

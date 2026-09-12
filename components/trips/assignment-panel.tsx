@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import {
   assignToTripAction,
   removeAssignmentAction,
-} from "@/app/(dashboard)/trips/actions";
+} from "@/app/(dashboard)/reservations/actions";
 import { FormMessage } from "@/components/auth/form-message";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

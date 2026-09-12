@@ -138,7 +138,7 @@ export function TripRequestCard({
           <CalendarClock className="size-3.5 shrink-0" aria-hidden />
           {formatDateTime(request.departure_at, timeZone)}
           <span className="text-muted-foreground/70">
-            · {relativeDays(request.departure_at)}
+            · {relativeDays(request.departure_at, timeZone)}
           </span>
         </span>
         <span className="tabular inline-flex items-center gap-1.5">

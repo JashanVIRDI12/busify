@@ -16,11 +16,14 @@ export default async function LoginPage({
   return (
     <AuthCard
       title="Sign in"
-      description="Pick up where your operation left off."
+      description="Charter operations, from quote to dispatch."
       footer={
         <>
-          New to Busify AI?{" "}
-          <Link href="/signup" className="font-medium text-interactive hover:underline">
+          New here?{" "}
+          <Link
+            href="/signup"
+            className="font-medium text-interactive hover:underline"
+          >
             Create an account
           </Link>
         </>

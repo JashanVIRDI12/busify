@@ -22,9 +22,9 @@ export function SetupChecklist({ setup }: { setup: SetupState }) {
   return (
     <section
       aria-labelledby="setup-heading"
-      className="conic-ring overflow-hidden rounded-2xl"
+      className="panel-lg overflow-hidden border-l-[3px] border-orange-500"
     >
-      <div className="rounded-2xl bg-signal-white p-7">
+      <div className="bg-signal-white p-7">
         <div className="flex flex-wrap items-start justify-between gap-x-8 gap-y-4">
           <div className="min-w-0">
             <p className="meta-label">Getting started</p>
@@ -87,7 +87,7 @@ export function SetupChecklist({ setup }: { setup: SetupState }) {
                   className={cn(
                     "flex size-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold transition-colors",
                     step.done
-                      ? "bg-emerald text-signal-white"
+                      ? "bg-teal-500 text-signal-white"
                       : "border border-cloud text-ash group-hover:border-ink group-hover:text-ink",
                   )}
                 >

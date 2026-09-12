@@ -50,5 +50,5 @@ export async function createOrganizationAction(
   }
 
   revalidatePath("/", "layout");
-  redirect("/dashboard");
+  redirect("/quotes");
 }

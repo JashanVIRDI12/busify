@@ -56,10 +56,10 @@ export async function POST(request: NextRequest) {
   if (result.ok) {
     // The operator is looking at a page that probably just went stale.
     for (const path of [
-      "/dashboard",
+      "/reports",
       "/trip-requests",
-      "/trips",
-      "/customers",
+      "/reservations",
+      "/contacts",
       "/quotes",
       "/bookings",
     ]) {

@@ -150,7 +150,7 @@ export default async function BookingsPage({
                     <TableCell>
                       {trip ? (
                         <Link
-                          href={`/trips/${trip.id}`}
+                          href={`/reservations/${trip.id}`}
                           className="text-sm hover:underline"
                         >
                           {trip.pickup_location} → {trip.destination}

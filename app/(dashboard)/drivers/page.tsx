@@ -1,109 +1,90 @@
 import type { Metadata } from "next";
-import { Plus, TriangleAlert, UserSquare } from "lucide-react";
+import Link from "next/link";
+import { Plus } from "lucide-react";
 
-import { DriverDialog } from "@/components/drivers/driver-dialog";
-import { DriverRowActions } from "@/components/drivers/driver-row-actions";
-import { EmptyState } from "@/components/shared/empty-state";
-import { FilterTabs, type FilterTab } from "@/components/shared/filter-tabs";
-import { ListShell } from "@/components/shared/list-shell";
-import { PageHeader } from "@/components/shared/page-header";
-import { SearchInput } from "@/components/shared/search-input";
+import { deleteDriversAction } from "@/app/(dashboard)/drivers/actions";
+import { DriverDrawer } from "@/components/drivers/driver-drawer";
+import { SearchField } from "@/components/data/filters";
+import { PageHeading } from "@/components/data/page-heading";
 import {
-  DRIVER_STATUS_LABELS,
-  DriverStatusBadge,
-} from "@/components/shared/status-badge";
+  BulkActionBar,
+  RowCheckbox,
+  SelectAllCheckbox,
+  SelectionProvider,
+} from "@/components/data/selection";
+import {
+  Blank,
+  DataTable,
+  EmptyRow,
+  TBody,
+  TD,
+  TH,
+  THead,
+  TR,
+  TableCard,
+} from "@/components/data/table";
+import { TablePagination } from "@/components/data/table-pagination";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { requireSession } from "@/lib/auth/session";
+import {
+  ilikeAcross,
+  pageCount,
+  parseListParams,
+  type SearchParamsInput,
+} from "@/lib/list-params";
 import { canManage, canWrite } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
-import { DRIVER_STATUSES } from "@/lib/validations/driver";
-import type { DriverStatus } from "@/types/database";
+import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Drivers" };
 
-const DAY_MS = 86_400_000;
-
-function parseStatus(value: string | undefined): DriverStatus | null {
-  return DRIVER_STATUSES.includes(value as DriverStatus)
-    ? (value as DriverStatus)
-    : null;
-}
-
-/** Days until a licence expires; negative once it already has. */
-function daysUntil(date: string) {
-  const target = new Date(`${date}T00:00:00Z`).getTime();
-  const today = new Date().setUTCHours(0, 0, 0, 0);
-  return Math.round((target - today) / DAY_MS);
-}
+const SEARCHABLE = ["first_name", "last_name", "email", "phone", "license_number"];
 
 export default async function DriversPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string }>;
+  searchParams: Promise<SearchParamsInput>;
 }) {
   const { role } = await requireSession();
-  const { q, status } = await searchParams;
-  const activeStatus = parseStatus(status);
+  const resolved = await searchParams;
+  const params = parseListParams(resolved);
 
   const supabase = await createClient();
 
-  const { data: statusRows } = await supabase.from("drivers").select("status");
-
   let query = supabase
     .from("drivers")
-    .select("*")
-    .order("first_name")
-    .limit(300);
+    .select("*, garages(id, name)", { count: "exact" })
+    .order("first_name", { ascending: true })
+    .range(params.from, params.to);
 
-  if (activeStatus) query = query.eq("status", activeStatus);
+  if (params.q) query = query.or(ilikeAcross(SEARCHABLE, params.q));
 
-  if (q?.trim()) {
-    const term = `%${q.trim()}%`;
-    query = query.or(
-      `first_name.ilike.${term},last_name.ilike.${term},email.ilike.${term},phone.ilike.${term},license_number.ilike.${term}`,
-    );
-  }
+  const [{ data, count, error }, { data: garages }] = await Promise.all([
+    query,
+    supabase.from("garages").select("id, name").order("name").limit(200),
+  ]);
 
-  const { data, error } = await query;
-  const drivers = data ?? [];
-
-  const counts = new Map<DriverStatus, number>();
-  for (const row of statusRows ?? []) {
-    counts.set(row.status, (counts.get(row.status) ?? 0) + 1);
-  }
-
-  const tabs: FilterTab[] = [
-    { label: "All", value: null, count: statusRows?.length ?? 0 },
-    ...DRIVER_STATUSES.map((value) => ({
-      label: DRIVER_STATUS_LABELS[value],
-      value,
-      count: counts.get(value) ?? 0,
-    })),
-  ];
-
+  const rows = data ?? [];
+  const garageOptions = garages ?? [];
+  const total = count ?? 0;
   const writeAllowed = canWrite(role);
-  const deleteAllowed = canManage(role);
+
+  const editingId = typeof resolved.edit === "string" ? resolved.edit : undefined;
+  const editing = rows.find((row) => row.id === editingId);
 
   return (
-    <div className="space-y-6">
-      <PageHeader
+    <SelectionProvider ids={rows.map((row) => row.id)}>
+      <PageHeading
         title="Drivers"
-        description="Your roster, their licences, and who is available to take a trip."
+        count={total}
         actions={
           writeAllowed ? (
-            <DriverDialog
+            <DriverDrawer
+              garages={garageOptions}
               trigger={
                 <Button>
                   <Plus />
-                  Add driver
+                  Add Driver
                 </Button>
               }
             />
@@ -111,120 +92,109 @@ export default async function DriversPage({
         }
       />
 
-      <ListShell
-        toolbar={
-          <>
-            <FilterTabs tabs={tabs} />
-            <SearchInput placeholder="Search name, phone, licence…" />
-          </>
+      <div className="mb-3.5">
+        <SearchField placeholder="Search" />
+      </div>
+
+      <TableCard
+        footer={
+          <TablePagination
+            page={params.page}
+            pageCount={pageCount(total, params.per)}
+            perPage={params.per}
+          />
         }
       >
-        {error ? (
-          <EmptyState
-            icon={UserSquare}
-            title="We could not load your drivers"
-            description="The request failed. Refresh the page, and if it keeps happening check your Supabase connection."
-          />
-        ) : drivers.length === 0 ? (
-          <EmptyState
-            icon={UserSquare}
-            title={
-              q || activeStatus ? "No drivers match those filters" : "No drivers yet"
-            }
-            description={
-              q || activeStatus
-                ? "Clear the search or pick a different status to see the rest of your roster."
-                : "Add your drivers so you can assign them to trips and track licence expiry."
-            }
-            action={
-              !q && !activeStatus && writeAllowed ? (
-                <DriverDialog
-                  trigger={
-                    <Button>
-                      <Plus />
-                      Add your first driver
-                    </Button>
-                  }
-                />
-              ) : null
-            }
-          />
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Driver</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead>Licence</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-12" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {drivers.map((driver) => {
-                const remaining = driver.license_expires_on
-                  ? daysUntil(driver.license_expires_on)
-                  : null;
-                const expiringSoon = remaining !== null && remaining <= 30;
+        <DataTable className="min-w-[54rem]">
+          <THead>
+            <TH width="44px">
+              <SelectAllCheckbox />
+            </TH>
+            <TH>Name</TH>
+            <TH>Phone Number</TH>
+            <TH>Email</TH>
+            <TH>Garage</TH>
+            <TH>Active</TH>
+          </THead>
 
+          <TBody>
+            {error ? (
+              <EmptyRow
+                colSpan={6}
+                message="Those drivers could not be loaded. Refresh to try again."
+              />
+            ) : rows.length === 0 ? (
+              <EmptyRow
+                colSpan={6}
+                message={
+                  params.q ? "No drivers match that search" : "No drivers yet"
+                }
+              />
+            ) : (
+              rows.map((driver) => {
+                const active = driver.status === "ACTIVE";
                 return (
-                  <TableRow key={driver.id}>
-                    <TableCell className="font-medium">
-                      {[driver.first_name, driver.last_name]
-                        .filter(Boolean)
-                        .join(" ")}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {driver.email && (
+                  <TR key={driver.id}>
+                    <TD>
+                      <RowCheckbox id={driver.id} />
+                    </TD>
+                    <TD>
+                      <Link
+                        href={`/drivers?edit=${driver.id}`}
+                        scroll={false}
+                        className="font-medium hover:text-teal-600 hover:underline"
+                      >
+                        {[driver.first_name, driver.last_name]
+                          .filter(Boolean)
+                          .join(" ")}
+                      </Link>
+                    </TD>
+                    <TD className="tabular whitespace-nowrap">
+                      {driver.phone ?? <Blank />}
+                    </TD>
+                    <TD>
+                      {driver.email ? (
                         <a
                           href={`mailto:${driver.email}`}
-                          className="block text-interactive hover:underline"
+                          className="hover:text-teal-600 hover:underline"
                         >
                           {driver.email}
                         </a>
+                      ) : (
+                        <Blank />
                       )}
-                      <span className="tabular block text-xs">
-                        {driver.phone ?? (driver.email ? "" : "—")}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="tabular block">
-                        {driver.license_number ?? "—"}
-                      </span>
-                      {driver.license_expires_on && (
-                        <span
-                          className={
-                            expiringSoon
-                              ? "mt-0.5 flex items-center gap-1 text-xs font-medium text-warning"
-                              : "mt-0.5 block text-xs text-muted-foreground"
-                          }
-                        >
-                          {expiringSoon && (
-                            <TriangleAlert className="size-3" aria-hidden />
-                          )}
-                          {remaining !== null && remaining < 0
-                            ? `Expired ${driver.license_expires_on}`
-                            : `Expires ${driver.license_expires_on}`}
-                        </span>
+                    </TD>
+                    <TD>{driver.garages?.name ?? <Blank />}</TD>
+                    <TD
+                      className={cn(
+                        "font-medium",
+                        active ? "text-ink" : "text-slate",
                       )}
-                    </TableCell>
-                    <TableCell>
-                      <DriverStatusBadge status={driver.status} />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DriverRowActions
-                        driver={driver}
-                        canEdit={writeAllowed}
-                        canDelete={deleteAllowed}
-                      />
-                    </TableCell>
-                  </TableRow>
+                    >
+                      {active ? "Active" : "Not Active"}
+                    </TD>
+                  </TR>
                 );
-              })}
-            </TableBody>
-          </Table>
-        )}
-      </ListShell>
-    </div>
+              })
+            )}
+          </TBody>
+        </DataTable>
+      </TableCard>
+
+      {editing && (
+        <DriverDrawer
+          key={editing.id}
+          driver={editing}
+          garages={garageOptions}
+          routed
+        />
+      )}
+
+      <BulkActionBar
+        noun="driver"
+        canDelete={canManage(role)}
+        onDelete={deleteDriversAction}
+      />
+    </SelectionProvider>
   );
 }

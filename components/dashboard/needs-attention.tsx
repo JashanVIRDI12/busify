@@ -39,7 +39,7 @@ export function NeedsAttention({ items }: { items: AttentionItem[] }) {
 
       {items.length === 0 ? (
         <div className="flex items-center gap-4 px-6 py-10">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-mint text-[#065f46]">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-teal-100 text-teal-700">
             <Check className="size-4" strokeWidth={3} aria-hidden />
           </span>
           <div>

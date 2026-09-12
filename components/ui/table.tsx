@@ -47,13 +47,13 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
   );
 }
 
-/** Column heads take the monospaced uppercase meta voice. */
+/** Matches the console tables in components/data/table.tsx exactly. */
 function TableHead({ className, ...props }: React.ComponentProps<"th">) {
   return (
     <th
       data-slot="table-head"
       className={cn(
-        "meta-label h-11 px-5 text-left align-middle whitespace-nowrap",
+        "px-3.5 py-3 text-left align-middle text-[12.5px] font-medium whitespace-nowrap text-slate",
         "[&:has([role=checkbox])]:pr-0",
         className,
       )}
@@ -66,7 +66,7 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
   return (
     <td
       data-slot="table-cell"
-      className={cn("px-5 py-3.5 align-middle text-slate", className)}
+      className={cn("px-3.5 py-[11px] align-middle text-ink", className)}
       {...props}
     />
   );

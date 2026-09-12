@@ -1,13 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { landingPath } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
-
-/** An explicit, same-origin redirect target, or null. */
-function explicitNext(value: string | null): string | null {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) return null;
-  return value;
-}
 
 /**
  * PKCE code exchange. Supabase email links and OAuth providers land here with
@@ -16,7 +9,11 @@ function explicitNext(value: string | null): string | null {
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const code = searchParams.get("code");
-  const next = explicitNext(searchParams.get("next"));
+  const nextParam = searchParams.get("next") ?? "/quotes";
+  const next =
+    nextParam.startsWith("/") && !nextParam.startsWith("//")
+      ? nextParam
+      : "/quotes";
 
   if (!code) {
     return NextResponse.redirect(
@@ -28,6 +25,9 @@ export async function GET(request: NextRequest) {
   const { error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
+    // A missing code_verifier cookie fails here exactly like a stale code, so
+    // the user-facing "expired" can be actively misleading. Log the real cause.
+    console.error("PKCE exchange failed", error.message);
     return NextResponse.redirect(
       `${origin}/login?error=${encodeURIComponent(
         "That sign-in link has expired. Request a new one.",
@@ -35,5 +35,5 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  return NextResponse.redirect(`${origin}${next ?? (await landingPath())}`);
+  return NextResponse.redirect(`${origin}${next}`);
 }

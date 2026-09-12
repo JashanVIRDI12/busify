@@ -14,8 +14,9 @@ export const config = {
   matcher: [
     /*
      * Everything except static assets and image files — those never carry a
-     * session that needs refreshing.
+     * session that needs refreshing, and running the proxy over them would put
+     * a Supabase round trip in front of every icon on the page.
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|mp4)$).*)",
   ],
 };

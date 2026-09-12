@@ -54,10 +54,10 @@ export function isOwner(role: OrgRole | null | undefined): boolean {
   return role === "OWNER";
 }
 
-export const ASSIGNABLE_ROLES = [
+export const ASSIGNABLE_ROLES: readonly OrgRole[] = [
   "ADMIN",
   "DISPATCHER",
   "STAFF",
   "ACCOUNTANT",
   "DRIVER",
-] as const satisfies readonly OrgRole[];
+];

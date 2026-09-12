@@ -39,13 +39,10 @@ type MembershipRow = {
 };
 
 /**
- * The caller's own memberships, oldest organization first.
+ * The caller's memberships, newest organization first.
  *
- * The `organization_members` SELECT policy lets a member read *every* member
- * row of an organization they belong to, not just their own — so the
- * `user_id` filter here is a correctness requirement, not a security one.
- * Without it a member of a multi-person org could resolve a teammate's role
- * as their own.
+ * RLS already restricts this to the current user, so there is no user_id
+ * filter here — adding one would imply the filter is what makes it safe.
  */
 export const getMemberships = cache(
   async (): Promise<{ role: OrgRole; organization: Organization }[]> => {
@@ -56,7 +53,6 @@ export const getMemberships = cache(
     const { data, error } = await supabase
       .from("organization_members")
       .select("role, organizations(*)")
-      .eq("user_id", user.id)
       .order("created_at", { ascending: true });
 
     if (error) {
@@ -99,65 +95,5 @@ export async function requireSession(): Promise<Session> {
   const session = await getSession();
   if (!session) redirect("/onboarding");
 
-  // Drivers do not use the operations console — they get the portal.
-  if (session.role === "DRIVER") redirect("/driver");
-
   return session;
-}
-
-export type DriverContext = {
-  user: User;
-  organization: Organization;
-  driver: Tables<"drivers">;
-};
-
-type DriverContextRow = Tables<"drivers"> & {
-  organizations: Organization | null;
-};
-
-/**
- * The signed-in user's driver record and its organization, or null if this
- * account is not a linked driver. Deduplicated per request like getSession().
- */
-export const getDriverContext = cache(async (): Promise<DriverContext | null> => {
-  const user = await getUser();
-  if (!user) return null;
-
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("drivers")
-    .select("*, organizations(*)")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  if (error || !data) return null;
-
-  const { organizations, ...driver } = data as unknown as DriverContextRow;
-  if (!organizations) return null;
-
-  return { user, organization: organizations, driver };
-});
-
-export async function requireDriver(): Promise<DriverContext> {
-  const user = await getUser();
-  if (!user) redirect("/driver/login");
-
-  const context = await getDriverContext();
-  // Signed in but not a driver — send them to the operations dashboard.
-  if (!context) redirect("/dashboard");
-
-  return context;
-}
-
-/**
- * Where a signed-in user belongs. A DRIVER lands in the driver portal;
- * everyone else in the operations dashboard. This is the single source of
- * truth so the login form, the PKCE callback and the email-confirm handler all
- * agree — a driver never briefly sees the dashboard shell.
- */
-export async function landingPath(): Promise<string> {
-  const memberships = await getMemberships();
-  const active = memberships[0];
-  if (!active) return "/onboarding";
-  return active.role === "DRIVER" ? "/driver" : "/dashboard";
 }

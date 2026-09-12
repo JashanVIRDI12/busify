@@ -39,6 +39,8 @@ export function OnboardingForm({ defaultEmail }: { defaultEmail: string }) {
   // only ever overwritten by a deliberate choice.
   const [province, setProvince] = useState<string>(DEFAULT_PROVINCE);
   const [timezone, setTimezone] = useState<string>(DEFAULT_TIMEZONE);
+  const [country, setCountry] = useState<string>(DEFAULT_COUNTRY);
+  const [currency, setCurrency] = useState<string>(DEFAULT_CURRENCY);
 
   const tax = taxForOrigin(province);
 
@@ -51,6 +53,11 @@ export function OnboardingForm({ defaultEmail }: { defaultEmail: string }) {
   return (
     <form action={formAction} className="space-y-6" noValidate>
       <FormMessage state={state} />
+
+      <input type="hidden" name="state" value={province} />
+      <input type="hidden" name="timezone" value={timezone} />
+      <input type="hidden" name="country" value={country} />
+      <input type="hidden" name="currency" value={currency} />
 
       <Field
         label="Company name"
@@ -123,7 +130,7 @@ export function OnboardingForm({ defaultEmail }: { defaultEmail: string }) {
           }
           errors={state.fieldErrors?.state}
         >
-          <Select name="state" value={province} onValueChange={chooseProvince}>
+          <Select value={province} onValueChange={chooseProvince}>
             <SelectTrigger id="state">
               <SelectValue placeholder="Select a province" />
             </SelectTrigger>
@@ -137,15 +144,19 @@ export function OnboardingForm({ defaultEmail }: { defaultEmail: string }) {
           </Select>
         </Field>
 
-        <Field label="Country" htmlFor="country" errors={state.fieldErrors?.country}>
-          <Select name="country" defaultValue={DEFAULT_COUNTRY}>
+        <Field
+          label="Country"
+          htmlFor="country"
+          errors={state.fieldErrors?.country}
+        >
+          <Select value={country} onValueChange={setCountry}>
             <SelectTrigger id="country">
               <SelectValue placeholder="Select a country" />
             </SelectTrigger>
             <SelectContent>
-              {COUNTRIES.map((country) => (
-                <SelectItem key={country.code} value={country.code}>
-                  {country.name}
+              {COUNTRIES.map((entry) => (
+                <SelectItem key={entry.code} value={entry.code}>
+                  {entry.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -157,14 +168,14 @@ export function OnboardingForm({ defaultEmail }: { defaultEmail: string }) {
           htmlFor="currency"
           errors={state.fieldErrors?.currency}
         >
-          <Select name="currency" defaultValue={DEFAULT_CURRENCY}>
+          <Select value={currency} onValueChange={setCurrency}>
             <SelectTrigger id="currency">
               <SelectValue placeholder="Select a currency" />
             </SelectTrigger>
             <SelectContent>
-              {CURRENCIES.map((currency) => (
-                <SelectItem key={currency.code} value={currency.code}>
-                  {currency.label}
+              {CURRENCIES.map((entry) => (
+                <SelectItem key={entry.code} value={entry.code}>
+                  {entry.label}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -178,7 +189,7 @@ export function OnboardingForm({ defaultEmail }: { defaultEmail: string }) {
         hint="Departure and return times are shown in this zone. Saskatchewan and Yukon do not change their clocks."
         errors={state.fieldErrors?.timezone}
       >
-        <Select name="timezone" value={timezone} onValueChange={setTimezone}>
+        <Select value={timezone} onValueChange={setTimezone}>
           <SelectTrigger id="timezone">
             <SelectValue placeholder="Select a time zone" />
           </SelectTrigger>
