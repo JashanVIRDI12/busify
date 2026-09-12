@@ -9,7 +9,6 @@ import {
   Users,
 } from "lucide-react";
 
-import { WelcomeTour } from "@/components/guide/welcome-tour";
 import { BreakdownCard } from "@/components/dashboard/breakdown-card";
 import { MetricStrip, type Metric } from "@/components/dashboard/metric-strip";
 import { NeedsAttention } from "@/components/dashboard/needs-attention";
@@ -207,7 +206,6 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <WelcomeTour />
       <Suspense fallback={<OverviewSkeleton />}>
       <Overview
         currency={organization.currency}

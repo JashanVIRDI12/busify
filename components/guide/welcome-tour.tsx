@@ -7,7 +7,9 @@ import {
   ArrowRight,
   BookOpen,
   BusFront,
+  FileText,
   Inbox,
+  ListChecks,
   Sparkles,
 } from "lucide-react";
 
@@ -32,12 +34,28 @@ const SLIDES = [
       "Start by adding a vehicle type. Your per-kilometre and hourly rates live there, and quoting reads from them.",
   },
   {
+    icon: ListChecks,
+    eyebrow: "First things first",
+    title: "Set up before you quote.",
+    body: "Your garages, vehicle types and rate card are what the quote builder prices from. Without them every quote comes out at $0.00.",
+    aside:
+      "The Setup page tracks what is still missing and links to each screen. You can reach it any time at /setup.",
+  },
+  {
     icon: Inbox,
     eyebrow: "How work flows",
     title: "Request → quote → booking → trip.",
     body: "An enquiry arrives, you check what is genuinely free, you send a price or accept it outright, then you dispatch a coach and driver.",
     aside:
       "Quotes apply GST or HST at the rate for the province the trip starts in. Set your province under Settings.",
+  },
+  {
+    icon: FileText,
+    eyebrow: "Pricing a job",
+    title: "A quote is four tabs.",
+    body: "Customer, then a tab per trip with its itinerary and rates, then Payment for deposits and terms, then Notes. Add Quote opens it empty — nothing is saved, and no quote number is used, until you press Save.",
+    aside:
+      "Each trip you add becomes its own reservation when the quote is won, numbered 10023, 10023-2, and so on.",
   },
   {
     icon: BookOpen,
@@ -162,9 +180,12 @@ export function WelcomeTour() {
                 <Button variant="ghost" size="sm" onClick={dismiss}>
                   Close
                 </Button>
+                {/* Setup, not the guide: the tour has just explained that
+                    nothing prices correctly until the rate card exists, so the
+                    useful next click is the checklist, not more reading. */}
                 <Button size="sm" asChild onClick={dismiss}>
-                  <Link href="/guide">
-                    Read the guide
+                  <Link href="/setup">
+                    Start setting up
                     <ArrowRight />
                   </Link>
                 </Button>
