@@ -157,7 +157,10 @@ export function QuoteBuilderProvider({
     builderFingerprint(toBuilderState(data)),
   );
   const [saving, setSaving] = useState(false);
-  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  // A quote reopened days later was saved then, not "never".
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(
+    data.quote.updated_at ?? null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [activeTripId, setActiveTripId] = useState(
     () => state.trips[0]?.id ?? "",

@@ -25,6 +25,9 @@ export async function GET(request: NextRequest) {
   const { error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
+    // A missing code_verifier cookie fails here exactly like a stale code, so
+    // the user-facing "expired" can be actively misleading. Log the real cause.
+    console.error("PKCE exchange failed", error.message);
     return NextResponse.redirect(
       `${origin}/login?error=${encodeURIComponent(
         "That sign-in link has expired. Request a new one.",

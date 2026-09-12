@@ -103,7 +103,7 @@ export default async function TripDetailPage({
       <PageHeader
         eyebrow="Reservation"
         title={`${trip.pickup_location} → ${trip.destination}`}
-        description={`Departs ${formatDateTime(trip.departure_at, timeZone)} · ${relativeDays(trip.departure_at)}`}
+        description={`Departs ${formatDateTime(trip.departure_at, timeZone)} · ${relativeDays(trip.departure_at, timeZone)}`}
         actions={<TripStatusBadge status={trip.status} />}
       />
 
@@ -170,7 +170,7 @@ export default async function TripDetailPage({
                       {formatDateTime(trip.departure_at, timeZone)}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {relativeDays(trip.departure_at)}
+                      {relativeDays(trip.departure_at, timeZone)}
                     </p>
                   </div>
                 </div>
@@ -291,6 +291,8 @@ export default async function TripDetailPage({
                 tripId={trip.id}
                 status={trip.status}
                 canEdit={writeAllowed}
+                hasVehicle={assignments.some((entry) => entry.vehicle !== null)}
+                hasDriver={hasDriver}
               />
             </CardContent>
           </Card>

@@ -177,7 +177,7 @@ export default async function TripRequestDetailPage({
                       {formatDateTime(request.departure_at, timeZone)}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {relativeDays(request.departure_at)}
+                      {relativeDays(request.departure_at, timeZone)}
                     </p>
                   </div>
                 </div>
@@ -317,7 +317,7 @@ export default async function TripRequestDetailPage({
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium">Trip scheduled</p>
                     <Link
-                      href={`/trips/${trip.id}`}
+                      href={`/reservations/${trip.id}`}
                       className="text-xs text-interactive hover:underline"
                     >
                       Open the trip

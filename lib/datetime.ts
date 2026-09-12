@@ -121,15 +121,25 @@ export function formatTime(iso: string | null, timeZone: string): string {
   });
 }
 
-/** "in 18 days", "tomorrow", "3 days ago" — for scanning a list quickly. */
-export function relativeDays(iso: string | null, now = new Date()): string {
+/**
+ * "in 18 days", "tomorrow", "3 days ago" — for scanning a list quickly.
+ *
+ * Counted in calendar days on the operator's clock, not the server's. A server
+ * running in UTC would otherwise call an 8 p.m. Toronto departure two days ago
+ * "yesterday", because it is already past midnight in UTC.
+ */
+export function relativeDays(
+  iso: string | null,
+  timeZone: string,
+  now = new Date(),
+): string {
   if (!iso) return "";
   const target = new Date(iso);
   if (Number.isNaN(target.getTime())) return "";
 
-  const days = Math.round(
-    (target.setHours(0, 0, 0, 0) - new Date(now).setHours(0, 0, 0, 0)) / 86_400_000,
-  );
+  const calendarDay = (instant: Date) =>
+    Math.floor((instant.getTime() + offsetMs(instant, timeZone)) / 86_400_000);
+  const days = calendarDay(target) - calendarDay(now);
 
   if (days === 0) return "today";
   if (days === 1) return "tomorrow";

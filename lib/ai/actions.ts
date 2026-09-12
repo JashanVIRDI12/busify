@@ -320,7 +320,7 @@ export async function executeAction(
       return {
         ok: true,
         message: `Accepted ${request.reference ?? "the request"}. The trip is on your schedule.`,
-        href: `/trips/${tripId}`,
+        href: `/reservations/${tripId}`,
       };
     }
 
@@ -371,7 +371,7 @@ export async function executeAction(
 
       if (error) return { ok: false, message: "Could not create that assignment." };
 
-      return { ok: true, message: "Crew assigned.", href: `/trips/${args.tripId}` };
+      return { ok: true, message: "Crew assigned.", href: `/reservations/${args.tripId}` };
     }
 
     case "setTripStatus": {
@@ -387,7 +387,7 @@ export async function executeAction(
       return {
         ok: true,
         message: `Trip moved to ${args.status.toLowerCase().replace(/_/g, " ")}.`,
-        href: `/trips/${args.tripId}`,
+        href: `/reservations/${args.tripId}`,
       };
     }
 

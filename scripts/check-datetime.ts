@@ -144,8 +144,21 @@ const w = tripWindow("2026-09-20T00:30:00.000Z", null);
 check("one-way window is 24h", w.end.getTime() - w.start.getTime(), 86_400_000);
 
 const now = new Date("2026-09-20T10:00:00Z");
-check("relative today", relativeDays("2026-09-20T18:00:00Z", now), "today");
-check("relative tomorrow", relativeDays("2026-09-21T02:00:00Z", now), "tomorrow");
+check("relative today", relativeDays("2026-09-20T18:00:00Z", "UTC", now), "today");
+check("relative tomorrow", relativeDays("2026-09-21T02:00:00Z", "UTC", now), "tomorrow");
+// 22:00 on the 20th in Toronto is still today there, whatever UTC says.
+check(
+  "relative uses the operator's calendar",
+  relativeDays("2026-09-21T02:00:00Z", "America/Toronto", now),
+  "today",
+);
+// An 8 p.m. Toronto departure two days back is past midnight in UTC; a
+// server-clock count would call it "yesterday".
+check(
+  "relative evening departure two days ago",
+  relativeDays("2026-09-10T00:00:00Z", "America/Toronto", new Date("2026-09-11T15:00:00Z")),
+  "2 days ago",
+);
 
 console.log(failures === 0 ? "\nALL PASSED" : `\n${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);

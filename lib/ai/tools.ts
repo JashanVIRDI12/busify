@@ -74,35 +74,72 @@ const TOOLS: Record<string, Tool> = {
       function: {
         name: "searchTrips",
         description:
-          "List trips on the operator's schedule, optionally filtered by text, status or date range. Use this before answering anything about upcoming or past work.",
+          "List trips (reservations) on the operator's schedule, optionally filtered by text, status, date range or crew — e.g. crew NO_DRIVER for trips without a driver. Each result says which vehicle and driver are assigned. Use this before answering anything about upcoming or past work.",
         parameters: toParameters(searchTripsSchema),
       },
     },
     handler: async (raw, { session }) => {
       const args = searchTripsSchema.parse(raw);
       const supabase = await createClient();
+      const limit = args.limit ?? 10;
 
       let query = supabase
         .from("trips")
-        .select("id, pickup_location, destination, departure_at, return_at, passenger_count, status")
+        .select(
+          "id, reference, group_name, pickup_location, destination, departure_at, return_at, passenger_count, status, trip_assignments(vehicle_id, driver_id, vehicles(name), drivers(first_name, last_name))",
+        )
         .order("departure_at", { ascending: true })
-        .limit(args.limit ?? 10);
+        // Crew is filtered after the read, so read enough rows to fill the page.
+        .limit(args.crew ? 200 : limit);
 
       if (args.status) query = query.eq("status", args.status);
       if (args.from) query = query.gte("departure_at", args.from);
       if (args.to) query = query.lte("departure_at", args.to);
       if (args.query) {
         const term = `%${args.query}%`;
-        query = query.or(`pickup_location.ilike.${term},destination.ilike.${term}`);
+        query = query.or(
+          `reference.ilike.${term},group_name.ilike.${term},pickup_location.ilike.${term},destination.ilike.${term}`,
+        );
       }
 
       const { data, error } = await query;
       if (error) return { error: "Could not read trips." };
 
+      const trips = data
+        .map((trip) => {
+          const crew = trip.trip_assignments ?? [];
+          const vehicles = crew.flatMap((a) => (a.vehicles ? [a.vehicles.name] : []));
+          const drivers = crew.flatMap((a) =>
+            a.drivers
+              ? [[a.drivers.first_name, a.drivers.last_name].filter(Boolean).join(" ")]
+              : [],
+          );
+          return { trip, vehicles, drivers };
+        })
+        .filter(({ trip, vehicles, drivers }) => {
+          // A closed trip is not missing anything.
+          const open = trip.status !== "COMPLETED" && trip.status !== "CANCELLED";
+          switch (args.crew) {
+            case "NO_DRIVER":
+              return open && drivers.length === 0;
+            case "NO_VEHICLE":
+              return open && vehicles.length === 0;
+            case "UNCREWED":
+              return open && (drivers.length === 0 || vehicles.length === 0);
+            case "CREWED":
+              return drivers.length > 0 && vehicles.length > 0;
+            default:
+              return true;
+          }
+        })
+        .slice(0, limit);
+
       return {
-        count: data.length,
-        trips: data.map((trip) => ({
+        count: trips.length,
+        trips: trips.map(({ trip, vehicles, drivers }) => ({
           id: trip.id,
+          reservation: trip.reference,
+          group: trip.group_name,
           route: `${trip.pickup_location} → ${trip.destination}`,
           departure: formatDateTime(trip.departure_at, session.organization.timezone),
           return: trip.return_at
@@ -110,6 +147,8 @@ const TOOLS: Record<string, Tool> = {
             : null,
           passengers: trip.passenger_count,
           status: trip.status,
+          vehicles: vehicles.length ? vehicles : "none assigned",
+          drivers: drivers.length ? drivers : "none assigned",
         })),
       };
     },
@@ -469,7 +508,7 @@ const TOOLS: Record<string, Tool> = {
 
       return {
         revenueThisMonth: formatMoney(metrics.revenueThisMonth, currency),
-        confirmedBookings: metrics.confirmedBookings,
+        newReservationsThisMonth: metrics.newReservations,
         pendingRequests: metrics.pendingRequests,
         upcomingTrips: metrics.upcomingTrips,
         customers: metrics.customers,

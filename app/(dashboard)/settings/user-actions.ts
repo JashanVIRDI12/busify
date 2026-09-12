@@ -56,9 +56,18 @@ export async function inviteUserAction(
     );
   }
 
+  // Not /auth/callback. That route exchanges a PKCE code, which needs the
+  // `code_verifier` cookie set in the browser that *started* the flow — and an
+  // invite is generated here, server-side, for a browser that has never seen
+  // this app. The exchange could never succeed, so every invitee was told the
+  // link had expired. Invites are token_hash links, same as recovery.
+  //
+  // They land on /reset-password rather than /quotes because an invited account
+  // has no password yet: dropping them straight into the console would leave
+  // them unable to ever sign in again.
   const invite = await admin.auth.admin.inviteUserByEmail(email, {
     data: full_name ? { full_name } : undefined,
-    redirectTo: `${siteUrl()}/auth/callback?next=/quotes`,
+    redirectTo: `${siteUrl()}/auth/confirm?type=invite&next=/reset-password`,
   });
 
   let userId = invite.data.user?.id ?? null;

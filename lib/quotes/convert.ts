@@ -87,6 +87,10 @@ export async function convertQuoteToReservations(
     );
     const first = stops[0];
     const last = stops.length > 1 ? stops[stops.length - 1] : undefined;
+    // Where the group is going, which on a round trip is not the last stop —
+    // that is back where they started. The first stop somewhere else is it.
+    const destination =
+      stops.slice(1).find((stop) => placeOf(stop) !== placeOf(first)) ?? last;
 
     // A reservation must have a departure. Preference order: the first stop,
     // then the garage departure, then the quote's denormalised pickup. A trip
@@ -117,8 +121,11 @@ export async function convertQuoteToReservations(
         company_id: quote.company_id,
         garage_id: trip.departing_garage_id,
         pickup_location: placeOf(first) ?? "Pickup to be confirmed",
-        destination: placeOf(last) ?? placeOf(first) ?? "Destination to be confirmed",
-        group_name: quote.event_name ?? titleAsGroup(quote.title),
+        destination:
+          placeOf(destination) ?? placeOf(first) ?? "Destination to be confirmed",
+        // The quote's title names the group ("Buffalo Bills game day"); the
+        // event is only its category ("Athletics"), so it is the fallback.
+        group_name: titleAsGroup(quote.title) ?? quote.event_name,
         departure_at: departureAt,
         return_at: returnAt,
         // The operational clock the dispatch board reads.

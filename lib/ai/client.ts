@@ -64,19 +64,53 @@ export function aiModel(): string {
   return process.env.OPENROUTER_MODEL?.trim() || DEFAULT_MODEL;
 }
 
-export async function chatCompletion({
-  messages,
-  tools,
-  temperature = 0,
-  maxTokens = 1200,
-  signal,
-}: {
+type CompletionRequest = {
   messages: ChatMessage[];
   tools?: ToolDefinition[];
   temperature?: number;
   maxTokens?: number;
   signal?: AbortSignal;
-}): Promise<CompletionResult> {
+};
+
+/** Extra attempts after the model garbles a function call. */
+const MALFORMED_CALL_RETRIES = 2;
+
+/**
+ * One chat turn, with a retry for garbled tool calls.
+ *
+ * Small Gemini models sometimes emit a function call that does not parse, and
+ * the provider reports MALFORMED_FUNCTION_CALL with no content at all. At
+ * temperature 0 the same prompt garbles the same way every time, so a retry
+ * samples a little warmer; the arguments are still validated by Zod before any
+ * tool runs, so a warmer sample cannot do anything a cold one could not.
+ */
+export async function chatCompletion(
+  request: CompletionRequest,
+): Promise<CompletionResult> {
+  let result = await completeOnce(request);
+
+  for (
+    let attempt = 1;
+    attempt <= MALFORMED_CALL_RETRIES && result.malformedCall;
+    attempt += 1
+  ) {
+    result = await completeOnce({ ...request, temperature: 0.4 * attempt });
+  }
+
+  return {
+    content: result.content,
+    toolCalls: result.toolCalls,
+    finishReason: result.finishReason,
+  };
+}
+
+async function completeOnce({
+  messages,
+  tools,
+  temperature = 0,
+  maxTokens = 1200,
+  signal,
+}: CompletionRequest): Promise<CompletionResult & { malformedCall: boolean }> {
   const env = serverEnv();
 
   if (!env.OPENROUTER_API_KEY) {
@@ -119,6 +153,7 @@ export async function chatCompletion({
     choices?: {
       message?: { content?: string | null; tool_calls?: ToolCall[] };
       finish_reason?: string;
+      native_finish_reason?: string;
     }[];
     error?: { message?: string };
   };
@@ -128,10 +163,28 @@ export async function chatCompletion({
   }
 
   const choice = payload.choices?.[0];
+  const malformedCall = choice?.native_finish_reason === "MALFORMED_FUNCTION_CALL";
+
+  if (choice?.finish_reason === "error") {
+    console.warn("OpenRouter finished with an error", {
+      model: aiModel(),
+      temperature,
+      reason: choice.native_finish_reason ?? null,
+    });
+  }
 
   return {
+    malformedCall,
     content: choice?.message?.content ?? null,
-    toolCalls: choice?.message?.tool_calls ?? [],
+    // Gemini sometimes namespaces a call as "default_api.searchTrips". The tool
+    // is ours either way; an unrecognised name would read as "no results".
+    toolCalls: (choice?.message?.tool_calls ?? []).map((call) => ({
+      ...call,
+      function: {
+        ...call.function,
+        name: call.function.name.replace(/^default_api\./, ""),
+      },
+    })),
     finishReason: choice?.finish_reason ?? null,
   };
 }

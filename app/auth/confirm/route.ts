@@ -27,6 +27,10 @@ export async function GET(request: NextRequest) {
   const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
 
   if (error) {
+    // "Expired" is what the operator should read, but it is only ever a guess:
+    // a consumed, malformed or wrong-type token fails identically. Log what the
+    // provider actually said so the next report is diagnosable.
+    console.error(`Email link failed (type=${type})`, error.message);
     return NextResponse.redirect(
       `${origin}/login?error=${encodeURIComponent(
         "That link has expired. Request a new one.",

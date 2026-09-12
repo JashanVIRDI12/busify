@@ -92,7 +92,7 @@ async function Overview({
     {
       label: "Revenue this month",
       value: formatMoney(metrics.revenueThisMonth, currency),
-      hint: "Confirmed and completed bookings.",
+      hint: "Invoiced on reservations departing this month.",
       icon: TrendingUp,
       lead: true,
     },
@@ -111,11 +111,11 @@ async function Overview({
       href: "/reservations",
     },
     {
-      label: "Confirmed bookings",
-      value: formatNumber(metrics.confirmedBookings),
-      hint: "Created this month.",
+      label: "New reservations",
+      value: formatNumber(metrics.newReservations),
+      hint: "Booked this month.",
       icon: TicketCheck,
-      href: "/bookings",
+      href: "/reservations",
     },
     {
       label: "Fleet utilization",

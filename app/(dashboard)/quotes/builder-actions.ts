@@ -395,8 +395,23 @@ export async function saveQuoteBuilderAction(
 
   // --- Header ------------------------------------------------------------
   const header = input.header;
+
+  // The company is the booking contact's, not something picked separately. It
+  // is stored on the quote because the quotes list shows it, and because the
+  // reservations a quote converts into inherit it from here.
+  let companyId: string | null = null;
+  if (header.customer_id) {
+    const { data: contact } = await supabase
+      .from("customers")
+      .select("company_id")
+      .eq("id", header.customer_id)
+      .maybeSingle();
+    companyId = contact?.company_id ?? null;
+  }
+
   const headerUpdate: Record<string, unknown> = {
     title: header.title,
+    company_id: companyId,
     pipeline_status: header.pipeline_status,
     priority: header.priority,
     sales_rep_id: header.sales_rep_id,

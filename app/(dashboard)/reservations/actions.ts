@@ -28,7 +28,7 @@ const BLOCKING_TRIP_STATUSES = [
 
 function revalidateTrip(id: string) {
   revalidatePath("/reservations");
-  revalidatePath(`/trips/${id}`);
+  revalidatePath(`/reservations/${id}`);
   revalidatePath("/vehicles");
   revalidatePath("/reports");
 }
@@ -131,14 +131,34 @@ export async function assignToTripAction(
     }
   }
 
-  const { error } = await supabase.from("trip_assignments").insert({
-    organization_id: session.organization.id,
-    trip_id: input.trip_id,
+  const row = {
     vehicle_id: input.vehicle_id,
     driver_id: input.driver_id,
     role: input.role,
     notes: input.notes,
-  });
+  };
+
+  // A reservation converted from a quote carries one empty row per coach the
+  // quote sold — that is what the board draws as unassigned. Assigning fills
+  // the first of those before adding another, so the operator is not left
+  // deleting a hollow "No vehicle, No driver" line afterwards.
+  const { data: openSlot } = await supabase
+    .from("trip_assignments")
+    .select("id")
+    .eq("trip_id", input.trip_id)
+    .is("vehicle_id", null)
+    .is("driver_id", null)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  const { error } = openSlot
+    ? await supabase.from("trip_assignments").update(row).eq("id", openSlot.id)
+    : await supabase.from("trip_assignments").insert({
+        organization_id: session.organization.id,
+        trip_id: input.trip_id,
+        ...row,
+      });
 
   if (error) return databaseError(error);
 

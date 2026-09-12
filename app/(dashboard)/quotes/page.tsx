@@ -255,7 +255,7 @@ export default async function QuotesPage({
                         <Blank />
                       )}
                     </TD>
-                    <TD>{quote.event_type ?? <Blank />}</TD>
+                    <TD>{quote.event_name ?? <Blank />}</TD>
                     <TD className="tabular whitespace-nowrap">
                       {quote.pickup_at ? formatStamp(quote.pickup_at, zone) : <Blank />}
                     </TD>
