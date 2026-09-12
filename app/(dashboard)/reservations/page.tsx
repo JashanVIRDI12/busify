@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { BusFront } from "lucide-react";
 
 import {
@@ -22,6 +21,7 @@ import {
   Blank,
   DataTable,
   EmptyRow,
+  RowLink,
   TBody,
   TD,
   TH,
@@ -30,6 +30,7 @@ import {
   TableCard,
 } from "@/components/data/table";
 import { TablePagination } from "@/components/data/table-pagination";
+import { Tip } from "@/components/shared/tip";
 import { requireSession } from "@/lib/auth/session";
 import { resolveDateRange } from "@/lib/date-filters";
 import { formatStamp } from "@/lib/datetime";
@@ -174,6 +175,8 @@ export default async function ReservationsPage({
         <ClearFiltersButton />
       </FilterBar>
 
+      <Tip className="-mt-1 mb-1">Click any row to open the reservation — assign a coach and driver, record a payment, or send the invoice.</Tip>
+
       <TableCard
         footer={
           <TablePagination
@@ -228,8 +231,8 @@ export default async function ReservationsPage({
                   .filter((name): name is string => Boolean(name));
 
                 return (
-                  <TR key={trip.id}>
-                    <TD>
+                  <TR key={trip.id} interactive>
+                    <TD className="relative z-10">
                       <RowCheckbox id={trip.id} />
                     </TD>
                     <TD>
@@ -249,12 +252,13 @@ export default async function ReservationsPage({
                       />
                     </TD>
                     <TD>
-                      <Link
+                      <RowLink
                         href={`/reservations/${trip.id}`}
-                        className="tabular font-medium hover:text-teal-600 hover:underline"
+                        label={`Open reservation ${trip.reference ?? ""}`}
+                        className="tabular font-medium"
                       >
                         {trip.reference ?? "--"}
-                      </Link>
+                      </RowLink>
                     </TD>
                     <TD>
                       <StatusPill label={status.label} tone={status.tone} uppercase />

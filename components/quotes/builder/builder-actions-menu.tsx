@@ -62,12 +62,49 @@ export function BuilderActionsMenu() {
     }
   }
 
+  function emailToCustomer() {
+    startTransition(async () => {
+      if (dirty) await save();
+      const result = await emailQuoteAction(quoteId);
+
+      if (!result.ok) {
+        toast.error(result.message);
+        return;
+      }
+      toast.success(
+        result.data.delivered
+          ? `Emailed to ${result.data.to}`
+          : `Marked as sent. No mail provider is configured, so nothing was delivered to ${result.data.to}.`,
+      );
+      router.refresh();
+    });
+  }
+
   return (
-    <>
+    <div className="flex items-center gap-2">
+      {/* The two things an operator does to a finished quote every single time
+          are send it and print it. They were three clicks deep inside a menu
+          called "Actions", beside Delete. Out here they are one click, and the
+          menu keeps what is either rare or irreversible. */}
+      {canEdit && (
+        <>
+          <Button variant="outline" onClick={emailToCustomer} disabled={pending}>
+            <Mail />
+            Email quote
+          </Button>
+          <Button variant="outline" asChild>
+            <a href={`/quotes/${quoteId}/pdf`} target="_blank" rel="noreferrer">
+              <FileText />
+              Download PDF
+            </a>
+          </Button>
+        </>
+      )}
+
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button>
-            Actions
+            More
             <ChevronDown />
           </Button>
         </DropdownMenuTrigger>
@@ -98,35 +135,6 @@ export function BuilderActionsMenu() {
           {canEdit && (
             <>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                disabled={pending}
-                onSelect={() =>
-                  startTransition(async () => {
-                    if (dirty) await save();
-                    const result = await emailQuoteAction(quoteId);
-
-                    if (!result.ok) {
-                      toast.error(result.message);
-                      return;
-                    }
-                    toast.success(
-                      result.data.delivered
-                        ? `Emailed to ${result.data.to}`
-                        : `Marked as sent. No mail provider is configured, so nothing was delivered to ${result.data.to}.`,
-                    );
-                    router.refresh();
-                  })
-                }
-              >
-                <Mail />
-                Email to customer
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <a href={`/quotes/${quoteId}/pdf`} target="_blank" rel="noreferrer">
-                  <FileText />
-                  Download PDF
-                </a>
-              </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => void send()}>
                 <Send />
                 Mark as sent
@@ -210,6 +218,6 @@ export function BuilderActionsMenu() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   );
 }

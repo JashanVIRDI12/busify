@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 
 import { cn } from "@/lib/utils";
 
@@ -87,16 +88,24 @@ export function TR({
   children,
   className,
   selected = false,
+  interactive = false,
 }: {
   children: ReactNode;
   className?: string;
   selected?: boolean;
+  /** The whole row opens a record. Pair with one <RowLink> inside it. */
+  interactive?: boolean;
 }) {
   return (
     <tr
       className={cn(
         "border-b border-bone/80 transition-colors last:border-0",
         selected ? "bg-orange-50/70" : "hover:bg-mist",
+        // `relative` is what lets RowLink's overlay cover the row, and
+        // focus-within carries the keyboard ring from that one real link out to
+        // the whole row so tabbing still shows where you are.
+        interactive &&
+          "relative cursor-pointer focus-within:bg-mist focus-within:outline focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-orange-400",
         className,
       )}
     >
@@ -128,6 +137,47 @@ export function TD({
     >
       {children}
     </td>
+  );
+}
+
+/**
+ * The one link in a row, stretched to cover the whole row.
+ *
+ * A row is not allowed to *be* a link — an anchor cannot wrap `<td>`s without
+ * breaking table semantics, and screen readers would read every cell as part of
+ * one enormous link label. So exactly one real link carries the destination and
+ * an absolutely-positioned pseudo-element extends its hit area over the row.
+ * Assistive technology still announces a single, sensibly-labelled link.
+ *
+ * Anything else clickable in the row — a checkbox, a row menu — must sit above
+ * that overlay: give its cell `className="relative z-10"`.
+ *
+ * Text stays selectable everywhere the overlay is not, and the browser's own
+ * "open in new tab" works because this is a genuine anchor.
+ */
+export function RowLink({
+  href,
+  children,
+  className,
+  label,
+}: {
+  href: string;
+  children: ReactNode;
+  className?: string;
+  /** Spoken label, when the visible text is just a reference number. */
+  label?: string;
+}) {
+  return (
+    <Link
+      href={href}
+      aria-label={label}
+      className={cn(
+        "after:absolute after:inset-0 after:content-[''] hover:text-teal-600 hover:underline focus:outline-none",
+        className,
+      )}
+    >
+      {children}
+    </Link>
   );
 }
 

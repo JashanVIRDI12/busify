@@ -25,6 +25,7 @@ import {
   TableCard,
 } from "@/components/data/table";
 import { RecordDrawer, type FieldSpec } from "@/components/settings/record-drawer";
+import { Tip } from "@/components/shared/tip";
 import { Button } from "@/components/ui/button";
 import { requireSession } from "@/lib/auth/session";
 import type { SearchParamsInput } from "@/lib/list-params";
@@ -112,6 +113,12 @@ export default async function VehicleRatesPage({
           ) : null
         }
       />
+
+      <Tip className="mb-3">
+        These rates are what the quote builder prices from — the base fare is the
+        highest of daily, hourly or per-kilometre. Without a rate here, quotes
+        come out at $0.00.
+      </Tip>
 
       <TableCard>
         <DataTable className="min-w-[56rem]">

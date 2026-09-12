@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
 
 import { QUOTE_PIPELINE_STATUS, StatusPill, pillFor } from "@/components/data/status-pill";
 import type { QuoteFile } from "@/components/quotes/builder/files-panel";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { CustomerHit } from "@/app/(dashboard)/quotes/builder-actions";
@@ -245,9 +246,52 @@ function BuilderShell({
               initialBilling={initialBilling}
             />
           )}
-          {section === "trip" && <TripTab key={activeTrip.id} trip={activeTrip} />}
+          {section === "trip" && (
+            <TripTab
+              key={activeTrip.id}
+              trip={activeTrip}
+              onBack={() => setSection("customer")}
+              backLabel="Customer"
+              onNext={() => setSection("payment")}
+              nextLabel="Payment"
+            />
+          )}
           {section === "payment" && <PaymentTab />}
           {section === "notes" && <NotesTab />}
+
+          {/* The trip section runs its own Back/Next across its four sub-tabs
+              and hands off at either end, so it is excluded here — two rows of
+              navigation on one screen would be a choice nobody wants to make. */}
+          {section !== "trip" && (
+            <div className="mt-6 flex items-center justify-between gap-3 border-t border-bone pt-4">
+              {section === "customer" && <span />}
+              {section === "payment" && (
+                <Button variant="outline" onClick={() => setSection("trip")}>
+                  <ChevronLeft />
+                  {activeTrip.name}
+                </Button>
+              )}
+              {section === "notes" && (
+                <Button variant="outline" onClick={() => setSection("payment")}>
+                  <ChevronLeft />
+                  Payment
+                </Button>
+              )}
+
+              {section === "customer" && (
+                <Button variant="outline" onClick={() => setSection("trip")}>
+                  {activeTrip.name}
+                  <ChevronRight />
+                </Button>
+              )}
+              {section === "payment" && (
+                <Button variant="outline" onClick={() => setSection("notes")}>
+                  Notes
+                  <ChevronRight />
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

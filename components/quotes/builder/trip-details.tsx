@@ -94,7 +94,7 @@ export function TripDetails({ trip }: { trip: QuoteTripInput }) {
       {/* --- Top row --- */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_140px_140px]">
         <Select
-          value={trip.trip_type ?? NONE}
+          value={trip.trip_type ?? ""}
           onValueChange={(value) =>
             setTrip(trip.id, {
               trip_type: value === NONE ? null : (value as QuoteTripInput["trip_type"]),
@@ -148,7 +148,7 @@ export function TripDetails({ trip }: { trip: QuoteTripInput }) {
             className="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-center"
           >
             <Select
-              value={vehicle.vehicle_type_id ?? NONE}
+              value={vehicle.vehicle_type_id ?? ""}
               onValueChange={(value) => {
                 const typeId = value === NONE ? null : value;
                 setVehicle(trip.id, vehicle.id, { vehicle_type_id: typeId });

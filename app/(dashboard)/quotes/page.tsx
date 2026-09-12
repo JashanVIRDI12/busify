@@ -25,6 +25,7 @@ import {
   Blank,
   DataTable,
   EmptyRow,
+  RowLink,
   TBody,
   TD,
   TH,
@@ -33,6 +34,7 @@ import {
   TableCard,
 } from "@/components/data/table";
 import { TablePagination } from "@/components/data/table-pagination";
+import { Tip } from "@/components/shared/tip";
 import { Button } from "@/components/ui/button";
 import { requireSession } from "@/lib/auth/session";
 import { resolveDateRange } from "@/lib/date-filters";
@@ -174,6 +176,8 @@ export default async function QuotesPage({
         <ClearFiltersButton />
       </FilterBar>
 
+      <Tip className="-mt-1 mb-1">Click any row to open the quote — its trips, pricing, terms and files all live inside.</Tip>
+
       <TableCard
         footer={
           <TablePagination
@@ -219,17 +223,18 @@ export default async function QuotesPage({
                   new Date(quote.expires_at).getTime() < now;
 
                 return (
-                  <TR key={quote.id}>
-                    <TD>
+                  <TR key={quote.id} interactive>
+                    <TD className="relative z-10">
                       <RowCheckbox id={quote.id} />
                     </TD>
                     <TD>
-                      <Link
+                      <RowLink
                         href={`/quotes/${quote.id}`}
-                        className="tabular font-medium hover:text-teal-600 hover:underline"
+                        label={`Open quote ${quote.reference ?? quote.quote_number ?? ""}`}
+                        className="tabular font-medium"
                       >
                         {quote.reference ?? quote.quote_number ?? "--"}
-                      </Link>
+                      </RowLink>
                     </TD>
                     <TD>
                       <StatusPill label={status.label} tone={status.tone} />
