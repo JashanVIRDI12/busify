@@ -31,6 +31,11 @@ export type DispatchTrip = {
   contact: string | null;
   garageId: string | null;
   garageName: string | null;
+  /** Money, so the drawer shows what a job is worth without a second read. */
+  totalDue: number;
+  balanceDue: number;
+  paymentStatus: string;
+  notes: string | null;
   assignments: DispatchAssignment[];
 };
 
@@ -75,7 +80,7 @@ export async function getDispatchTrips(
     .select(
       `id, reference, status, assignment_status, departure_at, return_at, dropoff_at,
        garage_arrival_at, spot_at, pickup_location, destination, group_name,
-       passenger_count, garage_id,
+       passenger_count, garage_id, total_due, balance_due, payment_status, notes,
        companies(name),
        customers(first_name, last_name),
        garages(id, name),
@@ -147,6 +152,10 @@ export async function getDispatchTrips(
           : null,
         garageId: trip.garages?.id ?? null,
         garageName: trip.garages?.name ?? null,
+        totalDue: Number(trip.total_due ?? 0),
+        balanceDue: Number(trip.balance_due ?? 0),
+        paymentStatus: trip.payment_status,
+        notes: trip.notes,
         assignments,
       };
     })

@@ -108,6 +108,14 @@ export type QuoteCustomerVisibility =
 
 export type QuoteStopKind = "PICKUP" | "STOP" | "DROPOFF";
 
+/** A sold reservation's stops, which unlike a quote's include the yard. */
+export type TripStopKind =
+  | "GARAGE_OUT"
+  | "PICKUP"
+  | "STOP"
+  | "DROPOFF"
+  | "GARAGE_IN";
+
 export type QuoteChargeSection = "BASE_FARE" | "ITEMIZED" | "TAX";
 
 export type QuoteChargeKind =
@@ -483,6 +491,13 @@ type TripRow = Timestamps & {
   garage_arrival_at: string | null;
   spot_at: string | null;
   dropoff_at: string | null;
+  quote_trip_id: string | null;
+  pickup_lat: number | null;
+  pickup_lng: number | null;
+  destination_lat: number | null;
+  destination_lng: number | null;
+  planned_miles: number;
+  planned_minutes: number;
   last_activity_at: string;
   created_by: string | null;
 };
@@ -712,6 +727,25 @@ type QuoteTripRow = Timestamps & {
   notes: string | null;
 };
 
+type TripStopRow = Timestamps & {
+  id: string;
+  organization_id: string;
+  trip_id: string;
+  position: number;
+  kind: TripStopKind;
+  label: string | null;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  /** Wheels stop: the arrival, the dropoff, or the return to the yard. */
+  arrive_at: string | null;
+  /** Passengers board for the onward leg. Null when nobody re-boards here. */
+  board_at: string | null;
+  /** Wheels roll. */
+  depart_at: string | null;
+  notes: string | null;
+};
+
 type QuoteTripStopRow = Timestamps & {
   id: string;
   organization_id: string;
@@ -728,6 +762,7 @@ type QuoteTripStopRow = Timestamps & {
   notes: string | null;
   leg_miles: number;
   leg_minutes: number;
+  dwell_minutes: number;
 };
 
 type QuoteTripVehicleRow = Timestamps & {
@@ -1109,6 +1144,12 @@ export type Database = {
         Update: Update<QuoteTripRow>;
         Relationships: [Rel<"quote_trips_quote_fk", "quote_id", "quotes">];
       };
+      trip_stops: {
+        Row: TripStopRow;
+        Insert: Insert<TripStopRow, "organization_id" | "trip_id">;
+        Update: Update<TripStopRow>;
+        Relationships: [];
+      };
       quote_trip_stops: {
         Row: QuoteTripStopRow;
         Insert: Insert<QuoteTripStopRow, "organization_id" | "quote_trip_id">;
@@ -1193,6 +1234,7 @@ export type Database = {
       quote_trip_type: QuoteTripType;
       quote_customer_visibility: QuoteCustomerVisibility;
       quote_stop_kind: QuoteStopKind;
+      trip_stop_kind: TripStopKind;
       quote_charge_section: QuoteChargeSection;
       quote_charge_kind: QuoteChargeKind;
       quote_base_fare_mode: QuoteBaseFareMode;

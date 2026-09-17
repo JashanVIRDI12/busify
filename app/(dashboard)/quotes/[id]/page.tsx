@@ -9,7 +9,6 @@ import { canWriteFinance } from "@/lib/permissions";
 import { getBuilderLookups } from "@/lib/queries/builder-lookups";
 import { getQuoteForBuilder } from "@/lib/queries/quote-builder";
 import { toBuilderState } from "@/lib/quotes/builder-model";
-import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -53,19 +52,15 @@ export default async function QuoteBuilderPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const { organization, role } = await requireSession();
+  const [session, data] = await Promise.all([
+    requireSession(),
+    getQuoteForBuilder(id),
+  ]);
+  const { organization, role } = session;
 
-  const data = await getQuoteForBuilder(id);
   if (!data) notFound();
 
-  const supabase = await createClient();
   const { lookups } = await getBuilderLookups(organization);
-
-  const { data: files } = await supabase
-    .from("quote_files")
-    .select("id, name, size_bytes")
-    .eq("quote_id", id)
-    .order("created_at", { ascending: true });
 
   return (
     <QuoteBuilder
@@ -79,7 +74,7 @@ export default async function QuoteBuilderPage({
       organizationId={organization.id}
       createdAt={data.quote.created_at}
       updatedAt={data.quote.updated_at}
-      files={files ?? []}
+      files={data.files}
       initialCustomer={customerHit(data.customer)}
       initialBilling={customerHit(data.billingCustomer)}
     />

@@ -2,32 +2,64 @@ import "server-only";
 
 import { cache } from "react";
 import { redirect } from "next/navigation";
-import type { User } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/server";
 import type { OrgRole, Tables } from "@/types/database";
 
 export type Organization = Tables<"organizations">;
 
+/**
+ * The fields of the signed-in user that this application actually reads.
+ *
+ * Deliberately narrower than Supabase's `User`: everything here comes out of
+ * the access token's verified claims, so the type cannot promise a column that
+ * only the Auth API can answer for.
+ */
+export type SessionUser = {
+  id: string;
+  email: string | null;
+  user_metadata: Record<string, unknown>;
+};
+
 export type Session = {
-  user: User;
+  user: SessionUser;
   organization: Organization;
   role: OrgRole;
 };
 
 /**
- * Deduplicated per request — several Server Components on the same page can
- * call this without producing several round trips.
+ * The signed-in user, taken from the access token's verified claims.
+ *
+ * This used to call `auth.getUser()`, which asks the Auth API to re-validate
+ * the token on every invocation. That put a round trip to the project's region
+ * in front of every page, server action and route handler — the largest fixed
+ * cost in a request here, because the project is not co-located with the people
+ * using it.
+ *
+ * `getClaims()` verifies the same token locally against the project's
+ * asymmetric signing keys, fetching the JWKS once and caching it for the life
+ * of the server process. The identity is still cryptographically proven; what
+ * is traded away is immediacy, because a session revoked elsewhere stays usable
+ * here until its access token expires. RLS, not this function, remains the
+ * authority on what that identity may read or write.
+ *
+ * Deduplicated per request, so several Server Components on one page share it.
  */
-export const getUser = cache(async (): Promise<User | null> => {
+export const getUser = cache(async (): Promise<SessionUser | null> => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return user;
+  const { data, error } = await supabase.auth.getClaims();
+
+  const claims = data?.claims;
+  if (error || !claims?.sub) return null;
+
+  return {
+    id: claims.sub,
+    email: claims.email ?? null,
+    user_metadata: claims.user_metadata ?? {},
+  };
 });
 
-export async function requireUser(): Promise<User> {
+export async function requireUser(): Promise<SessionUser> {
   const user = await getUser();
   if (!user) redirect("/login");
   return user;

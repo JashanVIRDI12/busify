@@ -307,7 +307,7 @@ begin
     ('CHARGE', 'Niagara Parking Permit','FLAT',         110.00, false, false, 3),
     ('CHARGE', 'Airport Pickup Fee',    'FLAT',         106.95, false, false, 4),
     ('CHARGE', 'Driver Accommodation',  'FLAT',         300.00, false, false, 5),
-    ('CHARGE', 'Fuel Surcharge',        'FLAT',        1200.00, false, false, 6),
+    ('CHARGE', 'Fuel Surcharge',        'PERCENTAGE',   15.50, false, false, 6),
     ('CHARGE', 'Driver Gratuity',       'PERCENTAGE',    10.00, false, true,  7),
     ('CHARGE', 'Tolls',                 'FLAT',         200.00, false, false, 8),
     ('MARKUP', 'Peak Season',           'PERCENTAGE',    12.00, false, false, 0),

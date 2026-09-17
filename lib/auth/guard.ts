@@ -19,14 +19,13 @@ export async function actionContext(): Promise<{
   session: Session;
   supabase: Awaited<ReturnType<typeof createClient>>;
 }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
-
-  const session = await getSession();
+  // getSession already performs the trusted user check. The previous version
+  // called auth.getUser() here and then again through getSession(), adding a
+  // full Auth API round trip to every action.
+  const [session, supabase] = await Promise.all([
+    getSession(),
+    createClient(),
+  ]);
   if (!session) redirect("/onboarding");
 
   return { session, supabase };

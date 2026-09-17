@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/types/database";
 
@@ -15,102 +17,88 @@ export type QuoteBuilderData = {
   billingCustomer: Tables<"customers"> | null;
   trips: BuilderTrip[];
   paymentMethods: Tables<"quote_payment_methods">[];
+  files: Pick<Tables<"quote_files">, "id" | "name" | "size_bytes">[];
 };
 
-/** Everything the builder page needs for one quote. RLS scopes it. */
-export async function getQuoteForBuilder(
+type QuoteBuilderRow = Tables<"quotes"> & {
+  customer: Tables<"customers"> | null;
+  billing_customer: Tables<"customers"> | null;
+  trips: BuilderTrip[];
+  payment_methods: Tables<"quote_payment_methods">[];
+  files: (Pick<
+    Tables<"quote_files">,
+    "id" | "name" | "size_bytes"
+  > & { created_at: string })[];
+};
+
+/**
+ * Everything the builder page needs for one quote. RLS scopes it.
+ *
+ * PostgREST embeds the quote-owned rows in one response. Previously the three
+ * trip-child queries selected every row in the organization and discarded
+ * unrelated trips in JavaScript, so loading one quote became slower as the
+ * entire account accumulated history.
+ */
+export const getQuoteForBuilder = cache(async function getQuoteForBuilder(
   id: string,
 ): Promise<QuoteBuilderData | null> {
   const supabase = await createClient();
 
-  const { data: quote, error } = await supabase
+  const { data, error } = await supabase
     .from("quotes")
-    .select("*")
+    .select(`
+      *,
+      customer:customers!quotes_organization_id_customer_id_fkey(*),
+      billing_customer:customers!quotes_billing_customer_fk(*),
+      trips:quote_trips(
+        *,
+        stops:quote_trip_stops(*),
+        vehicles:quote_trip_vehicles(*),
+        charges:quote_trip_charges(*)
+      ),
+      payment_methods:quote_payment_methods(*),
+      files:quote_files(id, name, size_bytes, created_at)
+    `)
     .eq("id", id)
     .maybeSingle();
 
-  if (error || !quote) return null;
+  if (error || !data) return null;
 
-  const [
-    tripsResult,
-    stopsResult,
-    vehiclesResult,
-    chargesResult,
-    methodsResult,
-    customerResult,
-    billingResult,
-  ] = await Promise.all([
-    supabase
-      .from("quote_trips")
-      .select("*")
-      .eq("quote_id", quote.id)
-      .order("position"),
-    supabase
-      .from("quote_trip_stops")
-      .select("*")
-      .eq("organization_id", quote.organization_id)
-      .order("position"),
-    supabase
-      .from("quote_trip_vehicles")
-      .select("*")
-      .eq("organization_id", quote.organization_id)
-      .order("position"),
-    supabase
-      .from("quote_trip_charges")
-      .select("*")
-      .eq("organization_id", quote.organization_id)
-      .order("position"),
-    supabase
-      .from("quote_payment_methods")
-      .select("*")
-      .eq("quote_id", quote.id)
-      .order("position"),
-    quote.customer_id
-      ? supabase.from("customers").select("*").eq("id", quote.customer_id).maybeSingle()
-      : Promise.resolve({ data: null }),
-    quote.billing_customer_id
-      ? supabase
-          .from("customers")
-          .select("*")
-          .eq("id", quote.billing_customer_id)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
-  ]);
+  const row = data as unknown as QuoteBuilderRow;
+  const {
+    customer,
+    billing_customer: billingCustomer,
+    trips: embeddedTrips,
+    payment_methods: paymentMethods,
+    files,
+    ...quote
+  } = row;
 
-  const tripIds = new Set((tripsResult.data ?? []).map((trip) => trip.id));
-
-  const stopsByTrip = groupBy(stopsResult.data ?? [], "quote_trip_id", tripIds);
-  const vehiclesByTrip = groupBy(vehiclesResult.data ?? [], "quote_trip_id", tripIds);
-  const chargesByTrip = groupBy(chargesResult.data ?? [], "quote_trip_id", tripIds);
-
-  const trips: BuilderTrip[] = (tripsResult.data ?? []).map((trip) => ({
-    ...trip,
-    stops: stopsByTrip.get(trip.id) ?? [],
-    vehicles: vehiclesByTrip.get(trip.id) ?? [],
-    charges: chargesByTrip.get(trip.id) ?? [],
-  }));
+  const trips = [...(embeddedTrips ?? [])]
+    .sort((a, b) => a.position - b.position)
+    .map((trip) => ({
+      ...trip,
+      stops: [...(trip.stops ?? [])].sort((a, b) => a.position - b.position),
+      vehicles: [...(trip.vehicles ?? [])].sort(
+        (a, b) => a.position - b.position,
+      ),
+      charges: [...(trip.charges ?? [])].sort((a, b) => a.position - b.position),
+    }));
 
   return {
     quote,
-    customer: customerResult.data,
-    billingCustomer: billingResult.data,
+    customer,
+    billingCustomer,
     trips,
-    paymentMethods: methodsResult.data ?? [],
+    paymentMethods: [...(paymentMethods ?? [])].sort(
+      (a, b) => a.position - b.position,
+    ),
+    files: [...(files ?? [])]
+      .sort((a, b) => a.created_at.localeCompare(b.created_at))
+      .map(({ id: fileId, name, size_bytes }) => ({
+        id: fileId,
+        name,
+        size_bytes,
+      })),
   };
-}
-
-function groupBy<T extends Record<K, string>, K extends string>(
-  rows: T[],
-  key: K,
-  keep: Set<string>,
-): Map<string, T[]> {
-  const map = new Map<string, T[]>();
-  for (const row of rows) {
-    const id = row[key];
-    if (!keep.has(id)) continue;
-    const list = map.get(id) ?? [];
-    list.push(row);
-    map.set(id, list);
-  }
-  return map;
-}
+});

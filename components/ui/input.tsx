@@ -31,14 +31,22 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
 /**
  * The two-line field used on the quote builder and every filter bar: a dim
  * label pinned above the value inside a single bordered box.
+ *
+ * An `icon` sits outside that stack rather than inside the input, so a date and
+ * a time field line their values up with each other even though one of them is
+ * wider. The label accepts nodes, not just text, which is what lets a field say
+ * how its value was arrived at without a second row.
  */
 function StackedInput({
   label,
+  icon,
   className,
   containerClassName,
   ...props
-}: React.ComponentProps<"input"> & {
-  label: string;
+}: Omit<React.ComponentProps<"input">, "children"> & {
+  label: React.ReactNode;
+  /** Sits left of the stack, e.g. a calendar on a date field. */
+  icon?: React.ReactNode;
   containerClassName?: string;
 }) {
   const id = React.useId();
@@ -46,25 +54,36 @@ function StackedInput({
   return (
     <div
       className={cn(
-        "flex min-h-[46px] flex-col justify-center rounded-md border border-cloud bg-signal-white px-3 py-1 transition-colors",
+        "flex min-h-[46px] items-center gap-2.5 rounded-md border border-cloud bg-signal-white px-3 py-1 transition-colors",
         "hover:border-fog focus-within:border-orange-400",
+        "has-disabled:bg-mist has-disabled:opacity-70",
         containerClassName,
       )}
     >
-      <label htmlFor={id} className="field-stack-label">
-        {label}
-      </label>
-      <input
-        id={id}
-        data-slot="stacked-input"
-        className={cn(
-          "w-full border-0 bg-transparent p-0 text-body-sm font-medium text-ink outline-none",
-          "placeholder:font-normal placeholder:text-ash",
-          "disabled:cursor-not-allowed disabled:opacity-60",
-          className,
-        )}
-        {...props}
-      />
+      {icon ? (
+        <span
+          aria-hidden="true"
+          className="shrink-0 text-ash [&_svg]:size-4 [&_svg]:shrink-0"
+        >
+          {icon}
+        </span>
+      ) : null}
+      <span className="flex min-w-0 flex-1 flex-col justify-center">
+        <label htmlFor={id} className="field-stack-label flex items-center gap-1.5">
+          {label}
+        </label>
+        <input
+          id={id}
+          data-slot="stacked-input"
+          className={cn(
+            "w-full border-0 bg-transparent p-0 text-body-sm font-medium text-ink outline-none",
+            "placeholder:font-normal placeholder:text-ash",
+            "disabled:cursor-not-allowed disabled:opacity-60",
+            className,
+          )}
+          {...props}
+        />
+      </span>
     </div>
   );
 }

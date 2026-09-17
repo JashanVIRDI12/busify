@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 
 import { actionContext, databaseError } from "@/lib/auth/guard";
 import {
@@ -287,4 +288,43 @@ export async function deleteTripAction(
   revalidatePath("/vehicles");
   revalidatePath("/reports");
   return formSuccess();
+}
+
+const stopNotesSchema = z.object({
+  id: uuid,
+  notes: z.string().trim().max(2000),
+});
+
+/**
+ * A note against one stop on a reservation.
+ *
+ * Kept on the stop rather than in the trip's single notes field, because the
+ * things worth writing down are location-specific — which gate, which dock, who
+ * to ask for — and a driver reading one long note has to work out which bit
+ * applies to where they currently are.
+ */
+export async function setStopNotesAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const { session, supabase } = await actionContext();
+
+  if (!canWrite(session.role)) {
+    return formError("Your role does not allow editing this reservation.");
+  }
+
+  const parsed = stopNotesSchema.safeParse(formDataToObject(formData));
+  if (!parsed.success) return validationError(parsed.error);
+
+  const { data: stop, error } = await supabase
+    .from("trip_stops")
+    .update({ notes: parsed.data.notes || null })
+    .eq("id", parsed.data.id)
+    .select("trip_id")
+    .maybeSingle();
+
+  if (error) return databaseError(error);
+  if (stop) revalidateTrip(stop.trip_id);
+
+  return formSuccess("Note saved.");
 }

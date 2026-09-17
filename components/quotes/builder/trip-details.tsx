@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Minus, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Input, StackedInput } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -18,7 +18,9 @@ import { QUOTE_TRIP_TYPES } from "@/lib/validations/quote-builder";
 import type { QuoteTripInput } from "@/lib/validations/quote-builder";
 
 import { useBuilder } from "./builder-context";
-import { Itinerary } from "./trip-itinerary";
+import { AutoTag } from "./itinerary/field-parts";
+import { Itinerary } from "./itinerary/itinerary";
+import { autoKey, useAutoSchedule } from "./itinerary/use-auto-schedule";
 
 const NONE = "__none__";
 
@@ -65,9 +67,18 @@ export function TripDetails({ trip }: { trip: QuoteTripInput }) {
     Boolean(trip.trip_contact_name || trip.trip_contact_email || trip.trip_contact_phone),
   );
 
+  // Owned here rather than inside the itinerary: the driver count it derives is
+  // shown in the row below, and the itinerary is only one of its two readers.
+  const schedule = useAutoSchedule(trip);
+
   const result = computed.byTrip[trip.id];
   const estimatedHours = result ? Math.floor(trip.estimated_minutes / 60) : 0;
   const estimatedMins = trip.estimated_minutes % 60;
+
+  const driversAreAuto = schedule.isAuto(
+    autoKey.drivers,
+    trip.driver_count === null ? null : String(trip.driver_count),
+  );
 
   function prefillRatesFromType(typeId: string) {
     const type = lookups.vehicleTypes.find((entry) => entry.id === typeId);
@@ -92,7 +103,7 @@ export function TripDetails({ trip }: { trip: QuoteTripInput }) {
   return (
     <div className="space-y-6">
       {/* --- Top row --- */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_140px_140px]">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_150px_165px]">
         <Select
           value={trip.trip_type ?? ""}
           onValueChange={(value) =>
@@ -114,10 +125,11 @@ export function TripDetails({ trip }: { trip: QuoteTripInput }) {
           </SelectContent>
         </Select>
 
-        <Input
+        <StackedInput
           type="number"
           min={1}
-          placeholder="Passengers (e.g. 30)"
+          label="Passengers"
+          placeholder="e.g. 30"
           value={trip.passenger_count ?? ""}
           disabled={!canEdit}
           onChange={(e) =>
@@ -126,10 +138,16 @@ export function TripDetails({ trip }: { trip: QuoteTripInput }) {
             })
           }
         />
-        <Input
+        <StackedInput
           type="number"
           min={0}
-          placeholder="Drivers (e.g. 1)"
+          label={
+            <>
+              Drivers
+              {driversAreAuto && <AutoTag />}
+            </>
+          }
+          placeholder="e.g. 1"
           value={trip.driver_count ?? ""}
           disabled={!canEdit}
           onChange={(e) =>
@@ -247,7 +265,7 @@ export function TripDetails({ trip }: { trip: QuoteTripInput }) {
 
       <hr className="border-bone" />
 
-      <Itinerary trip={trip} />
+      <Itinerary trip={trip} schedule={schedule} />
 
       {/* --- Footer metrics --- */}
       <div className="flex flex-wrap gap-x-6 gap-y-2 border-t border-bone pt-4 text-body-sm">
@@ -270,11 +288,25 @@ export function TripDetails({ trip }: { trip: QuoteTripInput }) {
           </span>
         </span>
         <span className="text-slate">
-          Estimated Time:{" "}
+          Driving:{" "}
           <span className="font-semibold text-ink">
             {estimatedHours}h {estimatedMins}m
           </span>
         </span>
+        {/*
+          Duty time is the figure that prices the job and decides the driver
+          count, and it is always the larger of the two — driving plus every
+          minute the coach stands waiting. Shown next to drive time because the
+          gap between them is the part operators forget to charge for.
+        */}
+        {trip.hours > 0 && (
+          <span className="text-slate">
+            On duty:{" "}
+            <span className="font-semibold text-ink">
+              {Math.floor(trip.hours)}h {Math.round((trip.hours % 1) * 60)}m
+            </span>
+          </span>
+        )}
       </div>
     </div>
   );

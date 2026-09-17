@@ -82,6 +82,7 @@ cp .env.example .env.local
 | `SUPABASE_SERVICE_ROLE_KEY`     | **server only** | Bypasses RLS. Never prefix with `NEXT_PUBLIC_` |
 | `NEXT_PUBLIC_SITE_URL`          | client + server | Builds auth email redirect URLs                |
 | `OPENROUTER_API_KEY`            | **server only** | Optional. Enables the assistant                |
+| `MAPBOX_TOKEN`                  | **server only** | Enables fast address autocomplete and routing  |
 
 `lib/env.ts` imports `server-only`, so importing it from a Client Component is
 a build error. That is the structural guarantee that the service-role and

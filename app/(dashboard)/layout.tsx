@@ -1,5 +1,4 @@
 import { AssistantLauncher } from "@/components/ai/assistant-launcher";
-import { WelcomeTour } from "@/components/guide/welcome-tour";
 import { TopNav } from "@/components/shell/top-nav";
 import { aiConfigured } from "@/lib/ai/client";
 import { requireSession } from "@/lib/auth/session";
@@ -33,12 +32,6 @@ export default async function ConsoleLayout({
       {/* Data tables run wide; the page itself never centres or caps them, so a
           1440px dispatch board uses the whole screen the operator paid for. */}
       <main className="flex-1 px-4 pt-5 pb-10 sm:px-6">{children}</main>
-
-      {/* First-run tour. It lives here rather than on one page because signed-in
-          users land on Quotes (or /setup straight after onboarding), and while
-          it was mounted on Reports alone almost nobody ever saw it. Dismissal
-          is remembered in localStorage, so it shows once per browser. */}
-      <WelcomeTour />
 
       {aiConfigured() && <AssistantLauncher />}
     </div>

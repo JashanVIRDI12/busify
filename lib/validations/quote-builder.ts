@@ -102,6 +102,7 @@ const stopSchema = z.object({
   notes: optionalText,
   leg_miles: nonNegative.default(0),
   leg_minutes: z.coerce.number<number>().int().min(0).catch(0),
+  dwell_minutes: z.coerce.number<number>().int().min(0).max(10080).catch(0),
 });
 
 const vehicleSchema = z.object({

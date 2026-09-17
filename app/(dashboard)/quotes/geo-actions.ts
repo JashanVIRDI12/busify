@@ -20,20 +20,6 @@ export type AddressSuggestion = {
   lng: number;
 };
 
-const querySchema = z.string().trim().min(3).max(200);
-
-/** Ranked address suggestions for what the operator has typed so far. */
-export async function suggestAddressesAction(
-  query: string,
-): Promise<AddressSuggestion[]> {
-  await requireSession();
-
-  const parsed = querySchema.safeParse(query);
-  if (!parsed.success) return [];
-
-  return geoProvider().suggest(parsed.data, 6);
-}
-
 const pointSchema = z.object({
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),

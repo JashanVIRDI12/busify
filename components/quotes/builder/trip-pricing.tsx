@@ -20,6 +20,7 @@ import type {
 } from "@/lib/validations/quote-builder";
 import type { QuoteBaseFareBasis } from "@/types/database";
 
+import { AddChargeMenu } from "./add-charge-menu";
 import { useBuilder } from "./builder-context";
 import { NumericInput } from "./numeric-input";
 
@@ -172,7 +173,16 @@ export function TripPricing({ trip }: { trip: QuoteTripInput }) {
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_320px] lg:items-start">
       <div className="space-y-5">
-        {/* Duration inputs — feed the daily/hourly candidates */}
+        {/*
+          These three drive the daily, hourly and mileage candidates below.
+          The itinerary works all of them out — days from the dates, hours from
+          drive time plus waiting, distance from the measured route — so they
+          are shown here to be checked and overridden, not filled in.
+        */}
+        <p className="text-[12px] text-ash">
+          Taken from the itinerary. Type over any of them to price this trip
+          differently.
+        </p>
         <div className="grid gap-3 sm:grid-cols-3">
           <label className="space-y-1">
             <span className="text-[12px] font-medium text-ash">Days</span>
@@ -274,14 +284,11 @@ export function TripPricing({ trip }: { trip: QuoteTripInput }) {
 
           {/* Base fare charges */}
           <div className="mt-4">
-            <button
-              type="button"
-              disabled={!canEdit}
-              onClick={() => addCharge(trip.id, "BASE_FARE")}
-              className="text-body-sm font-semibold text-teal-600 disabled:opacity-50"
-            >
-              + Base Fare Charges
-            </button>
+            <AddChargeMenu
+              tripId={trip.id}
+              section="BASE_FARE"
+              label="Add base fare charge"
+            />
             {baseFareCharges.map((charge) => (
               <ChargeRow
                 key={charge.id}
@@ -324,14 +331,7 @@ export function TripPricing({ trip }: { trip: QuoteTripInput }) {
 
         {/* Itemized charges */}
         <div className="rounded-xl border border-bone p-4">
-          <button
-            type="button"
-            disabled={!canEdit}
-            onClick={() => addCharge(trip.id, "ITEMIZED")}
-            className="text-body-sm font-semibold text-teal-600 disabled:opacity-50"
-          >
-            + Itemized Charges
-          </button>
+          <AddChargeMenu tripId={trip.id} section="ITEMIZED" label="Add charge" />
           {itemized.length > 0 && (
             <div className="mt-2 grid grid-cols-[1fr_120px_100px_80px_90px_auto] gap-2 px-1 text-[10px] font-semibold tracking-wide text-ash uppercase">
               <span>Description</span>
@@ -367,7 +367,7 @@ export function TripPricing({ trip }: { trip: QuoteTripInput }) {
             type="button"
             disabled={!canEdit}
             onClick={() => addCharge(trip.id, "TAX")}
-            className="text-body-sm font-semibold text-teal-600 disabled:opacity-50"
+            className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-body-sm font-semibold text-teal-600 transition-colors hover:bg-teal-50 hover:text-teal-700 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-teal-500 disabled:opacity-50"
           >
             + Taxes
           </button>

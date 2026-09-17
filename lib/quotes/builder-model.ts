@@ -90,6 +90,7 @@ export function toBuilderState(data: QuoteBuilderData): QuoteBuilderInput {
           notes: stop.notes,
           leg_miles: Number(stop.leg_miles),
           leg_minutes: stop.leg_minutes,
+          dwell_minutes: stop.dwell_minutes,
         }),
       ),
     vehicles:
@@ -282,6 +283,7 @@ export function newStop(position: number, kind: QuoteStopInput["kind"]): QuoteSt
     notes: null,
     leg_miles: 0,
     leg_minutes: 0,
+    dwell_minutes: 0,
   };
 }
 
@@ -295,19 +297,33 @@ export function newVehicle(position: number): QuoteVehicleInput {
   };
 }
 
+/**
+ * A charge the operator keeps in Settings, ready to drop onto a quote.
+ *
+ * Copied onto the trip rather than referenced, on purpose: raising the fuel
+ * surcharge next spring must not silently reprice a quote sent last autumn.
+ */
+export type ChargePreset = {
+  label: string;
+  kind: QuoteChargeInput["kind"];
+  rate: number;
+  taxable: boolean;
+};
+
 export function newCharge(
   section: QuoteChargeInput["section"],
   position: number,
+  preset?: ChargePreset,
 ): QuoteChargeInput {
   return {
     id: crypto.randomUUID(),
     position,
     section,
-    label: "",
-    kind: section === "TAX" ? "PERCENT" : "FLAT",
-    rate: 0,
+    label: preset?.label ?? "",
+    kind: preset?.kind ?? (section === "TAX" ? "PERCENT" : "FLAT"),
+    rate: preset?.rate ?? 0,
     quantity: 1,
-    taxable: true,
+    taxable: preset?.taxable ?? true,
   };
 }
 

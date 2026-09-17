@@ -14,7 +14,6 @@
     "db:push": "npx supabase db push",
     "db:reset": "npx supabase db reset",
     "db:types": "npx supabase gen types typescript --local > types/database.ts",
-    "demo:refresh": "npx supabase db query --linked -f supabase/demo-refresh.sql",
     "test:tax": "node scripts/check-tax.ts"
   },
   "dependencies": {

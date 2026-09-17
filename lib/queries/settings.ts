@@ -1,6 +1,6 @@
 import "server-only";
 
-import { requireSession } from "@/lib/auth/session";
+import { requireSession, type Organization } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/types/database";
 
@@ -14,9 +14,13 @@ export type OrganizationSettings = Tables<"organization_settings">;
  * existed — returning defaults rather than null keeps every settings page free
  * of a "not configured yet" branch.
  */
-export async function getOrganizationSettings(): Promise<OrganizationSettings> {
-  const { organization } = await requireSession();
-  const supabase = await createClient();
+export async function getOrganizationSettings(
+  organizationOverride?: Organization,
+  clientOverride?: Awaited<ReturnType<typeof createClient>>,
+): Promise<OrganizationSettings> {
+  const organization =
+    organizationOverride ?? (await requireSession()).organization;
+  const supabase = clientOverride ?? (await createClient());
 
   const { data } = await supabase
     .from("organization_settings")

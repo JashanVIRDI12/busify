@@ -3,6 +3,11 @@ import {
   utcToZonedInputValue,
   relativeDays,
   tripWindow,
+  parseClockTime,
+  formatClockTime,
+  clockDayShift,
+  addDaysToDate,
+  daysBetweenDates,
 } from "../lib/datetime.ts";
 
 let failures = 0;
@@ -159,6 +164,68 @@ check(
   relativeDays("2026-09-10T00:00:00Z", "America/Toronto", new Date("2026-09-11T15:00:00Z")),
   "2 days ago",
 );
+
+
+
+// ---------------------------------------------------------------------------
+// Itinerary clock arithmetic. These drive the auto-filled arrival and spot
+// times, so every case that crosses midnight is one a real overnight charter
+// would hit.
+// ---------------------------------------------------------------------------
+
+check("parse a time", parseClockTime("18:30"), 1110);
+check("parse midnight", parseClockTime("00:00"), 0);
+check("parse with seconds", parseClockTime("07:05:00"), 425);
+check("blank is not a time", parseClockTime(""), null);
+check("null is not a time", parseClockTime(null), null);
+check("hour 25 is rejected", parseClockTime("25:00"), null);
+check("minute 60 is rejected", parseClockTime("12:60"), null);
+
+check("format a time", formatClockTime(1110), "18:30");
+check("format pads", formatClockTime(425), "07:05");
+check("past midnight wraps", formatClockTime(1500), "01:00");
+check("before midnight wraps back", formatClockTime(-5), "23:55");
+
+check("same day", clockDayShift(600), 0);
+check("over midnight is next day", clockDayShift(1500), 1);
+check("under midnight is previous day", clockDayShift(-5), -1);
+check("two days out", clockDayShift(2900), 2);
+
+check("add a day", addDaysToDate("2026-09-20", 1), "2026-09-21");
+check("no shift returns the date", addDaysToDate("2026-09-20", 0), "2026-09-20");
+check("cross new year", addDaysToDate("2026-12-31", 1), "2027-01-01");
+check("back over a month", addDaysToDate("2026-03-01", -1), "2026-02-28");
+check("leap year", addDaysToDate("2028-03-01", -1), "2028-02-29");
+check("no date, no shift", addDaysToDate(null, 1), null);
+
+// An 11:30 p.m. departure with a four-hour run lands at 03:30 the next morning.
+const overnightDepart = parseClockTime("23:30");
+const overnightArrive = (overnightDepart ?? 0) + 240;
+check("overnight arrival time", formatClockTime(overnightArrive), "03:30");
+check(
+  "overnight arrival date",
+  addDaysToDate("2026-09-20", clockDayShift(overnightArrive)),
+  "2026-09-21",
+);
+
+// A 00:10 departure spots at 23:55 the evening before.
+const earlyDepart = parseClockTime("00:10");
+const spot = (earlyDepart ?? 0) - 15;
+check("spot time before midnight", formatClockTime(spot), "23:55");
+check(
+  "spot date is the day before",
+  addDaysToDate("2026-09-20", clockDayShift(spot)),
+  "2026-09-19",
+);
+
+
+check("same day is zero", daysBetweenDates("2026-09-20", "2026-09-20"), 0);
+check("two day span", daysBetweenDates("2026-09-20", "2026-09-22"), 2);
+check("span over a month end", daysBetweenDates("2026-01-30", "2026-02-02"), 3);
+check("span over a leap day", daysBetweenDates("2028-02-28", "2028-03-01"), 2);
+check("backwards is negative", daysBetweenDates("2026-09-22", "2026-09-20"), -2);
+check("missing date is unknown", daysBetweenDates(null, "2026-09-20"), null);
+check("garbage is unknown", daysBetweenDates("nope", "2026-09-20"), null);
 
 console.log(failures === 0 ? "\nALL PASSED" : `\n${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);

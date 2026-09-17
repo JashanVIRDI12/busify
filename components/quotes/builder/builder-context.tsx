@@ -17,6 +17,7 @@ import { computeQuote, type QuoteComputed } from "@/lib/quotes/compute";
 import {
   builderFingerprint,
   newCharge,
+  type ChargePreset,
   newStop,
   newTrip,
   newVehicle,
@@ -115,7 +116,12 @@ type BuilderValue = {
     chargeId: string,
     patch: Partial<QuoteChargeInput>,
   ) => void;
-  addCharge: (tripId: string, section: QuoteChargeInput["section"]) => void;
+  addCharge: (
+    tripId: string,
+    section: QuoteChargeInput["section"],
+    /** Seeds the row from the operator's saved catalogue; blank when absent. */
+    preset?: ChargePreset,
+  ) => void;
   removeCharge: (tripId: string, chargeId: string) => void;
 
   setPaymentMethod: (
@@ -347,10 +353,10 @@ export function QuoteBuilderProvider({
         ),
       })),
 
-    addCharge: (tripId, section) =>
+    addCharge: (tripId, section, preset) =>
       mutateTrip(tripId, (trip) => ({
         ...trip,
-        charges: [...trip.charges, newCharge(section, trip.charges.length)],
+        charges: [...trip.charges, newCharge(section, trip.charges.length, preset)],
       })),
 
     removeCharge: (tripId, chargeId) =>

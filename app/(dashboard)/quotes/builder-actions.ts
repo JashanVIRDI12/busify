@@ -36,6 +36,23 @@ function unknownColumn(error: PostgrestError | null): string | null {
   return match?.[1] ?? null;
 }
 
+/**
+ * Records a field that was thrown away to get a write through.
+ *
+ * The retry above keeps a drifted schema from blocking work, but it does it by
+ * discarding something the operator typed and then reporting success — which
+ * is the worst way to lose data, because nobody goes looking for it. The retry
+ * is worth keeping; doing it quietly is not. On a schema that matches the code
+ * this never runs, so anything it prints is a real problem.
+ */
+function reportDroppedColumn(column: string, where: string) {
+  console.error(
+    `[quote save] Dropped "${column}" while writing ${where}: the database ` +
+      `does not have that column. The save succeeded WITHOUT it. Run ` +
+      `\`npm run db:push\` to bring the schema up to date.`,
+  );
+}
+
 type SaveResult =
   | { ok: true; savedAt: string; totals: QuoteTotals }
   | { ok: false; message: string; fieldErrors?: Record<string, string[]> };
@@ -186,6 +203,7 @@ async function seedQuote(options: {
     error = result.error;
     const column = unknownColumn(error);
     if (!column || !(column in insertPayload)) break;
+    reportDroppedColumn(column, "a new quote");
     delete insertPayload[column];
   }
 
@@ -327,12 +345,26 @@ export async function saveQuoteBuilderAction(
 
   const input = parsed.data;
   const orgId = session.organization.id;
+  const header = input.header;
 
-  const { data: existing, error: loadError } = await supabase
-    .from("quotes")
-    .select("id, status")
-    .eq("id", input.id)
-    .maybeSingle();
+  // Quote existence and the selected contact are independent reads. Starting
+  // them together avoids making every save wait for two database round trips.
+  const [existingResult, contactResult] = await Promise.all([
+    supabase
+      .from("quotes")
+      .select("id, status")
+      .eq("id", input.id)
+      .maybeSingle(),
+    header.customer_id
+      ? supabase
+          .from("customers")
+          .select("company_id")
+          .eq("id", header.customer_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+  ]);
+
+  const { data: existing, error: loadError } = existingResult;
 
   if (loadError) {
     return { ok: false, message: "This quote no longer exists." };
@@ -372,20 +404,10 @@ export async function saveQuoteBuilderAction(
   const pickup = firstPickup(input, session.organization.timezone);
 
   // --- Header ------------------------------------------------------------
-  const header = input.header;
-
   // The company is the booking contact's, not something picked separately. It
   // is stored on the quote because the quotes list shows it, and because the
   // reservations a quote converts into inherit it from here.
-  let companyId: string | null = null;
-  if (header.customer_id) {
-    const { data: contact } = await supabase
-      .from("customers")
-      .select("company_id")
-      .eq("id", header.customer_id)
-      .maybeSingle();
-    companyId = contact?.company_id ?? null;
-  }
+  const companyId = contactResult.data?.company_id ?? null;
 
   const headerUpdate: Record<string, unknown> = {
     title: header.title,
@@ -434,34 +456,14 @@ export async function saveQuoteBuilderAction(
     headerError = result.error;
     const column = unknownColumn(headerError);
     if (!column || !(column in headerUpdate)) break;
+    reportDroppedColumn(column, "the quote header");
     delete headerUpdate[column];
   }
 
   if (headerError) return saveError(databaseError(headerError));
 
-  // --- Payment methods (fixed set of up to five) ------------------------
-  if (input.paymentMethods.length > 0) {
-    const { error } = await supabase.from("quote_payment_methods").upsert(
-      input.paymentMethods.map((method) => ({
-        id: method.id,
-        organization_id: orgId,
-        quote_id: input.id,
-        method: method.method,
-        position: method.position,
-        enabled: method.enabled,
-        online_processing: method.online_processing,
-        processing_fee_percent: method.processing_fee_percent,
-        customer_note: method.customer_note,
-      })),
-      { onConflict: "id" },
-    );
-    if (error) return saveError(databaseError(error));
-  }
-
-  // --- Trips: delete removed, then upsert -------------------------------
+  // --- Trips and payment methods ---------------------------------------
   const tripIds = input.trips.map((trip) => trip.id);
-  await pruneTrips(supabase, input.id, tripIds);
-
   const tripRows = priced.map(({ trip, result }) => ({
     id: trip.id,
     organization_id: orgId,
@@ -509,66 +511,87 @@ export async function saveQuoteBuilderAction(
     notes: trip.notes,
   }));
 
+  // These touch independent tables. Starting them together removes a full
+  // database round trip from every save.
+  const [paymentResult] = await Promise.all([
+    input.paymentMethods.length > 0
+      ? supabase.from("quote_payment_methods").upsert(
+          input.paymentMethods.map((method) => ({
+            id: method.id,
+            organization_id: orgId,
+            quote_id: input.id,
+            method: method.method,
+            position: method.position,
+            enabled: method.enabled,
+            online_processing: method.online_processing,
+            processing_fee_percent: method.processing_fee_percent,
+            customer_note: method.customer_note,
+          })),
+          { onConflict: "id" },
+        )
+      : Promise.resolve({ error: null }),
+    pruneTrips(supabase, input.id, tripIds),
+  ]);
+  if (paymentResult.error) {
+    return saveError(databaseError(paymentResult.error));
+  }
+
   const { error: tripError } = await supabase
     .from("quote_trips")
     .upsert(tripRows, { onConflict: "id" });
   if (tripError) return saveError(databaseError(tripError));
 
-  // --- Per-trip children ----------------------------------------------
+  // --- Per-trip children -----------------------------------------------
+  // Prunes used to run trip-by-trip, followed by three sequential upserts
+  // for each trip. Run all independent prunes together, then send one bulk
+  // upsert per child table so save time no longer grows in network waves.
+  await Promise.all(
+    priced.flatMap(({ trip }) => [
+      pruneStops(supabase, trip.id, trip.stops.map((stop) => stop.id)),
+      pruneVehicles(supabase, trip.id, trip.vehicles.map((vehicle) => vehicle.id)),
+      pruneCharges(supabase, trip.id, trip.charges.map((charge) => charge.id)),
+    ]),
+  );
+
+  const stopRows: TablesInsert<"quote_trip_stops">[] = [];
+  const vehicleRows: TablesInsert<"quote_trip_vehicles">[] = [];
+  const chargeRows: TablesInsert<"quote_trip_charges">[] = [];
+
   for (const { trip, result } of priced) {
-    const stopIds = trip.stops.map((stop) => stop.id);
-    const vehicleIds = trip.vehicles.map((vehicle) => vehicle.id);
-    const chargeIds = trip.charges.map((charge) => charge.id);
-
-    await Promise.all([
-      pruneStops(supabase, trip.id, stopIds),
-      pruneVehicles(supabase, trip.id, vehicleIds),
-      pruneCharges(supabase, trip.id, chargeIds),
-    ]);
-
-    if (trip.stops.length > 0) {
-      const { error } = await supabase.from("quote_trip_stops").upsert(
-        trip.stops.map((stop) => ({
-          id: stop.id,
-          organization_id: orgId,
-          quote_trip_id: trip.id,
-          position: stop.position,
-          kind: stop.kind,
-          label: stop.label,
-          address: stop.address,
-          latitude: stop.latitude,
-          longitude: stop.longitude,
-          stop_date: stop.stop_date,
-          stop_time: stop.stop_time,
-          spot_time: stop.spot_time,
-          notes: stop.notes,
-          leg_miles: stop.leg_miles,
-          leg_minutes: stop.leg_minutes,
-        })),
-        { onConflict: "id" },
-      );
-      if (error) return saveError(databaseError(error));
-    }
-
-    if (trip.vehicles.length > 0) {
-      const { error } = await supabase.from("quote_trip_vehicles").upsert(
-        trip.vehicles.map((vehicle) => ({
-          id: vehicle.id,
-          organization_id: orgId,
-          quote_trip_id: trip.id,
-          position: vehicle.position,
-          vehicle_type_id: vehicle.vehicle_type_id,
-          vehicle_id: vehicle.vehicle_id,
-          quantity: vehicle.quantity,
-        })),
-        { onConflict: "id" },
-      );
-      if (error) return saveError(databaseError(error));
-    }
-
-    if (trip.charges.length > 0) {
-      // Amounts are the server engine's, indexed by original charge order.
-      const chargeRows = trip.charges.map((charge, index) => ({
+    stopRows.push(
+      ...trip.stops.map((stop) => ({
+        id: stop.id,
+        organization_id: orgId,
+        quote_trip_id: trip.id,
+        position: stop.position,
+        kind: stop.kind,
+        label: stop.label,
+        address: stop.address,
+        latitude: stop.latitude,
+        longitude: stop.longitude,
+        stop_date: stop.stop_date,
+        stop_time: stop.stop_time,
+        spot_time: stop.spot_time,
+        notes: stop.notes,
+        leg_miles: stop.leg_miles,
+        leg_minutes: stop.leg_minutes,
+        dwell_minutes: stop.dwell_minutes,
+      })),
+    );
+    vehicleRows.push(
+      ...trip.vehicles.map((vehicle) => ({
+        id: vehicle.id,
+        organization_id: orgId,
+        quote_trip_id: trip.id,
+        position: vehicle.position,
+        vehicle_type_id: vehicle.vehicle_type_id,
+        vehicle_id: vehicle.vehicle_id,
+        quantity: vehicle.quantity,
+      })),
+    );
+    // Amounts are the server engine's, indexed by original charge order.
+    chargeRows.push(
+      ...trip.charges.map((charge, index) => ({
         id: charge.id,
         organization_id: orgId,
         quote_trip_id: trip.id,
@@ -580,17 +603,31 @@ export async function saveQuoteBuilderAction(
         quantity: charge.quantity,
         amount: toMajor(result.charges[index]?.amount ?? 0),
         taxable: charge.taxable,
-      }));
-
-      const { error } = await supabase
-        .from("quote_trip_charges")
-        .upsert(chargeRows, { onConflict: "id" });
-      if (error) return saveError(databaseError(error));
-    }
+      })),
+    );
   }
 
-  // --- Flattened quote_items mirror (public page + booking accept) -----
-  await rebuildQuoteItems(supabase, orgId, input.id, priced);
+  const [stopResult, vehicleResult, chargeResult] = await Promise.all([
+    stopRows.length > 0
+      ? supabase.from("quote_trip_stops").upsert(stopRows, { onConflict: "id" })
+      : Promise.resolve({ error: null }),
+    vehicleRows.length > 0
+      ? supabase
+          .from("quote_trip_vehicles")
+          .upsert(vehicleRows, { onConflict: "id" })
+      : Promise.resolve({ error: null }),
+    chargeRows.length > 0
+      ? supabase
+          .from("quote_trip_charges")
+          .upsert(chargeRows, { onConflict: "id" })
+      : Promise.resolve({ error: null }),
+    // Flattened mirror used by the public page and booking acceptance.
+    rebuildQuoteItems(supabase, orgId, input.id, priced),
+  ]);
+
+  for (const result of [stopResult, vehicleResult, chargeResult]) {
+    if (result.error) return saveError(databaseError(result.error));
+  }
 
   revalidateQuote(input.id);
 
@@ -848,6 +885,7 @@ export async function duplicateQuoteAction(formData: FormData) {
           notes: s.notes,
           leg_miles: s.leg_miles,
           leg_minutes: s.leg_minutes,
+          dwell_minutes: s.dwell_minutes,
         })),
       );
     }

@@ -177,7 +177,7 @@ begin
          c.rate_type::public.charge_rate_type, c.rate, c.exempt, c.default_on,
          c.placement::public.charge_placement, c.pos
   from (values
-    ('Fuel surcharge',       'PERCENTAGE',   5.00,  false, true,  'ITEMIZED', 0),
+    ('Fuel surcharge',       'PERCENTAGE',  15.50,  false, true,  'ITEMIZED', 0),
     ('Driver accommodation', 'FLAT',       250.00,  false, false, 'ITEMIZED', 1),
     ('Tolls and parking',    'FLAT',        45.00,  false, false, 'ITEMIZED', 2),
     ('Cross-border fee',     'FLAT',       180.00,  false, false, 'ITEMIZED', 3)

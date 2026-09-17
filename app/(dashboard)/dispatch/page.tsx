@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
+import { CalendarBoard, type CalendarCell } from "@/components/dispatch/calendar-board";
 import { CalendarNav, MiniCalendar } from "@/components/dispatch/calendar-nav";
 import { DispatchFilterRail } from "@/components/dispatch/filter-rail";
 import { requireSession } from "@/lib/auth/session";
 import {
-  WEEKDAYS,
   daysCovered,
   miniMonth,
   monthGrid,
@@ -14,7 +13,6 @@ import {
   shiftMonth,
 } from "@/lib/calendar";
 import { civilDate } from "@/lib/date-filters";
-import { formatStampTime } from "@/lib/datetime";
 import {
   filterValue,
   only,
@@ -23,7 +21,6 @@ import {
 } from "@/lib/list-params";
 import { getDispatchTrips, tripEnd } from "@/lib/queries/dispatch";
 import { createClient } from "@/lib/supabase/server";
-import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Dispatch" };
 
@@ -96,20 +93,26 @@ export default async function DispatchPage({
     : trips;
 
   // A multi-day charter lands on every square it covers, not just its first.
-  const byDay = new Map<string, typeof visible>();
+  // The first square it touches is the job starting; the rest are marked as
+  // continuations so three days of one charter never read as three bookings.
+  const byDay = new Map<string, string[]>();
+  const continuedOn = new Map<string, string[]>();
+
   for (const trip of visible) {
-    for (const key of daysCovered(
-      trip.departureAt,
-      tripEnd(trip).toISOString(),
-      zone,
-    )) {
-      const bucket = byDay.get(key) ?? [];
-      bucket.push(trip);
-      byDay.set(key, bucket);
-    }
+    const keys = daysCovered(trip.departureAt, tripEnd(trip).toISOString(), zone);
+    keys.forEach((key, index) => {
+      byDay.set(key, [...(byDay.get(key) ?? []), trip.id]);
+      if (index > 0) {
+        continuedOn.set(key, [...(continuedOn.get(key) ?? []), trip.id]);
+      }
+    });
   }
 
-  const showNotes = filterValue(params, "notes") !== "off";
+  const cells: CalendarCell[] = grid.days.map((day) => ({
+    day,
+    tripIds: byDay.get(day.key) ?? [],
+    continuing: continuedOn.get(day.key) ?? [],
+  }));
 
   return (
     <div className="flex gap-5">
@@ -151,86 +154,12 @@ export default async function DispatchPage({
           todayMonth={`${todayYear}-${String(todayMonth).padStart(2, "0")}`}
         />
 
-        <div className="overflow-hidden rounded-lg border border-bone bg-signal-white">
-          <div className="grid grid-cols-7 border-b border-bone bg-teal-50/60">
-            {WEEKDAYS.map((day) => (
-              <div
-                key={day}
-                className="py-2.5 text-center text-[12.5px] font-medium text-carbon"
-              >
-                <span className="hidden sm:inline">{day}</span>
-                <span className="sm:hidden">{day.slice(0, 3)}</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-7">
-            {grid.days.map((day) => {
-              const dayTrips = byDay.get(day.key) ?? [];
-              return (
-                <div
-                  key={day.key}
-                  className={cn(
-                    "min-h-[124px] border-r border-b border-bone p-1.5 last:border-r-0 [&:nth-child(7n)]:border-r-0",
-                    !day.inMonth && "bg-mist/60",
-                  )}
-                >
-                  <div className="mb-1 flex justify-center">
-                    <span
-                      className={cn(
-                        "flex size-6 items-center justify-center rounded-full text-[12.5px]",
-                        day.isToday
-                          ? "bg-teal-100 font-semibold text-teal-700"
-                          : day.inMonth
-                            ? "text-carbon"
-                            : "text-fog",
-                      )}
-                    >
-                      {day.dayOfMonth}
-                    </span>
-                  </div>
-
-                  <div className="space-y-1">
-                    {dayTrips.slice(0, 3).map((trip) => (
-                      <Link
-                        key={`${day.key}-${trip.id}`}
-                        href={`/reservations/${trip.id}`}
-                        className={cn(
-                          "block truncate rounded px-1.5 py-1 text-[11.5px] leading-tight transition-opacity hover:opacity-85",
-                          trip.assignmentStatus === "ASSIGNED"
-                            ? "bg-teal-500 text-signal-white"
-                            : trip.assignmentStatus === "PARTIAL"
-                              ? "bg-amber/85 text-ink"
-                              : "bg-orange-100 text-orange-700",
-                        )}
-                        title={`${trip.reference ?? ""} ${trip.pickupLocation} → ${trip.destination}`}
-                      >
-                        <span className="tabular font-medium">
-                          {formatStampTime(trip.departureAt, zone)}
-                        </span>{" "}
-                        {trip.reference ?? trip.pickupLocation}
-                        {showNotes && trip.groupName && (
-                          <span className="block truncate opacity-80">
-                            {trip.groupName}
-                          </span>
-                        )}
-                      </Link>
-                    ))}
-
-                    {dayTrips.length > 3 && (
-                      <Link
-                        href={`/reservations?pickup=${day.key}`}
-                        className="block px-1.5 text-[11px] font-medium text-teal-600 hover:underline"
-                      >
-                        +{dayTrips.length - 3} more
-                      </Link>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <CalendarBoard
+          cells={cells}
+          trips={visible}
+          timeZone={zone}
+          currency={organization.currency}
+        />
       </div>
     </div>
   );

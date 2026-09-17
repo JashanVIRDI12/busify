@@ -27,6 +27,10 @@ export async function getBuilderLookups(
     { data: vehicleTypes },
     { data: vehicles },
     { data: members },
+    { data: profiles },
+    settings,
+    { data: charges },
+    { data: rateCard },
   ] = await Promise.all([
     supabase.from("garages").select("id, name, address").order("name"),
     supabase
@@ -44,10 +48,11 @@ export async function getBuilderLookups(
       .select("id, name, capacity, vehicle_type_id")
       .order("name"),
     supabase.from("organization_members").select("user_id, role"),
-  ]);
-
-  const [settings, { data: charges }, { data: rateCard }] = await Promise.all([
-    getOrganizationSettings(),
+    // Profiles are RLS-limited to the current user's teammates. Fetching them
+    // alongside memberships avoids a second database round trip; the member
+    // id intersection below still decides which organization appears here.
+    supabase.from("profiles").select("id, full_name, email").limit(200),
+    getOrganizationSettings(organization, supabase),
     supabase
       .from("custom_charges")
       .select("id, name, rate_type, rate, tax_exempt")
@@ -74,19 +79,15 @@ export async function getBuilderLookups(
     (rateCard ?? []).map((rate) => [rate.vehicle_type_id, rate]),
   );
 
-  const memberIds = (members ?? []).map((m) => m.user_id);
-  const { data: profiles } = memberIds.length
-    ? await supabase
-        .from("profiles")
-        .select("id, full_name, email")
-        .in("id", memberIds)
-    : { data: [] };
+  const memberIds = new Set((members ?? []).map((member) => member.user_id));
 
   const lookups: BuilderLookups = {
-    salesReps: (profiles ?? []).map((profile) => ({
-      id: profile.id,
-      name: profile.full_name?.trim() || profile.email || "Teammate",
-    })),
+    salesReps: (profiles ?? [])
+      .filter((profile) => memberIds.has(profile.id))
+      .map((profile) => ({
+        id: profile.id,
+        name: profile.full_name?.trim() || profile.email || "Teammate",
+      })),
     garages: (garages ?? []).map((garage) => ({
       id: garage.id,
       name: garage.name,

@@ -247,3 +247,90 @@ export function formatDuration(minutes: number): string {
   const safe = Math.max(0, Math.round(minutes));
   return `${Math.floor(safe / 60)}h ${safe % 60}m`;
 }
+
+/* -------------------------------------------------------------------------- */
+/* Clock arithmetic for the itinerary.                                         */
+/*                                                                             */
+/* These work on the raw values an <input type="date"> and <input type="time"> */
+/* hold — "2026-09-20" and "18:30" — with no zone attached. The itinerary is   */
+/* written in the operator's wall-clock time and only becomes an instant when  */
+/* it is saved, which is what zonedTimeToUtc above is for.                     */
+/* -------------------------------------------------------------------------- */
+
+/** "HH:MM" as minutes past midnight, or null when unset or unparseable. */
+export function parseClockTime(value: string | null | undefined): number | null {
+  const match = /^(\d{1,2}):(\d{2})/.exec((value ?? "").trim());
+  if (!match) return null;
+
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (hours > 23 || minutes > 59) return null;
+
+  return hours * 60 + minutes;
+}
+
+/** Minutes past midnight back to "HH:MM", wrapping around the clock. */
+export function formatClockTime(totalMinutes: number): string {
+  const wrapped = ((totalMinutes % 1440) + 1440) % 1440;
+  const hours = Math.floor(wrapped / 60);
+  const minutes = wrapped % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
+/**
+ * Whole days crossed by a minutes-past-midnight figure that ran over or under.
+ * Negative when subtracting back past midnight, which is what a spot time an
+ * hour before a 00:30 departure does.
+ */
+export function clockDayShift(totalMinutes: number): number {
+  return Math.floor(totalMinutes / 1440);
+}
+
+/**
+ * A calendar date plus a number of days.
+ *
+ * Done in UTC on purpose: these are wall-clock dates with no zone attached, and
+ * routing them through the browser's local time would slide an overnight run by
+ * a day for anyone east of Greenwich.
+ */
+export function addDaysToDate(
+  date: string | null,
+  days: number,
+): string | null {
+  if (!date) return null;
+  if (days === 0) return date;
+
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date.trim());
+  if (!match) return date;
+
+  const moment = new Date(
+    Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])),
+  );
+  moment.setUTCDate(moment.getUTCDate() + days);
+  return moment.toISOString().slice(0, 10);
+}
+
+/**
+ * Whole days from one calendar date to another, e.g. the 20th to the 22nd is 2.
+ *
+ * Returns null when either date is missing or malformed, so a caller can tell
+ * "no span yet" apart from "a same-day trip", which is 0 and prices very
+ * differently from an unknown.
+ */
+export function daysBetweenDates(
+  from: string | null,
+  to: string | null,
+): number | null {
+  const parse = (value: string | null) => {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec((value ?? "").trim());
+    return match
+      ? Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+      : null;
+  };
+
+  const start = parse(from);
+  const end = parse(to);
+  if (start === null || end === null) return null;
+
+  return Math.round((end - start) / 86_400_000);
+}

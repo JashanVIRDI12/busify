@@ -65,8 +65,8 @@ export async function convertQuoteToReservations(
       `id, position, name, passenger_count, total,
        departing_garage_id, departing_date, departing_time,
        returning_garage_id, returning_date, returning_time,
-       notes,
-       quote_trip_stops(position, kind, label, address, stop_date, stop_time, spot_time),
+       notes, total_miles, estimated_minutes,
+       quote_trip_stops(position, kind, label, address, latitude, longitude, stop_date, stop_time, spot_time),
        quote_trip_vehicles(position, vehicle_id, vehicle_type_id, quantity)`,
     )
     .eq("quote_id", quoteId)
@@ -77,6 +77,26 @@ export async function convertQuoteToReservations(
   }
   if (!tripRows || tripRows.length === 0) {
     return { ok: false, message: "This quote has no trips to convert." };
+  }
+
+  // Garage names, for the stop rows that bracket each run. Read once for the
+  // whole quote rather than per trip: most quotes use one yard at both ends.
+  const garageIds = [
+    ...new Set(
+      tripRows
+        .flatMap((trip) => [trip.departing_garage_id, trip.returning_garage_id])
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+
+  const garageNames = new Map<string, string>();
+  if (garageIds.length > 0) {
+    const { data: garages } = await supabase
+      .from("garages")
+      .select("id, name")
+      .in("id", garageIds);
+
+    for (const garage of garages ?? []) garageNames.set(garage.id, garage.name);
   }
 
   const tripIds: string[] = [];
@@ -117,6 +137,9 @@ export async function convertQuoteToReservations(
       .insert({
         organization_id: quote.organization_id,
         quote_id: quote.id,
+        // Which tab, not just which quote. Without it a reservation cannot be
+        // traced back to the figures that produced it.
+        quote_trip_id: trip.id,
         customer_id: quote.customer_id,
         company_id: quote.company_id,
         garage_id: trip.departing_garage_id,
@@ -136,6 +159,16 @@ export async function convertQuoteToReservations(
         ),
         spot_at: combine(first?.stop_date, first?.spot_time, timeZone),
         dropoff_at: combine(last?.stop_date, last?.stop_time, timeZone),
+        // Carried rather than re-derived. The operator already placed these by
+        // picking an address out of the typeahead, and geocoding the same two
+        // strings again to draw a map would be a paid lookup for a fact the
+        // quote is holding.
+        pickup_lat: coordinate(first?.latitude),
+        pickup_lng: coordinate(first?.longitude),
+        destination_lat: coordinate(destination?.latitude),
+        destination_lng: coordinate(destination?.longitude),
+        planned_miles: Number(trip.total_miles ?? 0),
+        planned_minutes: Number(trip.estimated_minutes ?? 0),
         passenger_count: trip.passenger_count ?? 1,
         status: "SCHEDULED",
         total_due: Number(trip.total ?? 0),
@@ -157,6 +190,106 @@ export async function convertQuoteToReservations(
     }
 
     tripIds.push(created.id);
+
+    /**
+     * Every stop the coach actually makes, not just the ends.
+     *
+     * The yard brackets the run: position -1 is leaving it and 9999 is coming
+     * back, which keeps them at either end however many stops are added between
+     * without renumbering anything the quote already ordered.
+     *
+     * A failed insert here is not fatal. The reservation exists, the board can
+     * schedule it from its own timestamps, and losing a sold job over its
+     * itinerary detail would be the worse outcome.
+     */
+    const stopRows: {
+      organization_id: string;
+      trip_id: string;
+      position: number;
+      kind: "GARAGE_OUT" | "PICKUP" | "STOP" | "DROPOFF" | "GARAGE_IN";
+      label: string | null;
+      address: string | null;
+      latitude: number | null;
+      longitude: number | null;
+      arrive_at: string | null;
+      depart_at: string | null;
+    }[] = [];
+
+    const outGarage = trip.departing_garage_id
+      ? (garageNames.get(trip.departing_garage_id) ?? "Garage")
+      : null;
+    const backGarage = trip.returning_garage_id
+      ? (garageNames.get(trip.returning_garage_id) ?? "Garage")
+      : null;
+    const garageOutAt = combine(
+      trip.departing_date,
+      trip.departing_time,
+      timeZone,
+    );
+
+    if (trip.departing_garage_id) {
+      stopRows.push({
+        organization_id: quote.organization_id,
+        trip_id: created.id,
+        position: -1,
+        kind: "GARAGE_OUT",
+        label: outGarage,
+        address: null,
+        latitude: null,
+        longitude: null,
+        arrive_at: garageOutAt,
+        depart_at: garageOutAt,
+      });
+    }
+
+    stops.forEach((stop, index) => {
+      stopRows.push({
+        organization_id: quote.organization_id,
+        trip_id: created.id,
+        position: index,
+        kind:
+          stop.kind === "PICKUP"
+            ? "PICKUP"
+            : stop.kind === "DROPOFF"
+              ? "DROPOFF"
+              : "STOP",
+        label: stop.label,
+        address: stop.address,
+        latitude: coordinate(stop.latitude),
+        longitude: coordinate(stop.longitude),
+        // Spot time is when the coach is standing there; the stop time is when
+        // it leaves. A stop with no spot time arrives when it departs.
+        arrive_at:
+          combine(stop.stop_date, stop.spot_time, timeZone) ??
+          combine(stop.stop_date, stop.stop_time, timeZone),
+        depart_at: combine(stop.stop_date, stop.stop_time, timeZone),
+      });
+    });
+
+    if (trip.returning_garage_id && returnAt) {
+      stopRows.push({
+        organization_id: quote.organization_id,
+        trip_id: created.id,
+        position: 9999,
+        kind: "GARAGE_IN",
+        label: backGarage,
+        address: null,
+        latitude: null,
+        longitude: null,
+        arrive_at: returnAt,
+        depart_at: null,
+      });
+    }
+
+    if (stopRows.length > 0) {
+      const { error: stopError } = await supabase
+        .from("trip_stops")
+        .insert(stopRows);
+
+      if (stopError) {
+        console.error("Quote conversion: stops failed", stopError);
+      }
+    }
 
     // One assignment row per coach the quote sold. A quote that names an
     // actual vehicle pre-fills it; one that only names a type leaves the row
@@ -187,6 +320,20 @@ export async function convertQuoteToReservations(
   return { ok: true, created: tripIds.length, tripIds, alreadyExisted: false };
 }
 
+/**
+ * A coordinate that is actually a coordinate.
+ *
+ * Postgres hands `numeric` back as a string through PostgREST, and a stop that
+ * was typed rather than picked has none at all. Anything that does not survive
+ * both checks becomes null, so the map draws nothing rather than a pin at 0°N
+ * 0°E — which is in the Atlantic, and looks like a real answer.
+ */
+function coordinate(value: number | string | null | undefined): number | null {
+  if (value === null || value === undefined) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed !== 0 ? parsed : null;
+}
+
 /** `2026-09-20` + `06:00:00` in the operator's zone → a UTC instant. */
 function combine(
   date: string | null | undefined,
@@ -197,12 +344,24 @@ function combine(
   return zonedTimeToUtc(`${date}T${(time ?? "00:00").slice(0, 5)}`, timeZone);
 }
 
-/** The human name of a stop: what it is called, or failing that, where it is. */
+/**
+ * Where a stop actually is.
+ *
+ * Address first, deliberately. A stop's `label` is its role on the itinerary —
+ * the builder fills the first and last with "Pickup" and "Dropoff" and does not
+ * let them be edited, because the role is decided by position. Reading the
+ * label first therefore produced reservations whose pickup location was the
+ * word "Pickup", which tells a driver nothing and is what made converted jobs
+ * look empty on the board.
+ *
+ * The label is kept only as a fallback, for a stop somebody named but never
+ * gave an address to.
+ */
 function placeOf(
   stop: { label: string | null; address: string | null } | undefined,
 ): string | null {
   if (!stop) return null;
-  const value = stop.label?.trim() || stop.address?.trim();
+  const value = stop.address?.trim() || stop.label?.trim();
   return value && value.length > 0 ? value : null;
 }
 

@@ -29,9 +29,12 @@ export default async function NewQuotePage() {
   if (!canWriteFinance(role)) redirect("/quotes");
 
   const supabase = await createClient();
-  const { lookups, settings } = await getBuilderLookups(organization);
-
-  const [{ data: defaultTerms }, { data: standingCharges }] = await Promise.all([
+  const [
+    { lookups, settings },
+    { data: defaultTerms },
+    { data: standingCharges },
+  ] = await Promise.all([
+    getBuilderLookups(organization),
     supabase
       .from("contract_terms")
       .select("id")

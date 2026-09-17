@@ -1,14 +1,54 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Loader2, MapPin } from "lucide-react";
 
-import {
-  suggestAddressesAction,
-  type AddressSuggestion,
-} from "@/app/(dashboard)/quotes/geo-actions";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+
+type AddressSuggestion = {
+  label: string;
+  primary?: string;
+  secondary?: string;
+  point: { lat: number; lng: number } | null;
+  placeId?: string;
+};
+
+type SuggestResponse = {
+  suggestions: AddressSuggestion[];
+  provider: string | null;
+  available?: boolean;
+};
+
+type ResolveResponse = {
+  result: { lat: number; lng: number; label: string } | null;
+};
+
+/**
+ * Predictions already fetched, shared by every itinerary row.
+ *
+ * Keyed by billing session as well as by text: Google ties a burst of
+ * keystrokes and the selection that ends it into one charged lookup, so a
+ * prediction may be reused while that session is open and must not outlive it.
+ * Within a session this covers the case that would otherwise be pure waste —
+ * an operator backspacing a house number and typing it again.
+ */
+const suggestionCache = new Map<string, AddressSuggestion[]>();
+
+function remember(key: string, suggestions: AddressSuggestion[]) {
+  suggestionCache.set(key, suggestions);
+  if (suggestionCache.size <= 80) return;
+  const oldest = suggestionCache.keys().next().value;
+  if (oldest) suggestionCache.delete(oldest);
+}
+
+function newSessionToken(): string {
+  // Available in every secure context, which includes localhost.
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
 
 /**
  * An address input that offers real places as you type.
@@ -17,6 +57,10 @@ import { cn } from "@/lib/utils";
  * write "back gate, loading dock 3" if that is where the coach actually goes.
  * Picking one only adds coordinates, which is what lets the itinerary measure
  * itself without geocoding the same string again on every recalculation.
+ *
+ * Those coordinates may arrive a moment after the text does. Google charges for
+ * turning a prediction into a location, so it happens once, for the row that
+ * was chosen — the address lands in the field immediately and the point follows.
  */
 export function AddressField({
   value,
@@ -37,12 +81,21 @@ export function AddressField({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [active, setActive] = useState(-1);
+  const [unavailable, setUnavailable] = useState(false);
 
   const listId = useId();
   const boxRef = useRef<HTMLDivElement>(null);
   // Set while applying a suggestion, so the effect below does not immediately
   // fetch suggestions for the text it just wrote.
   const justPicked = useRef(false);
+  // One token spans the keystrokes leading to a selection. Created lazily so a
+  // field that is never typed into never opens a billable session.
+  const sessionToken = useRef<string | null>(null);
+
+  const session = useCallback(() => {
+    sessionToken.current ??= newSessionToken();
+    return sessionToken.current;
+  }, []);
 
   // Keep in step when the trip is reloaded or another field rewrites the stop.
   // Adjusted during render rather than in an effect: React re-renders before
@@ -51,6 +104,10 @@ export function AddressField({
   if (value !== lastExternal) {
     setLastExternal(value);
     setQuery(value);
+    setSuggestions([]);
+    setOpen(false);
+    setLoading(false);
+    setUnavailable(false);
   }
 
   useEffect(() => {
@@ -59,33 +116,54 @@ export function AddressField({
       return;
     }
 
-    // Debounced, because the provider is rate-limited and a keystroke-per-
-    // request would get the whole install blocked rather than throttled.
-    let cancelled = false;
-    const timer = setTimeout(async () => {
-      const trimmed = query.trim();
-      if (trimmed.length < 3) {
-        setSuggestions([]);
-        return;
-      }
+    const trimmed = query.trim();
+    if (trimmed.length < 3) return;
 
+    const token = session();
+    const cacheKey = `${token}|${trimmed.toLocaleLowerCase()}`;
+    const cached = suggestionCache.get(cacheKey);
+    if (cached) {
+      setSuggestions(cached);
+      setActive(-1);
+      setOpen(cached.length > 0);
+      setLoading(false);
+      setUnavailable(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const hits = await suggestAddressesAction(trimmed);
-        if (cancelled) return;
+        const response = await fetch(
+          `/api/geo/suggest?q=${encodeURIComponent(trimmed)}` +
+            `&session=${encodeURIComponent(token)}`,
+          { signal: controller.signal },
+        );
+        if (!response.ok) throw new Error("Address lookup failed");
+
+        const body = (await response.json()) as SuggestResponse;
+        const hits = body.suggestions ?? [];
+        setUnavailable(body.available === false);
+        if (body.available !== false) remember(cacheKey, hits);
         setSuggestions(hits);
         setActive(-1);
-        if (hits.length > 0) setOpen(true);
+        setOpen(hits.length > 0);
+      } catch (error) {
+        if ((error as Error).name !== "AbortError") {
+          setSuggestions([]);
+          setOpen(false);
+        }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
-    }, 450);
+    }, 200);
 
     return () => {
-      cancelled = true;
       clearTimeout(timer);
+      controller.abort();
     };
-  }, [query]);
+  }, [query, session]);
 
   useEffect(() => {
     function onPointerDown(event: PointerEvent) {
@@ -95,12 +173,45 @@ export function AddressField({
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, []);
 
-  function pick(hit: AddressSuggestion) {
+  async function pick(hit: AddressSuggestion) {
     justPicked.current = true;
     setQuery(hit.label);
-    onChange(hit.label, { lat: hit.lat, lng: hit.lng });
     setOpen(false);
     setSuggestions([]);
+
+    // Providers that send coordinates with the prediction are done here.
+    if (hit.point || !hit.placeId) {
+      onChange(hit.label, hit.point);
+      sessionToken.current = null;
+      return;
+    }
+
+    // The address is already in the field; only the point is still missing, so
+    // the operator can carry on typing dates while this finishes.
+    onChange(hit.label, null);
+    const token = session();
+    setLoading(true);
+
+    try {
+      const response = await fetch(
+        `/api/geo/resolve?placeId=${encodeURIComponent(hit.placeId)}` +
+          `&session=${encodeURIComponent(token)}`,
+      );
+      const body = (await response.json()) as ResolveResponse;
+      if (body.result) {
+        onChange(body.result.label || hit.label, {
+          lat: body.result.lat,
+          lng: body.result.lng,
+        });
+      }
+    } catch {
+      // Leaving the text without a point is survivable: the itinerary geocodes
+      // unplaced stops when it measures, and distance can still be typed in.
+    } finally {
+      setLoading(false);
+      // The selection closed this billing session; the next edit opens a new one.
+      sessionToken.current = null;
+    }
   }
 
   return (
@@ -115,11 +226,19 @@ export function AddressField({
         aria-expanded={open}
         aria-controls={listId}
         aria-autocomplete="list"
+        aria-busy={loading}
         autoComplete="off"
         onChange={(event) => {
-          setQuery(event.target.value);
+          const nextQuery = event.target.value;
+          setQuery(nextQuery);
+          setUnavailable(false);
+          if (nextQuery.trim().length < 3) {
+            setSuggestions([]);
+            setOpen(false);
+            setLoading(false);
+          }
           // Typing invalidates the coordinates: they belonged to the old text.
-          onChange(event.target.value, null);
+          onChange(nextQuery, null);
         }}
         onFocus={() => {
           if (suggestions.length > 0) setOpen(true);
@@ -135,7 +254,7 @@ export function AddressField({
           } else if (event.key === "Enter" && active >= 0) {
             event.preventDefault();
             const hit = suggestions[active];
-            if (hit) pick(hit);
+            if (hit) void pick(hit);
           } else if (event.key === "Escape") {
             setOpen(false);
           }
@@ -146,6 +265,12 @@ export function AddressField({
         <Loader2 className="absolute top-1/2 right-3 size-4 -translate-y-1/2 animate-spin text-ash" />
       )}
 
+      {unavailable && query.trim().length >= 3 && (
+        <p className="mt-1 text-[11px] text-ash">
+          Address suggestions are not configured. You can still type the full address.
+        </p>
+      )}
+
       {open && suggestions.length > 0 && (
         <ul
           id={listId}
@@ -153,19 +278,30 @@ export function AddressField({
           className="absolute z-50 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-cloud bg-signal-white py-1 shadow-lg"
         >
           {suggestions.map((hit, index) => (
-            <li key={`${hit.lat},${hit.lng},${index}`}>
+            <li key={hit.placeId ?? `${hit.label}-${index}`}>
               <button
                 type="button"
                 role="option"
                 aria-selected={index === active}
                 onMouseEnter={() => setActive(index)}
-                onClick={() => pick(hit)}
+                onClick={() => void pick(hit)}
                 className={cn(
                   "block w-full px-3 py-2 text-left text-body-sm leading-snug text-ink",
                   index === active ? "bg-mist" : "hover:bg-mist",
                 )}
               >
-                {hit.label}
+                {hit.primary ? (
+                  <>
+                    <span className="block font-medium">{hit.primary}</span>
+                    {hit.secondary && (
+                      <span className="block text-[12px] text-ash">
+                        {hit.secondary}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  hit.label
+                )}
               </button>
             </li>
           ))}

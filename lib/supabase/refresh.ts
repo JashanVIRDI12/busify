@@ -54,10 +54,12 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  // Do not remove: this call is what refreshes an expiring session.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims verifies the signed access token and still refreshes it when it
+  // is close to expiry. With Supabase's asymmetric signing keys the check is
+  // local (apart from the cached JWKS fetch), avoiding an Auth API round trip
+  // in front of every page and API request.
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const user = claimsData?.claims.sub;
 
   const { pathname, search } = request.nextUrl;
 

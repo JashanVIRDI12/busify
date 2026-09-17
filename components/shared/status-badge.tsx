@@ -13,7 +13,7 @@ import type {
  * "dormant" — and every pill carries its label, so colour is never the only
  * channel carrying meaning.
  */
-type Tone = "go" | "active" | "attention" | "dormant" | "stopped";
+export type Tone = "go" | "active" | "attention" | "dormant" | "stopped";
 
 const TONE_STYLE: Record<Tone, string> = {
   go: "bg-teal-100 text-teal-700",
@@ -66,7 +66,7 @@ const TRIP_STATUS: Record<TripStatus, { label: string; tone: Tone }> = {
   CANCELLED: { label: "Cancelled", tone: "stopped" },
 };
 
-function StatusPill({ label, tone }: { label: string; tone: Tone }) {
+export function StatusPill({ label, tone }: { label: string; tone: Tone }) {
   return (
     <span
       className={cn(
@@ -113,3 +113,15 @@ export const TRIP_REQUEST_STATUS_LABELS = Object.fromEntries(
 export const TRIP_STATUS_LABELS = Object.fromEntries(
   Object.entries(TRIP_STATUS).map(([k, v]) => [k, v.label]),
 ) as Record<TripStatus, string>;
+
+/**
+ * The status maps, exported so the handbook can print a legend from the same
+ * data the pills themselves render from. A legend maintained separately is a
+ * legend that goes stale the first time a status is renamed.
+ */
+export const STATUS_REFERENCE = {
+  VEHICLE: VEHICLE_STATUS,
+  DRIVER: DRIVER_STATUS,
+  TRIP_REQUEST: TRIP_REQUEST_STATUS,
+  TRIP: TRIP_STATUS,
+} as const;
