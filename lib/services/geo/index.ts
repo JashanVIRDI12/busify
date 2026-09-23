@@ -388,6 +388,74 @@ function googleProviderWith(key: string): GeoProvider {
         })),
       );
     },
+
+    /**
+     * The same route, asking for its shape instead of its numbers.
+     *
+     * Separate from `route` because the field mask decides what Google bills
+     * for and how much comes back: the itinerary re-measures on every edit and
+     * never needs geometry, while the map asks once and needs nothing else.
+     */
+    async routeShape(points) {
+      if (points.length < 2) return null;
+
+      const waypoint = (point: GeoPoint) => ({
+        location: { latLng: { latitude: point.lat, longitude: point.lng } },
+      });
+
+      const body = await fetchJson<{
+        routes?: { polyline?: { encodedPolyline?: string } }[];
+      }>("https://routes.googleapis.com/directions/v2:computeRoutes", {
+        method: "POST",
+        timeoutMs: 8000,
+        headers: {
+          "X-Goog-Api-Key": key,
+          "X-Goog-FieldMask": "routes.polyline.encodedPolyline",
+        },
+        body: {
+          origin: waypoint(points[0]!),
+          destination: waypoint(points[points.length - 1]!),
+          ...(points.length > 2
+            ? { intermediates: points.slice(1, -1).map(waypoint) }
+            : {}),
+          travelMode: "DRIVE",
+          routingPreference: "TRAFFIC_UNAWARE",
+        },
+      });
+
+      return body?.routes?.[0]?.polyline?.encodedPolyline ?? null;
+    },
+
+    staticMapUrl(points, shape, size) {
+      if (points.length === 0) return null;
+
+      const params = new URLSearchParams({
+        // Google caps a static map at 640 on the free tier and doubles the
+        // pixels with scale, so this asks for 640-wide at twice the density
+        // rather than a larger image it would refuse.
+        size: `${Math.min(size.width, 640)}x${Math.min(size.height, 640)}`,
+        scale: "2",
+        key,
+      });
+
+      if (shape) {
+        params.append("path", `color:0x0d8b7cbb|weight:4|enc:${shape}`);
+      }
+
+      // A label is a single character, so past nine the stop is drawn as a
+      // plain dot rather than a wrong number.
+      points.forEach((point, index) => {
+        const label = index < 9 ? `label:${index + 1}|` : "";
+        params.append(
+          "markers",
+          `color:0x12a594|${label}${point.lat},${point.lng}`,
+        );
+      });
+
+      // No centre or zoom: with markers and a path, Google frames them itself,
+      // and naming a centre would crop a long charter to its middle.
+      return `https://maps.googleapis.com/maps/api/staticmap?${params.toString()}`;
+    },
   };
 
   return provider;
