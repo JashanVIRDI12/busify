@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
 import { serverEnv } from "@/lib/env";
+import { fetchWithJwtRetry } from "@/lib/supabase/fetch";
 import type { Database } from "@/types/database";
 
 /**
@@ -19,6 +20,7 @@ export async function createClient() {
     env.NEXT_PUBLIC_SUPABASE_URL,
     env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
+      global: { fetch: fetchWithJwtRetry },
       cookies: {
         getAll() {
           return cookieStore.getAll();

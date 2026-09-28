@@ -39,24 +39,26 @@ export function StopNotes({
   if (!canEdit && !notes) return null;
 
   if (!canEdit) {
-    return <p className="mt-1 text-body-sm text-slate">{notes}</p>;
+    return <p className="mt-2 text-[12.5px] text-carbon">{notes}</p>;
   }
 
+  // Quiet until wanted: six stops means six of these, and in teal they read as
+  // six calls to action rather than one optional field each.
   if (!open) {
     return (
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-1 inline-flex items-center gap-1 rounded-md px-1 py-0.5 text-[12px] font-semibold text-teal-600 transition-colors hover:bg-teal-50 hover:text-teal-700 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-teal-500"
+        className="mt-1.5 -ml-1 inline-flex items-center gap-1 rounded-md px-1 py-0.5 text-[12px] font-medium text-slate transition-colors hover:bg-mist hover:text-teal-700 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-teal-500"
       >
         <Plus className="size-3.5" aria-hidden="true" />
-        Add Notes
+        Add note
       </button>
     );
   }
 
   return (
-    <form action={formAction} className="mt-1.5 flex items-center gap-2">
+    <form action={formAction} className="mt-2 flex items-center gap-2">
       <input type="hidden" name="id" value={stopId} />
       <Input
         name="notes"
@@ -64,7 +66,8 @@ export function StopNotes({
         placeholder="Gate, dock, who to ask for"
         defaultValue={notes ?? ""}
         disabled={pending}
-        className="h-8 max-w-sm"
+        autoFocus={!notes}
+        className="h-8 max-w-md text-[12.5px]"
         onBlur={(event) => event.currentTarget.form?.requestSubmit()}
       />
       {pending && (

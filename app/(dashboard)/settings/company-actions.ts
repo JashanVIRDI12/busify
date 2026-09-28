@@ -10,6 +10,7 @@ import {
   validationError,
   type FormState,
 } from "@/lib/forms";
+import { setDefaultGarage } from "@/lib/garages";
 import { canManage } from "@/lib/permissions";
 import {
   brandingSchema,
@@ -124,6 +125,15 @@ export async function updateDefaultsAction(
   );
 
   if (error) return databaseError(error);
+
+  // The same choice as the garage's own "default" flag; keep the badge on the
+  // Garages list pointing at the garage new quotes will actually start from.
+  await setDefaultGarage(
+    supabase,
+    session.organization.id,
+    parsed.data.default_garage_id ?? null,
+    { syncSetting: false },
+  );
 
   revalidateSettings();
   revalidatePath("/quotes");

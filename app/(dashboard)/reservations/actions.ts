@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { actionContext, databaseError } from "@/lib/auth/guard";
+import { zonedTimeToUtc } from "@/lib/datetime";
+import { RESERVATION_TIMES } from "@/lib/reservation-times";
 import {
   formDataToObject,
   formError,
@@ -15,7 +17,11 @@ import { canManage, canWrite } from "@/lib/permissions";
 import { getFleetAvailability } from "@/lib/queries/availability";
 import type { createClient } from "@/lib/supabase/server";
 import { uuid } from "@/lib/validations/shared";
-import { assignmentSchema, tripStatusSchema } from "@/lib/validations/trip";
+import {
+  assignmentSchema,
+  reservationUpdateSchema,
+  tripStatusSchema,
+} from "@/lib/validations/trip";
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
@@ -327,4 +333,160 @@ export async function setStopNotesAction(
   if (stop) revalidateTrip(stop.trip_id);
 
   return formSuccess("Note saved.");
+}
+
+/**
+ * The reservation's own facts: its name, head count, route ends, the five
+ * times of the run and its notes.
+ *
+ * Moving the times re-checks the coaches and drivers already on the job, for
+ * the same reason assigning does — a trip slid into Saturday must not quietly
+ * double-book a coach that was free on Friday.
+ */
+export async function updateReservationAction(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const { session, supabase } = await actionContext();
+
+  if (!canWrite(session.role)) {
+    return formError("Your role does not allow editing this reservation.");
+  }
+
+  const parsed = reservationUpdateSchema.safeParse(formDataToObject(formData));
+  if (!parsed.success) return validationError(parsed.error);
+
+  const input = parsed.data;
+  const timeZone = session.organization.timezone;
+
+  const { data: trip } = await supabase
+    .from("trips")
+    .select("id, status, departure_at, return_at, pickup_location, destination")
+    .eq("id", input.id)
+    .maybeSingle();
+
+  if (!trip) return formError("That reservation could not be found.");
+  if (trip.status === "CANCELLED" || trip.status === "COMPLETED") {
+    return formError("This reservation is closed, so it can no longer be edited.");
+  }
+
+  // The form submits wall-clock time in the operator's timezone.
+  const times: Record<string, string | null> = {};
+  for (const { key } of RESERVATION_TIMES) {
+    const value = input[key];
+    if (value === null) {
+      times[key] = null;
+      continue;
+    }
+    const utc = zonedTimeToUtc(value, timeZone);
+    if (!utc) return formError("Check the highlighted fields and try again.", {
+      [key]: ["Pick a valid date and time"],
+    });
+    times[key] = utc;
+  }
+  const departureAt = times.departure_at as string;
+
+  const timesMoved =
+    departureAt !== new Date(trip.departure_at).toISOString() ||
+    (times.return_at ?? null) !==
+      (trip.return_at ? new Date(trip.return_at).toISOString() : null);
+
+  if (timesMoved) {
+    const { data: assignments } = await supabase
+      .from("trip_assignments")
+      .select("vehicle_id, driver_id")
+      .eq("trip_id", trip.id);
+
+    const rows = assignments ?? [];
+    if (rows.some((row) => row.vehicle_id || row.driver_id)) {
+      const availability = await getFleetAvailability(
+        {
+          departure_at: departureAt,
+          return_at: times.return_at ?? null,
+          passenger_count: input.passenger_count,
+        },
+        { excludeTripId: trip.id },
+      );
+
+      for (const row of rows) {
+        const vehicle = availability.vehicles.find(
+          (entry) => entry.vehicle.id === row.vehicle_id,
+        );
+        if (vehicle && vehicle.reason === "On another trip these dates") {
+          return formError(
+            `${vehicle.vehicle.name} is on another trip at the new times. Unassign it first, or pick different times.`,
+          );
+        }
+        const driver = availability.drivers.find(
+          (entry) => entry.driver.id === row.driver_id,
+        );
+        // Only the date-driven reasons: leave or retirement is not something
+        // moving the trip caused, and the assignment panel already shows it.
+        const statusReason =
+          driver?.driver.status === "INACTIVE" || driver?.driver.status === "ON_LEAVE";
+        if (driver && !driver.available && !statusReason) {
+          const name = [driver.driver.first_name, driver.driver.last_name]
+            .filter(Boolean)
+            .join(" ");
+          return formError(
+            `${name} is not available at the new times — ${driver.reason?.toLowerCase()}.`,
+          );
+        }
+      }
+    }
+  }
+
+  // A picked suggestion brings its point with it. A retyped address no longer
+  // sits where its old pin did, so that pin goes; an untouched one keeps it.
+  const place = (
+    typed: string,
+    stored: string,
+    lat: number | null,
+    lng: number | null,
+  ) => {
+    if (lat !== null && lng !== null) return { lat, lng };
+    if (typed !== stored) return { lat: null, lng: null };
+    return null;
+  };
+  const pickup = place(
+    input.pickup_location,
+    trip.pickup_location,
+    input.pickup_lat,
+    input.pickup_lng,
+  );
+  const destination = place(
+    input.destination,
+    trip.destination,
+    input.destination_lat,
+    input.destination_lng,
+  );
+
+  const { error } = await supabase
+    .from("trips")
+    .update({
+      group_name: input.group_name,
+      passenger_count: input.passenger_count,
+      pickup_location: input.pickup_location,
+      destination: input.destination,
+      garage_arrival_at: times.garage_arrival_at,
+      spot_at: times.spot_at,
+      departure_at: departureAt,
+      dropoff_at: times.dropoff_at,
+      return_at: times.return_at,
+      notes: input.notes,
+      last_activity_at: new Date().toISOString(),
+      ...(pickup && { pickup_lat: pickup.lat, pickup_lng: pickup.lng }),
+      ...(destination && {
+        destination_lat: destination.lat,
+        destination_lng: destination.lng,
+      }),
+    })
+    .eq("id", trip.id);
+
+  if (error) return databaseError(error);
+
+  revalidateTrip(trip.id);
+  revalidatePath("/board");
+  revalidatePath("/dispatch");
+  return formSuccess("Reservation updated.");
 }

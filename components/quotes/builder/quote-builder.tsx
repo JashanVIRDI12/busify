@@ -2,9 +2,17 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Pencil, Plus, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  ChevronLeft,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
 
-import { QUOTE_PIPELINE_STATUS, StatusPill, pillFor } from "@/components/data/status-pill";
 import type { QuoteFile } from "@/components/quotes/builder/files-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,7 +40,7 @@ type Section = "customer" | "trip" | "payment" | "notes";
  * read as pages of one document rather than as a row of filters.
  */
 const TAB_BASE =
-  "relative -mb-px rounded-t-[10px] px-4 py-2 text-body-sm transition-colors";
+  "shrink-0 rounded-t-[10px] px-4 py-2 text-body-sm whitespace-nowrap transition-colors";
 
 function tabClass(active: boolean) {
   return cn(
@@ -83,7 +91,7 @@ function TripTabButton({
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className="text-ash opacity-0 transition-opacity group-hover:opacity-100"
+          className="text-ash opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
           aria-label={`Rename ${name}`}
         >
           <Pencil className="size-3" />
@@ -93,7 +101,7 @@ function TripTabButton({
         <button
           type="button"
           onClick={() => removeTrip(tripId)}
-          className="text-ash opacity-0 transition-opacity group-hover:opacity-100 hover:text-destructive"
+          className="text-ash opacity-0 transition-opacity group-hover:opacity-100 hover:text-destructive focus-visible:opacity-100"
           aria-label={`Delete ${name}`}
         >
           <Trash2 className="size-3" />
@@ -127,60 +135,60 @@ function BuilderShell({
 
   const activeTrip =
     state.trips.find((trip) => trip.id === activeTripId) ?? state.trips[0]!;
-  const status = pillFor(QUOTE_PIPELINE_STATUS, state.header.pipeline_status);
 
   return (
     // Full-bleed out of the page padding: the rail is chrome, and inset chrome
     // with a gutter behind it reads as a floating card rather than a sidebar.
     <div className="-mx-4 -mt-5 -mb-10 flex min-h-[calc(100dvh-3.5rem)] sm:-mx-6">
       {railOpen && (
-        <aside className="hidden w-[15rem] shrink-0 border-r border-bone bg-signal-white px-5 py-4 lg:block">
-          <div className="mb-3 flex items-center justify-between gap-2">
+        <aside className="hidden w-64 shrink-0 border-r border-bone bg-signal-white lg:block">
+          {/* Held in view on a long Pricing or Payment page: status, rep and
+              files are what an operator glances back at while filling it in.
+              The title and status already lead the page, so they are not
+              repeated here; the status is changed in its own row below. */}
+          <div className="scrollbar-slim sticky top-14 max-h-[calc(100dvh-3.5rem)] overflow-y-auto px-5 py-4">
             <Link
               href="/quotes"
-              className="inline-flex items-center text-body-sm font-medium text-carbon hover:text-ink"
+              className="-ml-1 inline-flex items-center rounded-md px-1 py-0.5 text-body-sm font-medium text-carbon transition-colors hover:bg-mist hover:text-ink"
             >
               <ChevronLeft className="size-4" />
               Quotes
             </Link>
-            <StatusPill label={status.label} tone={status.tone} />
+
+            <div className="my-3 border-t border-bone" />
+
+            <BuilderSidebar
+              quoteId={quoteId}
+              organizationId={organizationId}
+              createdAt={createdAt}
+              updatedAt={updatedAt}
+              files={files}
+            />
           </div>
-
-          <p className="mb-3 truncate text-body-sm font-semibold text-ink">
-            {state.header.title}
-          </p>
-
-          <div className="mb-3 border-t border-bone" />
-
-          <BuilderSidebar
-            quoteId={quoteId}
-            organizationId={organizationId}
-            createdAt={createdAt}
-            updatedAt={updatedAt}
-            files={files}
-          />
         </aside>
       )}
 
       <div className="min-w-0 flex-1 px-4 py-4 sm:px-6">
-        <div className="flex items-start gap-3">
-          <div className="min-w-0 flex-1">
-            <BuilderTopbar />
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setRailOpen((open) => !open)}
-            aria-label={railOpen ? "Hide the quote details" : "Show the quote details"}
-            className="hidden size-8 shrink-0 items-center justify-center rounded-full border border-bone bg-signal-white text-slate transition-colors hover:text-ink lg:flex"
-          >
-            {railOpen ? (
-              <ChevronLeft className="size-4" />
-            ) : (
-              <ChevronRight className="size-4" />
-            )}
-          </button>
-        </div>
+        <BuilderTopbar
+          leading={
+            // Beside the title, on the side the rail opens from, rather than at
+            // the far end of the page away from the thing it moves.
+            <button
+              type="button"
+              onClick={() => setRailOpen((open) => !open)}
+              aria-label={railOpen ? "Hide the quote details" : "Show the quote details"}
+              aria-expanded={railOpen}
+              title={railOpen ? "Hide the quote details" : "Show the quote details"}
+              className="hidden size-8 shrink-0 items-center justify-center rounded-md text-ash transition-colors hover:bg-signal-white hover:text-ink lg:flex"
+            >
+              {railOpen ? (
+                <PanelLeftClose className="size-4" />
+              ) : (
+                <PanelLeftOpen className="size-4" />
+              )}
+            </button>
+          }
+        />
 
         {error && (
           <div className="mt-3 rounded-lg border border-destructive/25 bg-destructive/5 px-4 py-2 text-body-sm text-destructive">
@@ -188,7 +196,10 @@ function BuilderShell({
           </div>
         )}
 
-        <div className="mt-4 flex flex-wrap items-end gap-1">
+        {/* Scrolls sideways on a phone rather than wrapping Add Trip onto a line
+            of its own. The strip overlaps the panel by a pixel, so the active
+            chip closes over the panel's top edge instead of sitting on it. */}
+        <div className="relative -mb-px mt-4 flex items-end gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <button
             type="button"
             className={tabClass(section === "customer")}
@@ -232,7 +243,7 @@ function BuilderShell({
                 addTrip();
                 setSection("trip");
               }}
-              className="ml-1 inline-flex items-center gap-1 px-3 py-2 text-body-sm font-medium text-orange-600 hover:text-orange-700"
+              className="ml-1 inline-flex shrink-0 items-center gap-1 px-3 py-2 text-body-sm font-medium whitespace-nowrap text-orange-600 hover:text-orange-700"
             >
               <Plus className="size-4" /> Add Trip
             </button>
@@ -267,13 +278,13 @@ function BuilderShell({
               {section === "customer" && <span />}
               {section === "payment" && (
                 <Button variant="outline" onClick={() => setSection("trip")}>
-                  <ChevronLeft />
+                  <ArrowLeft />
                   {activeTrip.name}
                 </Button>
               )}
               {section === "notes" && (
                 <Button variant="outline" onClick={() => setSection("payment")}>
-                  <ChevronLeft />
+                  <ArrowLeft />
                   Payment
                 </Button>
               )}
@@ -281,13 +292,13 @@ function BuilderShell({
               {section === "customer" && (
                 <Button variant="outline" onClick={() => setSection("trip")}>
                   {activeTrip.name}
-                  <ChevronRight />
+                  <ArrowRight />
                 </Button>
               )}
               {section === "payment" && (
                 <Button variant="outline" onClick={() => setSection("notes")}>
                   Notes
-                  <ChevronRight />
+                  <ArrowRight />
                 </Button>
               )}
             </div>

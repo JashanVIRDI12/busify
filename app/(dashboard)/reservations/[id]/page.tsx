@@ -11,10 +11,10 @@ import {
   Users,
 } from "lucide-react";
 
-import { PageHeader } from "@/components/shared/page-header";
-import { TripStatusBadge } from "@/components/shared/status-badge";
 import { AssignmentPanel } from "@/components/trips/assignment-panel";
+import { ReservationHeader } from "@/components/reservations/reservation-header";
 import { ReservationSummary } from "@/components/reservations/reservation-summary";
+import { stopMarkers } from "@/components/reservations/stop-timeline";
 import { ReservationTabs } from "@/components/reservations/reservation-tabs";
 import {
   DriverPayPanel,
@@ -35,7 +35,12 @@ import {
 import { requireSession } from "@/lib/auth/session";
 import { dayKey } from "@/lib/calendar";
 import { civilDate } from "@/lib/date-filters";
-import { daysBetweenDates, formatDateTime, relativeDays } from "@/lib/datetime";
+import {
+  daysBetweenDates,
+  formatDateTime,
+  minutesBetween,
+  relativeDays,
+} from "@/lib/datetime";
 import { canWrite, canWriteFinance } from "@/lib/permissions";
 import { getFleetAvailability } from "@/lib/queries/availability";
 import { getReservationTabData } from "@/lib/queries/reservation-tabs";
@@ -51,7 +56,7 @@ export async function generateMetadata({
   const detail = await getTrip(id);
   return {
     title: detail
-      ? `${detail.trip.reference ?? detail.trip.pickup_location} · ${detail.trip.destination}`
+      ? `${detail.trip.reference ?? detail.trip.pickup_location} · ${detail.trip.group_name ?? detail.trip.destination}`
       : "Reservation",
   };
 }
@@ -76,7 +81,7 @@ export default async function TripDetailPage({
     // Exclude this trip from the conflict set, or its own coaches would report
     // as busy with themselves.
     getFleetAvailability(trip, { excludeTripId: trip.id }),
-    getReservationTabData(trip.id, trip.quote_id),
+    getReservationTabData(trip.id, trip.quote_id, trip.quote_trip_id),
   ]);
 
   const assignedVehicleIds = new Set(
@@ -134,13 +139,26 @@ export default async function TripDetailPage({
    * the line then runs between the ones that do, which is honest about what is
    * known rather than dropping a pin in the Atlantic at 0°N 0°E.
    */
+  // Pins carry the itinerary's own numbering, so "2" is the same stop in the
+  // list and on the map, and the yard is G on both.
+  const markers = stopMarkers(tabs.stops);
   const stopPoints = tabs.stops
-    .map((stop) => ({
+    .map((stop, index) => ({
       lat: Number(stop.latitude),
       lng: Number(stop.longitude),
       label: stop.label ?? stop.address ?? undefined,
+      marker: markers[index],
     }))
-    .filter((point) => Number.isFinite(point.lat) && point.lat !== 0);
+    .filter(
+      (point) =>
+        Number.isFinite(point.lat) && point.lat !== 0 && Number.isFinite(point.lng),
+    );
+
+  // The whole commitment, yard out to yard back — what the coach is gone for.
+  const yardToYardMinutes = minutesBetween(
+    trip.garage_arrival_at ?? trip.departure_at,
+    trip.return_at ?? trip.dropoff_at ?? trip.departure_at,
+  );
 
   const mapPoints =
     stopPoints.length > 0
@@ -354,15 +372,31 @@ export default async function TripDetailPage({
         </Link>
       </Button>
 
-      <PageHeader
-        eyebrow="Reservation"
-        title={`${trip.pickup_location} → ${trip.destination}`}
-        description={`Departs ${formatDateTime(trip.departure_at, timeZone)} · ${relativeDays(trip.departure_at, timeZone)}`}
-        actions={<TripStatusBadge status={trip.status} />}
+      <ReservationHeader
+        trip={trip}
+        timeZone={timeZone}
+        canEdit={writeAllowed && !locked}
       />
 
       <ReservationSummary
         trip={trip}
+        crew={{
+          coaches: assignments
+            .map((entry) => entry.vehicle?.name)
+            .filter((name): name is string => Boolean(name)),
+          drivers: assignments.flatMap((entry) =>
+            entry.driver
+              ? [
+                  {
+                    name: [entry.driver.first_name, entry.driver.last_name]
+                      .filter(Boolean)
+                      .join(" "),
+                    phone: entry.driver.phone,
+                  },
+                ]
+              : [],
+          ),
+        }}
         currency={organization.currency}
         timeZone={timeZone}
         canInvoice={canWriteFinance(role)}
@@ -377,11 +411,13 @@ export default async function TripDetailPage({
               <TrackingPanel
                 points={mapPoints}
                 stops={tabs.stops}
+                legs={tabs.legs}
                 timeZone={timeZone}
                 canEdit={writeAllowed}
                 plannedMiles={Number(trip.planned_miles ?? 0)}
                 plannedMinutes={Number(trip.planned_minutes ?? 0)}
                 plannedDays={plannedDays}
+                yardToYardMinutes={yardToYardMinutes}
               />
             ),
           },

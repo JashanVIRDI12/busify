@@ -234,6 +234,38 @@ export function formatWeekdayStamp(
   return `${weekday}, ${formatStampDate(iso, timeZone, { shortYear: true })}`;
 }
 
+/** `Sat, Oct 10` — a day heading on the operator's clock. */
+export function formatDayLabel(
+  iso: string | null | undefined,
+  timeZone: string,
+): string {
+  if (!iso) return "";
+  const instant = new Date(iso);
+  if (Number.isNaN(instant.getTime())) return "";
+
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  }).format(instant);
+}
+
+/**
+ * `45m` / `2h 30m` / `2d 2h 15m` — a span that may run past a day, where
+ * `50h 15m` would make the reader do the division.
+ */
+export function formatSpan(minutes: number): string {
+  const safe = Math.max(0, Math.round(minutes));
+  const days = Math.floor(safe / 1440);
+  const hours = Math.floor((safe % 1440) / 60);
+  const mins = safe % 60;
+
+  return [days && `${days}d`, hours && `${hours}h`, (mins || safe === 0) && `${mins}m`]
+    .filter(Boolean)
+    .join(" ");
+}
+
 /** Minutes between two instants, floored at zero. */
 export function minutesBetween(startIso: string, endIso: string): number {
   const start = new Date(startIso).getTime();

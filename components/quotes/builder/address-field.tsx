@@ -63,15 +63,20 @@ function newSessionToken(): string {
  * was chosen — the address lands in the field immediately and the point follows.
  */
 export function AddressField({
+  id,
   value,
   placeholder = "Address",
   disabled,
+  invalid,
   className,
   onChange,
 }: {
+  /** Lets a surrounding `<Field>` label point at the input. */
+  id?: string;
   value: string;
   placeholder?: string;
   disabled?: boolean;
+  invalid?: boolean;
   className?: string;
   /** Coordinates are null when the text was typed rather than chosen. */
   onChange: (address: string, point: { lat: number; lng: number } | null) => void;
@@ -218,9 +223,11 @@ export function AddressField({
     <div ref={boxRef} className={cn("relative", className)}>
       <MapPin className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ash" />
       <Input
+        id={id}
         value={query}
         placeholder={placeholder}
         disabled={disabled}
+        aria-invalid={invalid || undefined}
         className="pl-9"
         role="combobox"
         aria-expanded={open}

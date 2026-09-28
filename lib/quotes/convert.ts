@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { zonedTimeToUtc } from "@/lib/datetime";
+import { garageAddressLine } from "@/lib/garages";
 import type { Database } from "@/types/database";
 
 type Client = SupabaseClient<Database>;
@@ -66,7 +67,7 @@ export async function convertQuoteToReservations(
        departing_garage_id, departing_date, departing_time,
        returning_garage_id, returning_date, returning_time,
        notes, total_miles, estimated_minutes,
-       quote_trip_stops(position, kind, label, address, latitude, longitude, stop_date, stop_time, spot_time),
+       quote_trip_stops(position, kind, label, address, latitude, longitude, stop_date, stop_time, spot_time, dwell_minutes),
        quote_trip_vehicles(position, vehicle_id, vehicle_type_id, quantity)`,
     )
     .eq("quote_id", quoteId)
@@ -89,14 +90,26 @@ export async function convertQuoteToReservations(
     ),
   ];
 
-  const garageNames = new Map<string, string>();
+  // Where each yard is, not only what it is called, so the run the board and
+  // the map show starts and ends at a real place like every other stop.
+  const garagesById = new Map<
+    string,
+    { name: string; address: string | null; latitude: number | null; longitude: number | null }
+  >();
   if (garageIds.length > 0) {
     const { data: garages } = await supabase
       .from("garages")
-      .select("id, name")
+      .select("id, name, address, city, province, postal_code, latitude, longitude")
       .in("id", garageIds);
 
-    for (const garage of garages ?? []) garageNames.set(garage.id, garage.name);
+    for (const garage of garages ?? []) {
+      garagesById.set(garage.id, {
+        name: garage.name,
+        address: garageAddressLine(garage) || null,
+        latitude: coordinate(garage.latitude),
+        longitude: coordinate(garage.longitude),
+      });
+    }
   }
 
   const tripIds: string[] = [];
@@ -119,7 +132,9 @@ export async function convertQuoteToReservations(
     const departureAt =
       combine(first?.stop_date, first?.stop_time, timeZone) ??
       combine(trip.departing_date, trip.departing_time, timeZone) ??
-      quote.pickup_at;
+      quote.pickup_at ??
+      // A dated pickup with no time yet still books the right day.
+      combine(first?.stop_date, "00:00", timeZone);
 
     if (!departureAt) {
       return {
@@ -216,11 +231,11 @@ export async function convertQuoteToReservations(
     }[] = [];
 
     const outGarage = trip.departing_garage_id
-      ? (garageNames.get(trip.departing_garage_id) ?? "Garage")
-      : null;
+      ? garagesById.get(trip.departing_garage_id)
+      : undefined;
     const backGarage = trip.returning_garage_id
-      ? (garageNames.get(trip.returning_garage_id) ?? "Garage")
-      : null;
+      ? garagesById.get(trip.returning_garage_id)
+      : undefined;
     const garageOutAt = combine(
       trip.departing_date,
       trip.departing_time,
@@ -233,16 +248,25 @@ export async function convertQuoteToReservations(
         trip_id: created.id,
         position: -1,
         kind: "GARAGE_OUT",
-        label: outGarage,
-        address: null,
-        latitude: null,
-        longitude: null,
+        label: outGarage?.name ?? "Garage",
+        address: outGarage?.address ?? null,
+        latitude: outGarage?.latitude ?? null,
+        longitude: outGarage?.longitude ?? null,
         arrive_at: garageOutAt,
         depart_at: garageOutAt,
       });
     }
 
     stops.forEach((stop, index) => {
+      const at = combine(stop.stop_date, stop.stop_time, timeZone);
+      // A stop's time is when the coach gets there; waiting holds it until the
+      // wait is over. The first stop's time is already its departure.
+      const wait = index > 0 ? Number(stop.dwell_minutes ?? 0) : 0;
+      const departAt =
+        at && wait > 0
+          ? new Date(new Date(at).getTime() + wait * 60_000).toISOString()
+          : at;
+
       stopRows.push({
         organization_id: quote.organization_id,
         trip_id: created.id,
@@ -257,12 +281,10 @@ export async function convertQuoteToReservations(
         address: stop.address,
         latitude: coordinate(stop.latitude),
         longitude: coordinate(stop.longitude),
-        // Spot time is when the coach is standing there; the stop time is when
-        // it leaves. A stop with no spot time arrives when it departs.
-        arrive_at:
-          combine(stop.stop_date, stop.spot_time, timeZone) ??
-          combine(stop.stop_date, stop.stop_time, timeZone),
-        depart_at: combine(stop.stop_date, stop.stop_time, timeZone),
+        // Spot time is when the coach is standing at the pickup; elsewhere the
+        // stop time is the arrival.
+        arrive_at: combine(stop.stop_date, stop.spot_time, timeZone) ?? at,
+        depart_at: departAt,
       });
     });
 
@@ -272,10 +294,10 @@ export async function convertQuoteToReservations(
         trip_id: created.id,
         position: 9999,
         kind: "GARAGE_IN",
-        label: backGarage,
-        address: null,
-        latitude: null,
-        longitude: null,
+        label: backGarage?.name ?? "Garage",
+        address: backGarage?.address ?? null,
+        latitude: backGarage?.latitude ?? null,
+        longitude: backGarage?.longitude ?? null,
         arrive_at: returnAt,
         depart_at: null,
       });
@@ -340,8 +362,11 @@ function combine(
   time: string | null | undefined,
   timeZone: string,
 ): string | null {
-  if (!date) return null;
-  return zonedTimeToUtc(`${date}T${(time ?? "00:00").slice(0, 5)}`, timeZone);
+  // A missing time is unknown, not midnight. Defaulting it made every
+  // `combine(a) ?? combine(b)` fallback dead — a stop with no spot time
+  // "arrived" at 00:00 instead of at its stop time.
+  if (!date || !time) return null;
+  return zonedTimeToUtc(`${date}T${time.slice(0, 5)}`, timeZone);
 }
 
 /**

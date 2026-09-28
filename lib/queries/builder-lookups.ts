@@ -2,6 +2,7 @@ import "server-only";
 
 import type { BuilderLookups } from "@/components/quotes/builder/builder-context";
 import type { Organization } from "@/lib/auth/session";
+import { garageAddressLine } from "@/lib/garages";
 import { getOrganizationSettings } from "@/lib/queries/settings";
 import { createClient } from "@/lib/supabase/server";
 
@@ -32,7 +33,12 @@ export async function getBuilderLookups(
     { data: charges },
     { data: rateCard },
   ] = await Promise.all([
-    supabase.from("garages").select("id, name, address").order("name"),
+    supabase
+      .from("garages")
+      .select(
+        "id, name, address, city, province, postal_code, latitude, longitude, is_default",
+      )
+      .order("name"),
     supabase
       .from("contract_terms")
       .select("id, name, body, is_default")
@@ -91,7 +97,13 @@ export async function getBuilderLookups(
     garages: (garages ?? []).map((garage) => ({
       id: garage.id,
       name: garage.name,
-      address: garage.address,
+      // The whole address rather than the street: it is what the router looks
+      // the yard up by when the garage was saved without a location.
+      address: garageAddressLine(garage) || null,
+      point:
+        garage.latitude != null && garage.longitude != null
+          ? { lat: Number(garage.latitude), lng: Number(garage.longitude) }
+          : null,
     })),
     contractTerms: contractTerms ?? [],
     vehicleTypes: (vehicleTypes ?? []).map((type) => {
@@ -118,5 +130,12 @@ export async function getBuilderLookups(
     gstNumber: organization.gst_hst_number,
   };
 
-  return { lookups, settings };
+  // A garage flagged as the default counts even when Settings names none, so a
+  // new quote starts from the yard the Garages list says it will.
+  const defaultGarageId =
+    settings.default_garage_id ??
+    (garages ?? []).find((garage) => garage.is_default)?.id ??
+    null;
+
+  return { lookups, settings: { ...settings, default_garage_id: defaultGarageId } };
 }

@@ -25,9 +25,11 @@ import { autoKey, type AutoSchedule } from "./use-auto-schedule";
  * One stop on the itinerary.
  *
  * The row asks four things — where, what to call it, which day, what time —
- * and folds everything else away. Spot times, waiting time and notes matter on
- * perhaps one trip in five, and a field that is visible is a field an operator
- * has to decide about, even when the decision is "not this time".
+ * and folds everything else away. Waiting time and notes matter on perhaps one
+ * trip in five, and a field that is visible is a field an operator has to
+ * decide about, even when the decision is "not this time". The pickup's spot
+ * time is the exception: it is what the coach is dispatched to, so it stays in
+ * view, filled in from the departure until someone types over it.
  *
  * The pickup and dropoff are tinted and cannot be deleted: every charter has
  * them, and a stop list that can be emptied to nothing is not an itinerary.
@@ -63,7 +65,6 @@ export function StopRow({
   const { setStop, removeStop, canEdit } = useBuilder();
   const controls = useDragControls();
 
-  const [showSpot, setShowSpot] = useState(Boolean(stop.spot_time));
   const [showDwell, setShowDwell] = useState(Boolean(stop.dwell_minutes));
   const [showNotes, setShowNotes] = useState(Boolean(stop.notes));
 
@@ -76,6 +77,8 @@ export function StopRow({
 
   const arriveKey = autoKey.arrive(stop.id);
   const timeIsAuto = !isFirst && schedule.isAuto(arriveKey, stop.stop_time);
+  const dateIsAuto =
+    !isFirst && schedule.isAuto(autoKey.arriveDate(stop.id), stop.stop_date);
   const spotIsAuto = schedule.isAuto(autoKey.spot(stop.id), stop.spot_time);
   const canRevertTime = canEdit && !isFirst && !timeIsAuto && Boolean(stop.stop_time);
 
@@ -170,7 +173,7 @@ export function StopRow({
         <DateField
           value={stop.stop_date}
           disabled={!canEdit}
-          auto={timeIsAuto}
+          auto={dateIsAuto}
           onChange={(value) => setStop(trip.id, stop.id, { stop_date: value })}
         />
 
@@ -194,7 +197,7 @@ export function StopRow({
 
       {/* Everything optional, folded until asked for. */}
       <div className="mt-2 flex flex-wrap items-center gap-x-1 gap-y-2">
-        {isFirst && (showSpot || stop.spot_time) ? (
+        {isFirst && (canEdit || stop.spot_time) && (
           <TimeField
             className="w-44"
             label="Spot Time"
@@ -203,14 +206,6 @@ export function StopRow({
             auto={spotIsAuto}
             onChange={(value) => setStop(trip.id, stop.id, { spot_time: value })}
           />
-        ) : (
-          isFirst &&
-          canEdit && (
-            <DisclosureButton
-              label="Add Spot Time"
-              onClick={() => setShowSpot(true)}
-            />
-          )
         )}
 
         {!isLast && (showDwell || stop.dwell_minutes) ? (

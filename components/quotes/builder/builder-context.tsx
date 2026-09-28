@@ -35,7 +35,14 @@ import type { PaymentMethodKind } from "@/types/database";
 
 export type BuilderLookups = {
   salesReps: { id: string; name: string }[];
-  garages: { id: string; name: string; address: string | null }[];
+  garages: {
+    id: string;
+    name: string;
+    /** One line, street to postal code. */
+    address: string | null;
+    /** Where the yard was placed when it was saved; null if it never was. */
+    point: { lat: number; lng: number } | null;
+  }[];
   contractTerms: { id: string; name: string; body: string; is_default: boolean }[];
   vehicleTypes: {
     id: string;

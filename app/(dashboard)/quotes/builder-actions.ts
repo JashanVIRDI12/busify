@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { actionContext, databaseError } from "@/lib/auth/guard";
 import { zonedTimeToUtc } from "@/lib/datetime";
 import type { FormState } from "@/lib/forms";
+import { resolveDefaultGarageId } from "@/lib/garages";
 import { canWriteFinance } from "@/lib/permissions";
 import { toMajor } from "@/lib/pricing";
 import { rollUpQuote, type TripPricingResult } from "@/lib/pricing/quote";
@@ -175,6 +176,11 @@ async function seedQuote(options: {
       .maybeSingle(),
   ]);
 
+  const defaultGarageId = await resolveDefaultGarageId(
+    supabase,
+    settings?.default_garage_id,
+  );
+
   const quoteInsert: TablesInsert<"quotes"> = {
     organization_id: org.id,
     trip_request_id: request?.id ?? null,
@@ -222,8 +228,8 @@ async function seedQuote(options: {
       trip_type: request ? (request.return_at ? "ROUND_TRIP" : "ONE_WAY") : null,
       passenger_count: request?.passenger_count ?? null,
       notes: request?.special_requirements ?? null,
-      departing_garage_id: settings?.default_garage_id ?? null,
-      returning_garage_id: settings?.default_garage_id ?? null,
+      departing_garage_id: defaultGarageId,
+      returning_garage_id: defaultGarageId,
     })
     .select("id")
     .single();

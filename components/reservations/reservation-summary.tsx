@@ -1,9 +1,15 @@
 import Link from "next/link";
-import { FileText } from "lucide-react";
+import { BusFront, FileText, UserRound } from "lucide-react";
 
 import { StatusPill } from "@/components/data/status-pill";
 import { Button } from "@/components/ui/button";
-import { formatStamp } from "@/lib/datetime";
+import {
+  formatDayLabel,
+  formatSpan,
+  formatStamp,
+  formatStampTime,
+  minutesBetween,
+} from "@/lib/datetime";
 import { cn, formatMoney } from "@/lib/utils";
 import type { Tables } from "@/types/database";
 
@@ -16,119 +22,216 @@ const PAYMENT = {
   REFUNDED: { label: "Refunded", tone: "neutral" },
 } as const;
 
+type Milestone = { label: string; at: string; yard: boolean };
+
 /**
  * The commercial and operational facts of a reservation, above the itinerary.
  *
  * These live together because they are read together: a dispatcher opening a
- * job wants to know what time the coach leaves the yard, and whether the
- * customer has paid, before they read a single stop.
+ * job wants to know when the coach leaves the yard, and whether the customer
+ * has paid, before they read a single stop. The run leads, because it is read
+ * on every visit; the money sits beside it, because it is read on some.
  */
 export function ReservationSummary({
   trip,
+  crew,
   currency,
   timeZone,
   canInvoice,
 }: {
   trip: Trip;
+  /** Who is on the job; empty lists read as a gap to fill. */
+  crew: {
+    coaches: string[];
+    drivers: { name: string; phone: string | null }[];
+  };
   currency: string;
   timeZone: string;
   canInvoice: boolean;
 }) {
   const payment = PAYMENT[trip.payment_status];
+  const total = Number(trip.total_due);
+  const collected = Number(trip.amount_paid);
   const balance = Number(trip.balance_due);
+  const share = total > 0 ? Math.min(1, Math.max(0, collected / total)) : 0;
+  const money = (value: number) => formatMoney(value, currency, { precise: true });
 
-  const clock = [
-    { label: "Garage arrival", at: trip.garage_arrival_at },
-    { label: "Spot", at: trip.spot_at },
-    { label: "Departure", at: trip.departure_at },
-    { label: "Drop-off", at: trip.dropoff_at },
-    { label: "Return", at: trip.return_at },
-  ].filter((entry) => entry.at);
+  // The day as the driver lives it. The yard ends are the operator's own
+  // movements and are drawn hollow; the middle three are the customer's.
+  const milestones = (
+    [
+      { label: "Leaves yard", at: trip.garage_arrival_at, yard: true },
+      { label: "Spot", at: trip.spot_at, yard: false },
+      { label: "Departs", at: trip.departure_at, yard: false },
+      { label: "Last drop-off", at: trip.dropoff_at, yard: false },
+      { label: "Back in yard", at: trip.return_at, yard: true },
+    ] as { label: string; at: string | null; yard: boolean }[]
+  ).filter((entry): entry is Milestone => Boolean(entry.at));
+
+  const first = milestones[0]?.at ?? null;
+  const last = milestones.at(-1)?.at ?? null;
+  const firstDay = formatDayLabel(first, timeZone);
+  const lastDay = formatDayLabel(last, timeZone);
+  const span = first && last ? minutesBetween(first, last) : 0;
 
   return (
-    <div className="panel p-5">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-[12.5px] text-slate">Reservation</p>
-          <p className="tabular text-heading-sm font-semibold text-ink">
-            {trip.reference ?? "Unnumbered"}
-          </p>
-          {trip.group_name && (
-            <p className="mt-0.5 text-body-sm text-carbon">{trip.group_name}</p>
+    <section className="panel grid lg:grid-cols-[minmax(0,1fr)_minmax(17rem,22rem)]">
+      <div className="flex flex-col p-5 sm:p-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h2 className="text-body-sm font-semibold text-ink">The run</h2>
+          {first && (
+            <p className="tabular text-[12px] text-slate">
+              {firstDay}
+              {lastDay !== firstDay && ` – ${lastDay}`}
+              {span > 0 && ` · ${formatSpan(span)} yard to yard`}
+            </p>
           )}
         </div>
 
-        {canInvoice && Number(trip.total_due) > 0 && (
-          <Button variant="outline" size="sm" asChild>
-            <Link
-              href={`/reservations/${trip.id}/invoice`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <FileText className="size-3.5" />
-              Invoice PDF
-            </Link>
-          </Button>
-        )}
-      </div>
+        {milestones.length > 0 ? (
+          <ol className="mt-4 grid grid-cols-2 gap-x-4 gap-y-4 sm:grid-cols-3 lg:grid-cols-5 lg:gap-x-0">
+            {milestones.map((entry, index) => {
+              const day = formatDayLabel(entry.at, timeZone);
+              const dayChanged = day !== formatDayLabel(milestones[index - 1]?.at ?? first, timeZone);
 
-      <div className="mt-4 grid gap-4 border-t border-bone pt-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Fact label="Invoiced" value={formatMoney(trip.total_due, currency, { precise: true })} />
-        <Fact label="Collected" value={formatMoney(trip.amount_paid, currency, { precise: true })} />
-        <Fact
-          label="Balance"
-          value={formatMoney(balance, currency, { precise: true })}
-          emphasis={balance > 0}
-        />
-        <div>
-          <p className="text-[12px] text-slate">Payment</p>
-          <p className="mt-1 flex flex-wrap items-center gap-2">
-            <StatusPill label={payment.label} tone={payment.tone} />
-            <span className="text-[11.5px] text-ash">
-              {trip.invoice_sent_at
-                ? `Invoiced ${formatStamp(trip.invoice_sent_at, timeZone, { shortYear: true, withZone: false })}`
-                : "Not invoiced"}
-            </span>
+              return (
+                <li key={entry.label} className="min-w-0">
+                  <div className="flex items-center" aria-hidden="true">
+                    <span
+                      className={cn(
+                        "size-2.5 shrink-0 rounded-full",
+                        entry.yard
+                          ? "border-2 border-fog bg-signal-white"
+                          : "bg-teal-500",
+                      )}
+                    />
+                    {index < milestones.length - 1 && (
+                      <span className="mx-2 hidden h-px flex-1 bg-cloud lg:block" />
+                    )}
+                  </div>
+                  <p className="mt-2 text-[12px] text-slate">{entry.label}</p>
+                  <p className="tabular text-body font-semibold whitespace-nowrap text-ink">
+                    {formatStampTime(entry.at, timeZone)}
+                  </p>
+                  {dayChanged && (
+                    <p className="tabular text-[11px] text-slate">{day}</p>
+                  )}
+                </li>
+              );
+            })}
+          </ol>
+        ) : (
+          <p className="mt-3 text-body-sm text-slate">
+            No times yet. They come across from the quote&apos;s itinerary when
+            it is converted.
           </p>
-        </div>
+        )}
+
+        {/* The next question after "when" is "who". Level with the invoice row
+            opposite, so both halves of the card end on the same line. */}
+        <dl className="mt-5 flex min-h-11 flex-wrap items-center gap-x-8 gap-y-2 border-t border-bone pt-3 text-body-sm lg:mt-auto">
+          <CrewFact icon={<BusFront />} label="Coach" names={crew.coaches} />
+          <CrewFact icon={<UserRound />} label="Driver" names={crew.drivers.map((d) => d.name)}>
+            {crew.drivers.length > 0 &&
+              crew.drivers.map((driver, index) => (
+                <span key={index}>
+                  {index > 0 && ", "}
+                  {driver.name}
+                  {driver.phone && (
+                    <a
+                      href={`tel:${driver.phone.replace(/[^\d+]/g, "")}`}
+                      className="tabular ml-2 font-normal text-slate hover:text-teal-600 hover:underline"
+                    >
+                      {driver.phone}
+                    </a>
+                  )}
+                </span>
+              ))}
+          </CrewFact>
+        </dl>
       </div>
 
-      {clock.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-x-8 gap-y-3 border-t border-bone pt-4">
-          {clock.map((entry) => (
-            <div key={entry.label}>
-              <p className="text-[12px] text-slate">{entry.label}</p>
-              <p className="tabular mt-0.5 text-body-sm text-ink">
-                {formatStamp(entry.at!, timeZone)}
-              </p>
-            </div>
-          ))}
+      <div className="border-t border-bone p-5 sm:p-6 lg:border-t-0 lg:border-l">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-body-sm font-semibold text-ink">Payment</h2>
+          <StatusPill label={payment.label} tone={payment.tone} />
         </div>
-      )}
-    </div>
+
+        {total > 0 ? (
+          <>
+            <p className="mt-3 text-[12px] text-slate">
+              {balance > 0 ? "Balance due" : "Balance"}
+            </p>
+            <p
+              className={cn(
+                "tabular text-subheading font-semibold",
+                balance > 0 ? "text-orange-600" : "text-teal-600",
+              )}
+            >
+              {balance > 0 ? money(balance) : "Paid in full"}
+            </p>
+
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-bone" aria-hidden="true">
+              <div
+                className="h-full rounded-full bg-teal-500"
+                style={{ width: `${share * 100}%` }}
+              />
+            </div>
+            <p className="tabular mt-2 text-[12px] text-slate">
+              {money(collected)} of {money(total)} collected
+            </p>
+          </>
+        ) : (
+          <p className="mt-3 text-body-sm text-slate">No charges on this reservation yet.</p>
+        )}
+
+        <div className="mt-4 flex min-h-11 flex-wrap items-center justify-between gap-2 border-t border-bone pt-3">
+          <span className="text-[12px] text-slate">
+            {trip.invoice_sent_at
+              ? `Invoiced ${formatStamp(trip.invoice_sent_at, timeZone, { shortYear: true, withZone: false })}`
+              : "Not invoiced yet"}
+          </span>
+          {canInvoice && total > 0 && (
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`/reservations/${trip.id}/invoice`} target="_blank" rel="noreferrer">
+                <FileText className="size-3.5" aria-hidden="true" />
+                Invoice PDF
+              </Link>
+            </Button>
+          )}
+        </div>
+      </div>
+    </section>
   );
 }
 
-function Fact({
+/** A coach or a driver line; unassigned reads orange, as a gap to fill. */
+function CrewFact({
+  icon,
   label,
-  value,
-  emphasis = false,
+  names,
+  children,
 }: {
+  icon: React.ReactNode;
   label: string;
-  value: string;
-  emphasis?: boolean;
+  names: string[];
+  /** Richer rendering of the names, e.g. with a phone number beside each. */
+  children?: React.ReactNode;
 }) {
   return (
-    <div>
-      <p className="text-[12px] text-slate">{label}</p>
-      <p
+    <div className="flex min-w-0 items-center gap-2">
+      <dt className="inline-flex items-center gap-1.5 text-slate [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-ash">
+        {icon}
+        {label}
+      </dt>
+      <dd
         className={cn(
-          "tabular mt-1 text-subheading font-semibold",
-          emphasis ? "text-orange-600" : "text-ink",
+          "truncate font-medium",
+          names.length > 0 ? "text-ink" : "text-orange-600",
         )}
       >
-        {value}
-      </p>
+        {names.length > 0 ? (children ?? names.join(", ")) : "Not assigned"}
+      </dd>
     </div>
   );
 }

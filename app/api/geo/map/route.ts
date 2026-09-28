@@ -41,6 +41,12 @@ const pathSchema = z
 
 const sizeSchema = z.coerce.number().int().min(160).max(1280);
 
+/** `G,1,2,G` — one pin label per point; single characters only. */
+const labelsSchema = z
+  .string()
+  .regex(/^[A-Z0-9](,[A-Z0-9])*$/)
+  .transform((value) => value.split(","));
+
 /**
  * An image of a reservation's route.
  *
@@ -82,10 +88,18 @@ export async function GET(request: NextRequest) {
       ? await provider.routeShape(points)
       : null;
 
-  const url = provider.staticMapUrl(points, shape, {
-    width: width.success ? width.data : 640,
-    height: height.success ? height.data : 420,
-  });
+  // Ignored unless there is exactly one per point; numbering is the fallback.
+  const labels = labelsSchema.safeParse(params.get("labels"));
+
+  const url = provider.staticMapUrl(
+    points,
+    shape,
+    {
+      width: width.success ? width.data : 640,
+      height: height.success ? height.data : 420,
+    },
+    labels.success && labels.data.length === points.length ? labels.data : undefined,
+  );
 
   if (!url) {
     return NextResponse.json(

@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 import { Reorder } from "framer-motion";
-import { Loader2, Plus, Route } from "lucide-react";
+import { Loader2, MapPinOff, Plus, Route } from "lucide-react";
 
 import type { QuoteStopInput, QuoteTripInput } from "@/lib/validations/quote-builder";
 
@@ -31,7 +32,7 @@ export function Itinerary({
   schedule: AutoSchedule;
 }) {
   const { reorderStops, addStop, setTrip, canEdit } = useBuilder();
-  const routing = useAutoRoute(trip);
+  const { state: routing, unplacedGarage } = useAutoRoute(trip);
 
   // Recompute the trip's distance/time totals from the legs.
   useEffect(() => {
@@ -164,6 +165,26 @@ export function Itinerary({
               Could not measure this route — enter the distances by hand.
             </>
           )}
+        </p>
+      )}
+
+      {/*
+        Without this, a yard that cannot be placed just reads as a trip with no
+        deadhead — the one number an operator has no reason to doubt.
+      */}
+      {canEdit && unplacedGarage && routing !== "measuring" && (
+        <p
+          role="status"
+          className="flex items-center justify-center gap-1.5 text-center text-[12px] text-orange-600"
+        >
+          <MapPinOff className="size-3.5 shrink-0" aria-hidden="true" />
+          <span>
+            {unplacedGarage} is not on the map, so dead kilometres to and from it
+            are not counted.{" "}
+            <Link href="/settings/garages" className="font-semibold underline">
+              Add its address
+            </Link>
+          </span>
         </p>
       )}
 

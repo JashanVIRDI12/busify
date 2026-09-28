@@ -9,6 +9,19 @@ import { useBuilder } from "../builder-context";
 
 export type RoutingState = "idle" | "measuring" | "failed";
 
+export type AutoRoute = {
+  state: RoutingState;
+  /**
+   * A garage chosen on this trip that could not be put on the map, by name.
+   * Its dead leg is missing from the totals, which would otherwise read as a
+   * trip with no deadhead at all.
+   */
+  unplacedGarage: string | null;
+};
+
+const GARAGE_OUT = "__garage_out__";
+const GARAGE_BACK = "__garage_back__";
+
 /**
  * Measures the whole itinerary against a real road network, by itself.
  *
@@ -25,17 +38,25 @@ export type RoutingState = "idle" | "measuring" | "failed";
  * are dead miles, which is precisely the leg out of the departing garage and
  * the leg back to the returning one.
  */
-export function useAutoRoute(trip: QuoteTripInput): RoutingState {
+export function useAutoRoute(trip: QuoteTripInput): AutoRoute {
   const { setStop, setTrip, lookups, canEdit } = useBuilder();
   const [state, setState] = useState<RoutingState>("idle");
+  const [unresolvedGarage, setUnresolvedGarage] = useState<string | null>(null);
 
-  const garageAddress = (id: string | null) =>
-    id ? (lookups.garages.find((g) => g.id === id)?.address ?? null) : null;
+  const garageOf = (id: string | null) =>
+    id ? (lookups.garages.find((g) => g.id === id) ?? null) : null;
 
-  const departing = garageAddress(trip.departing_garage_id);
-  const returning = garageAddress(trip.returning_garage_id);
+  const departing = garageOf(trip.departing_garage_id);
+  const returning = garageOf(trip.returning_garage_id);
 
-  // What the route actually depends on: the addresses, in order.
+  // A yard with neither a saved point nor an address cannot be measured from,
+  // and says so without waiting for a router to fail on it.
+  const blank = [departing, returning].find(
+    (garage) => garage && !garage.point && !garage.address,
+  );
+
+  // What the route actually depends on: where the yards are, and the stop
+  // addresses in order.
   //
   // Everything this effect *writes* is deliberately absent — leg distances, and
   // the coordinates it caches back onto a geocoded stop. Including either would
@@ -43,8 +64,8 @@ export function useAutoRoute(trip: QuoteTripInput): RoutingState {
   // coordinates once per address, which is a second round trip to a geocoder
   // that is rate-limited to about one request a second.
   const fingerprint = JSON.stringify([
-    departing,
-    returning,
+    departing && [departing.address, departing.point],
+    returning && [returning.address, returning.point],
     trip.stops.map((stop) => [stop.id, (stop.address ?? "").trim()]),
   ]);
 
@@ -60,9 +81,15 @@ export function useAutoRoute(trip: QuoteTripInput): RoutingState {
       point: { lat: number; lng: number } | null;
     }[] = [];
 
-    if (departing) {
-      path.push({ id: "__garage_out__", address: departing, point: null });
-    }
+    // The saved point when the garage has one, so the yard is never re-geocoded
+    // and never lands somewhere else; its full address when it does not.
+    const yard = (id: string, garage: typeof departing) =>
+      garage && (garage.point || garage.address)
+        ? { id, address: garage.address ?? "", point: garage.point }
+        : null;
+
+    const out = yard(GARAGE_OUT, departing);
+    if (out) path.push(out);
 
     for (const stop of trip.stops) {
       const address = (stop.address ?? "").trim();
@@ -77,9 +104,8 @@ export function useAutoRoute(trip: QuoteTripInput): RoutingState {
       });
     }
 
-    if (returning) {
-      path.push({ id: "__garage_back__", address: returning, point: null });
-    }
+    const back = yard(GARAGE_BACK, returning);
+    if (back) path.push(back);
 
     if (path.length < 2) return;
 
@@ -100,10 +126,19 @@ export function useAutoRoute(trip: QuoteTripInput): RoutingState {
 
         lastRouted.current = fingerprint;
 
-        for (const routed of result.stops) {
-          if (routed.id === "__garage_out__") continue;
+        // Only the yards are reported here; a stop the router could not place
+        // keeps its own leg blank where the operator can see it.
+        const lost = result.unresolved.includes(GARAGE_OUT)
+          ? departing
+          : result.unresolved.includes(GARAGE_BACK)
+            ? returning
+            : null;
+        setUnresolvedGarage(lost?.id ?? null);
 
-          if (routed.id === "__garage_back__") {
+        for (const routed of result.stops) {
+          if (routed.id === GARAGE_OUT) continue;
+
+          if (routed.id === GARAGE_BACK) {
             setTrip(trip.id, {
               return_leg_miles: routed.legMiles,
               return_leg_minutes: routed.legMinutes,
@@ -134,5 +169,11 @@ export function useAutoRoute(trip: QuoteTripInput): RoutingState {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fingerprint, canEdit]);
 
-  return state;
+  // Only while that garage is still the one chosen — switching yards or
+  // clearing it must not leave the warning behind.
+  const lost = [departing, returning].find(
+    (garage) => garage && garage.id === unresolvedGarage,
+  );
+
+  return { state, unplacedGarage: (blank ?? lost)?.name ?? null };
 }

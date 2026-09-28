@@ -10,8 +10,9 @@ import {
   validationError,
   type FormState,
 } from "@/lib/forms";
+import { garageAddressLine, locateGarage, setDefaultGarage } from "@/lib/garages";
 import { canManage, canWrite } from "@/lib/permissions";
-import { garageSchema } from "@/lib/validations/garage";
+import { garageSchema, type GarageInput } from "@/lib/validations/garage";
 import { uuid, type ActionResult } from "@/lib/validations/shared";
 
 const DUPLICATE_NAME = {
@@ -20,22 +21,20 @@ const DUPLICATE_NAME = {
 
 function revalidateGarages() {
   revalidatePath("/settings/garages");
+  revalidatePath("/settings");
   revalidatePath("/vehicles");
   revalidatePath("/drivers");
 }
 
 /**
- * Only one garage can be the default, so setting one clears the rest. Done in
- * two statements rather than a partial unique index because the operator's
- * intent is "make this the default", not "fail because another one already is".
+ * Saved either way — a garage without a location is still a garage — but the
+ * operator is told, because every quote from it will show zero dead miles.
  */
-async function clearOtherDefaults(
-  supabase: Awaited<ReturnType<typeof actionContext>>["supabase"],
-  keepId: string | null,
-) {
-  let query = supabase.from("garages").update({ is_default: false }).eq("is_default", true);
-  if (keepId) query = query.neq("id", keepId);
-  await query;
+function savedMessage(garage: GarageInput, latitude: number | null) {
+  if (latitude !== null) return undefined;
+  return garageAddressLine(garage)
+    ? "Saved, but that address could not be found on the map, so dead kilometres cannot be measured from it. Check the street, city and postal code."
+    : "Saved. Add an address so dead kilometres can be measured from this garage.";
 }
 
 export async function createGarageAction(
@@ -51,17 +50,29 @@ export async function createGarageAction(
   const parsed = garageSchema.safeParse(formDataToObject(formData));
   if (!parsed.success) return validationError(parsed.error);
 
-  if (parsed.data.is_default) await clearOtherDefaults(supabase, null);
+  const location = await locateGarage(parsed.data);
 
-  const { error } = await supabase.from("garages").insert({
-    organization_id: session.organization.id,
-    ...parsed.data,
-  });
+  const { data: created, error } = await supabase
+    .from("garages")
+    .insert({
+      organization_id: session.organization.id,
+      ...parsed.data,
+      ...location,
+    })
+    .select("id")
+    .single();
 
   if (error) return databaseError(error, DUPLICATE_NAME);
+  if (!created) return formError("The garage could not be saved.");
+
+  if (parsed.data.is_default) {
+    await setDefaultGarage(supabase, session.organization.id, created.id, {
+      syncSetting: canManage(session.role),
+    });
+  }
 
   revalidateGarages();
-  return formSuccess();
+  return formSuccess(savedMessage(parsed.data, location.latitude));
 }
 
 export async function updateGarageAction(
@@ -80,17 +91,33 @@ export async function updateGarageAction(
   const parsed = garageSchema.safeParse(formDataToObject(formData));
   if (!parsed.success) return validationError(parsed.error);
 
-  if (parsed.data.is_default) await clearOtherDefaults(supabase, id.data);
+  // Re-located on every save: the address may be what just changed, and a
+  // stale point would keep measuring from the old yard.
+  const location = await locateGarage(parsed.data);
 
   const { error } = await supabase
     .from("garages")
-    .update(parsed.data)
+    .update({ ...parsed.data, ...location })
     .eq("id", id.data);
 
   if (error) return databaseError(error, DUPLICATE_NAME);
 
+  const syncSetting = canManage(session.role);
+  if (parsed.data.is_default) {
+    await setDefaultGarage(supabase, session.organization.id, id.data, {
+      syncSetting,
+    });
+  } else if (syncSetting) {
+    // Unticking the default garage means new quotes start without one.
+    await supabase
+      .from("organization_settings")
+      .update({ default_garage_id: null })
+      .eq("organization_id", session.organization.id)
+      .eq("default_garage_id", id.data);
+  }
+
   revalidateGarages();
-  return formSuccess();
+  return formSuccess(savedMessage(parsed.data, location.latitude));
 }
 
 export async function deleteGaragesAction(

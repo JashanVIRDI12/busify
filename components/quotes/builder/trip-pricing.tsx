@@ -1,7 +1,8 @@
 "use client";
 
-import { RotateCcw, Trash2 } from "lucide-react";
+import { Check, Plus, RotateCcw, Trash2 } from "lucide-react";
 
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -12,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { toMajor } from "@/lib/pricing";
 import { BASE_FARE_BASIS_LABELS } from "@/lib/pricing/quote";
-import { formatMoney } from "@/lib/utils";
+import { cn, formatMoney } from "@/lib/utils";
 import { QUOTE_VISIBILITY } from "@/lib/validations/quote-builder";
 import type {
   QuoteChargeInput,
@@ -38,6 +39,43 @@ const VISIBILITY_LABELS: Record<string, string> = {
   TOTAL_ONLY: "Total charges only",
 };
 
+/**
+ * One template for the column headings and every row beneath them. The last
+ * column is a fixed width rather than `auto`, because an `auto` column that is
+ * empty in the heading row and holds the tax box in the rows gives the two
+ * grids different `1fr`s, and every heading lands 40px left of its column.
+ */
+const CHARGE_GRID =
+  "grid grid-cols-[minmax(0,1fr)_128px_108px_76px_104px_84px] items-center gap-2";
+
+/** Held to a sensible width inside its own scroller on a phone, never the page. */
+function ChargeTable({ children }: { children: React.ReactNode }) {
+  return (
+    // Padded on every side so focus rings are not clipped by the scroller.
+    <div className="-m-1 overflow-x-auto p-1">
+      <div className="min-w-[640px]">{children}</div>
+    </div>
+  );
+}
+
+function ChargeHeader({ taxable }: { taxable: boolean }) {
+  return (
+    <div
+      className={cn(
+        CHARGE_GRID,
+        "pb-1 text-[10px] font-semibold tracking-wide text-ash uppercase",
+      )}
+    >
+      <span>Description</span>
+      <span>Type</span>
+      <span className="text-right">Rate</span>
+      <span className="text-right">Qty</span>
+      <span className="text-right">Amount</span>
+      <span className="text-right">{taxable ? "Taxable" : ""}</span>
+    </div>
+  );
+}
+
 function ChargeRow({
   trip,
   charge,
@@ -52,18 +90,21 @@ function ChargeRow({
   showTaxable: boolean;
 }) {
   const { setCharge, removeCharge, canEdit } = useBuilder();
+  const isPercent = charge.kind === "PERCENT" || charge.section === "TAX";
+  const name = charge.label || (charge.section === "TAX" ? "Tax" : "Charge");
 
   return (
-    <div className="grid grid-cols-[1fr_120px_100px_80px_90px_auto] items-center gap-2 py-1.5">
+    <div className={cn(CHARGE_GRID, "py-1.5")}>
       <Input
         className="h-8"
+        aria-label={charge.section === "TAX" ? "Tax name" : "Charge description"}
         placeholder={charge.section === "TAX" ? "Tax name" : "Description"}
         value={charge.label}
         disabled={!canEdit}
         onChange={(e) => setCharge(trip.id, charge.id, { label: e.target.value })}
       />
       {charge.section === "TAX" ? (
-        <span className="text-center text-[12px] text-ash">Percentage</span>
+        <span className="px-3 text-[12px] text-ash">Percentage</span>
       ) : (
         <Select
           value={charge.kind}
@@ -74,7 +115,7 @@ function ChargeRow({
           }
           disabled={!canEdit}
         >
-          <SelectTrigger size="sm" className="h-8">
+          <SelectTrigger size="sm" className="h-8" aria-label={`${name} type`}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -88,7 +129,9 @@ function ChargeRow({
       )}
       <NumericInput
         className="h-8 text-right"
-        suffix={charge.kind === "PERCENT" || charge.section === "TAX" ? "%" : undefined}
+        aria-label={`${name} rate`}
+        prefix={isPercent ? undefined : "$"}
+        suffix={isPercent ? "%" : undefined}
         value={charge.rate}
         onValueChange={(value) =>
           setCharge(trip.id, charge.id, { rate: value ?? 0 })
@@ -96,34 +139,32 @@ function ChargeRow({
       />
       <NumericInput
         className="h-8 text-right"
+        aria-label={`${name} quantity`}
         value={charge.quantity}
         onValueChange={(value) =>
           setCharge(trip.id, charge.id, { quantity: value ?? 1 })
         }
       />
-      <span className="tabular text-right text-body-sm font-medium">
+      <span className="tabular text-right text-body-sm font-medium text-ink">
         {formatMoney(amount, currency, { precise: true })}
       </span>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center justify-end gap-1.5">
         {showTaxable && (
-          <label className="flex items-center gap-1 text-[10px] text-ash">
-            <input
-              type="checkbox"
-              checked={charge.taxable}
-              disabled={!canEdit}
-              onChange={(e) =>
-                setCharge(trip.id, charge.id, { taxable: e.target.checked })
-              }
-            />
-            tax
-          </label>
+          <Checkbox
+            checked={charge.taxable}
+            disabled={!canEdit}
+            aria-label={`Apply taxes to ${name}`}
+            onCheckedChange={(checked) =>
+              setCharge(trip.id, charge.id, { taxable: checked === true })
+            }
+          />
         )}
         {canEdit && (
           <button
             type="button"
             onClick={() => removeCharge(trip.id, charge.id)}
-            className="text-ash hover:text-destructive"
-            aria-label="Remove charge"
+            className="flex size-7 items-center justify-center rounded-md text-ash transition-colors hover:bg-destructive/10 hover:text-destructive"
+            aria-label={`Remove ${name}`}
           >
             <Trash2 className="size-3.5" />
           </button>
@@ -132,6 +173,44 @@ function ChargeRow({
     </div>
   );
 }
+
+/** The heading every pricing panel opens with, so the four read as one set. */
+function PanelHeading({
+  title,
+  children,
+}: {
+  title: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+      <h3 className="text-body-sm font-semibold text-ink">{title}</h3>
+      {children}
+    </div>
+  );
+}
+
+function SummaryRow({
+  label,
+  value,
+  muted,
+}: {
+  label: string;
+  value: string;
+  muted?: boolean;
+}) {
+  return (
+    <div className="flex items-baseline justify-between gap-3">
+      <dt className={muted ? "text-slate" : "text-carbon"}>{label}</dt>
+      <dd className={cn("tabular", muted ? "text-slate" : "font-medium text-ink")}>
+        {value}
+      </dd>
+    </div>
+  );
+}
+
+const plural = (count: number, word: string) =>
+  `${count || 0} ${count === 1 ? word : `${word}s`}`;
 
 export function TripPricing({ trip }: { trip: QuoteTripInput }) {
   const { computed, currency, setTrip, addCharge, canEdit, state, setHeader } =
@@ -145,9 +224,15 @@ export function TripPricing({ trip }: { trip: QuoteTripInput }) {
     return toMajor(result.charges[index]?.amount ?? 0);
   };
 
+  const manual = result.baseFareOverridden;
+
   const baseFareCharges = trip.charges.filter((c) => c.section === "BASE_FARE");
   const itemized = trip.charges.filter((c) => c.section === "ITEMIZED");
   const taxes = trip.charges.filter((c) => c.section === "TAX");
+  const itemizedTotal = result.itemizedCharges.reduce(
+    (sum, charge) => sum + charge.amount,
+    0,
+  );
 
   const candidates: { basis: QuoteBaseFareBasis; amount: number }[] = [
     { basis: "DAILY", amount: result.candidates.daily },
@@ -163,253 +248,370 @@ export function TripPricing({ trip }: { trip: QuoteTripInput }) {
     BASE: "rate_flat_base",
   };
 
-  const unitFor: Record<QuoteBaseFareBasis, string> = {
-    DAILY: `${trip.days || 0} days`,
-    HOURLY: `${trip.hours || 0} h`,
-    MILEAGE: `${trip.total_miles || 0} km`,
-    BASE: "flat",
+  /** What the rate is per, beside the number, so "3.1" reads as a price. */
+  const perFor: Record<QuoteBaseFareBasis, string | undefined> = {
+    DAILY: "/day",
+    HOURLY: "/h",
+    MILEAGE: "/km",
+    BASE: undefined,
   };
 
+  const unitFor: Record<QuoteBaseFareBasis, string> = {
+    DAILY: `× ${plural(trip.days, "day")}`,
+    HOURLY: `× ${trip.hours || 0} h`,
+    MILEAGE: `× ${trip.total_miles || 0} km`,
+    BASE: "Flat amount",
+  };
+
+  const modeNote = manual
+    ? "Using the amount you typed"
+    : trip.base_fare_mode === "HIGHEST"
+      ? "Using whichever rate comes out highest"
+      : "Using the rate you picked";
+
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_320px] lg:items-start">
-      <div className="space-y-5">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start">
+      <div className="min-w-0 space-y-5">
         {/*
           These three drive the daily, hourly and mileage candidates below.
           The itinerary works all of them out — days from the dates, hours from
           drive time plus waiting, distance from the measured route — so they
           are shown here to be checked and overridden, not filled in.
         */}
-        <p className="text-[12px] text-ash">
-          Taken from the itinerary. Type over any of them to price this trip
-          differently.
-        </p>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <label className="space-y-1">
-            <span className="text-[12px] font-medium text-ash">Days</span>
-            <NumericInput
-              value={trip.days}
-              onValueChange={(v) => setTrip(trip.id, { days: v ?? 0 })}
-            />
-          </label>
-          <label className="space-y-1">
-            <span className="text-[12px] font-medium text-ash">Hours</span>
-            <NumericInput
-              value={trip.hours}
-              onValueChange={(v) => setTrip(trip.id, { hours: v ?? 0 })}
-            />
-          </label>
-          <label className="space-y-1">
-            <span className="text-[12px] font-medium text-ash">Total distance</span>
-            <NumericInput
-              suffix="km"
-              value={trip.total_miles}
-              onValueChange={(v) => setTrip(trip.id, { total_miles: v ?? 0 })}
-            />
-          </label>
+        <div>
+          <p className="mb-2 text-[12px] text-ash">
+            Taken from the itinerary. Type over any of them to price this trip
+            differently.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <label className="space-y-1">
+              <span className="text-[12px] font-medium text-slate">Days</span>
+              <NumericInput
+                value={trip.days}
+                onValueChange={(v) => setTrip(trip.id, { days: v ?? 0 })}
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="text-[12px] font-medium text-slate">Hours</span>
+              <NumericInput
+                suffix="h"
+                value={trip.hours}
+                onValueChange={(v) => setTrip(trip.id, { hours: v ?? 0 })}
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="text-[12px] font-medium text-slate">Total distance</span>
+              <NumericInput
+                suffix="km"
+                value={trip.total_miles}
+                onValueChange={(v) => setTrip(trip.id, { total_miles: v ?? 0 })}
+              />
+            </label>
+          </div>
         </div>
 
         {/* Base Fare */}
-        <div className="rounded-xl border border-bone p-4">
-          <div className="mb-3 flex items-center gap-3">
-            <p className="text-body-sm font-semibold text-ink">Base Fare</p>
-            <div className="flex overflow-hidden rounded-full border border-bone text-[12px] font-semibold">
-              {(["HIGHEST", "CHOOSE"] as const).map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  disabled={!canEdit}
-                  onClick={() => setTrip(trip.id, { base_fare_mode: mode })}
-                  className={
-                    trip.base_fare_mode === mode
-                      ? "bg-ink px-3 py-1 text-signal-white"
-                      : "px-3 py-1 text-slate hover:bg-mist"
-                  }
-                >
-                  {mode === "HIGHEST" ? "Highest" : "Choose"}
-                </button>
-              ))}
+        <section className="rounded-xl border border-bone p-4">
+          <PanelHeading title="Base Fare">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-[12px] text-ash" aria-live="polite">
+                {modeNote}
+              </span>
+              <div
+                role="radiogroup"
+                aria-label="How the base fare is chosen"
+                className="inline-flex rounded-full bg-plaster p-0.5 text-[12px] font-semibold"
+              >
+                {(["HIGHEST", "CHOOSE"] as const).map((mode) => {
+                  const on = !manual && trip.base_fare_mode === mode;
+                  return (
+                    <button
+                      key={mode}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      disabled={!canEdit}
+                      onClick={() =>
+                        setTrip(trip.id, { base_fare_mode: mode, base_fare_override: null })
+                      }
+                      className={cn(
+                        "rounded-full px-3 py-1 transition-colors disabled:cursor-default",
+                        on
+                          ? "bg-signal-white text-ink shadow-subtle"
+                          : "text-slate enabled:hover:text-ink",
+                      )}
+                    >
+                      {mode === "HIGHEST" ? "Highest" : "Choose"}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          </PanelHeading>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
             {candidates.map(({ basis, amount }) => {
-              const selected = result.selectedBasis === basis;
+              const selected = !manual && result.selectedBasis === basis;
               const rateKey = rateFor[basis];
-              const selectable = canEdit && trip.base_fare_mode === "CHOOSE";
               return (
                 <div
                   key={basis}
-                  className={`rounded-lg border p-2.5 transition-colors ${
-                    selected
-                      ? "border-teal-400 bg-teal-50"
-                      : "border-bone"
-                  }`}
+                  className={cn(
+                    "flex flex-col rounded-lg border p-2.5 transition-colors",
+                    selected ? "border-teal-400 bg-teal-50" : "border-bone",
+                  )}
                 >
+                  {/* Picking a card is the choice itself: it switches the fare
+                      to Choose rather than asking for that first. */}
                   <button
                     type="button"
-                    disabled={!selectable}
+                    disabled={!canEdit}
+                    aria-pressed={selected}
                     onClick={() =>
                       setTrip(trip.id, {
                         base_fare_basis: basis,
                         base_fare_mode: "CHOOSE",
+                        base_fare_override: null,
                       })
                     }
-                    className="block w-full text-left disabled:cursor-default"
+                    className="-m-1 block rounded-md p-1 text-left transition-colors enabled:hover:bg-mist/70 disabled:cursor-default"
                   >
-                    <span className="block text-[11px] font-semibold text-ash">
+                    <span className="flex items-center justify-between gap-1 text-[11px] font-semibold text-slate">
                       {BASE_FARE_BASIS_LABELS[basis]}
                       {selected && (
-                        <span className="ml-1 text-teal-600">• used</span>
+                        <span className="inline-flex items-center gap-0.5 text-teal-600">
+                          <Check className="size-3" aria-hidden />
+                          Used
+                        </span>
                       )}
                     </span>
-                    <span className="tabular block text-body-sm font-semibold text-ink">
+                    <span className="tabular mt-0.5 block text-body font-semibold text-ink">
                       {money(amount)}
                     </span>
                   </button>
                   <NumericInput
-                    className="mt-1 h-7 w-full"
-                    prefix={basis === "MILEAGE" ? undefined : "$"}
+                    className="mt-2 h-8 w-full"
+                    aria-label={`${BASE_FARE_BASIS_LABELS[basis]} rate`}
+                    prefix="$"
+                    suffix={perFor[basis]}
                     value={trip[rateKey] as number}
                     onValueChange={(value) =>
                       setTrip(trip.id, { [rateKey]: value ?? 0 })
                     }
                   />
-                  <span className="mt-0.5 block text-[10px] text-ash">
-                    × {unitFor[basis]}
+                  <span className="tabular mt-1 block text-[11px] text-ash">
+                    {unitFor[basis]}
                   </span>
                 </div>
               );
             })}
-          </div>
 
-          {/* Base fare charges */}
-          <div className="mt-4">
-            <AddChargeMenu
-              tripId={trip.id}
-              section="BASE_FARE"
-              label="Add base fare charge"
-            />
-            {baseFareCharges.map((charge) => (
-              <ChargeRow
-                key={charge.id}
-                trip={trip}
-                charge={charge}
-                amount={chargeAmount(charge.id)}
-                currency={currency}
-                showTaxable={false}
-              />
-            ))}
-          </div>
-
-          <div className="mt-3 flex items-center justify-between border-t border-bone pt-3">
-            <span className="text-body-sm font-semibold text-ink">Total Base Fare</span>
-            <div className="flex items-center gap-2">
+            {/*
+              Manual: the operator types the base fare outright. Stored as
+              base_fare_override, which the engine uses in place of whichever
+              candidate would otherwise win; clearing it hands back to the calc.
+            */}
+            <div
+              className={cn(
+                "flex flex-col rounded-lg border p-2.5 transition-colors",
+                manual ? "border-teal-400 bg-teal-50" : "border-dashed border-cloud",
+              )}
+            >
+              <button
+                type="button"
+                disabled={!canEdit || manual}
+                aria-pressed={manual}
+                onClick={() =>
+                  setTrip(trip.id, { base_fare_override: toMajor(result.baseFare) })
+                }
+                className="-m-1 block rounded-md p-1 text-left transition-colors enabled:hover:bg-mist/70 disabled:cursor-default"
+              >
+                <span className="flex items-center justify-between gap-1 text-[11px] font-semibold text-slate">
+                  Manual
+                  {manual && (
+                    <span className="inline-flex items-center gap-0.5 text-teal-600">
+                      <Check className="size-3" aria-hidden />
+                      Used
+                    </span>
+                  )}
+                </span>
+                <span className="tabular mt-0.5 block text-body font-semibold text-ink">
+                  {manual ? money(result.baseFare) : "—"}
+                </span>
+              </button>
               <NumericInput
-                className="h-9 w-32 text-right"
+                className="mt-2 h-8 w-full"
+                aria-label="Manual base fare"
                 prefix="$"
                 nullable
-                value={
-                  trip.base_fare_override ?? toMajor(result.baseFareTotal)
-                }
+                placeholder="Enter rate"
+                value={trip.base_fare_override}
                 onValueChange={(value) =>
                   setTrip(trip.id, { base_fare_override: value })
                 }
               />
-              {trip.base_fare_override !== null && canEdit && (
-                <button
-                  type="button"
-                  onClick={() => setTrip(trip.id, { base_fare_override: null })}
-                  className="text-ash hover:text-ink"
-                  aria-label="Reset to calculated base fare"
-                >
-                  <RotateCcw className="size-4" />
-                </button>
-              )}
+              <span className="mt-1 flex items-center justify-between gap-1 text-[11px] text-ash">
+                {manual ? "Overrides the rates" : "Your own amount"}
+                {manual && canEdit && (
+                  <button
+                    type="button"
+                    onClick={() => setTrip(trip.id, { base_fare_override: null })}
+                    className="inline-flex items-center gap-0.5 rounded px-1 font-medium text-teal-600 transition-colors hover:bg-teal-100/60 hover:text-teal-700"
+                  >
+                    <RotateCcw className="size-3" aria-hidden />
+                    Use calc
+                  </button>
+                )}
+              </span>
             </div>
           </div>
-        </div>
+
+          {/* Base fare charges */}
+          <div className="mt-4">
+            {baseFareCharges.length > 0 && (
+              <ChargeTable>
+                <ChargeHeader taxable={false} />
+                {baseFareCharges.map((charge) => (
+                  <ChargeRow
+                    key={charge.id}
+                    trip={trip}
+                    charge={charge}
+                    amount={chargeAmount(charge.id)}
+                    currency={currency}
+                    showTaxable={false}
+                  />
+                ))}
+              </ChargeTable>
+            )}
+            <div className={baseFareCharges.length > 0 ? "mt-2" : undefined}>
+              <AddChargeMenu
+                tripId={trip.id}
+                section="BASE_FARE"
+                label="Add base fare charge"
+              />
+            </div>
+          </div>
+
+          <div className="mt-3 flex items-center justify-between border-t border-bone pt-3">
+            <span className="text-body-sm font-semibold text-ink">Total Base Fare</span>
+            <span className="tabular text-body-sm font-semibold text-ink">
+              {money(result.baseFareTotal)}
+            </span>
+          </div>
+        </section>
 
         {/* Itemized charges */}
-        <div className="rounded-xl border border-bone p-4">
-          <AddChargeMenu tripId={trip.id} section="ITEMIZED" label="Add charge" />
-          {itemized.length > 0 && (
-            <div className="mt-2 grid grid-cols-[1fr_120px_100px_80px_90px_auto] gap-2 px-1 text-[10px] font-semibold tracking-wide text-ash uppercase">
-              <span>Description</span>
-              <span>Type</span>
-              <span className="text-right">Rate</span>
-              <span className="text-right">Qty</span>
-              <span className="text-right">Amount</span>
-              <span />
-            </div>
+        <section className="rounded-xl border border-bone p-4">
+          <PanelHeading title="Charges" />
+          {itemized.length > 0 ? (
+            <ChargeTable>
+              <ChargeHeader taxable />
+              {itemized.map((charge) => (
+                <ChargeRow
+                  key={charge.id}
+                  trip={trip}
+                  charge={charge}
+                  amount={chargeAmount(charge.id)}
+                  currency={currency}
+                  showTaxable
+                />
+              ))}
+            </ChargeTable>
+          ) : (
+            <p className="text-[12.5px] text-ash">
+              Anything on top of the base fare — a fuel surcharge, parking, a
+              driver&apos;s hotel.
+            </p>
           )}
-          {itemized.map((charge) => (
-            <ChargeRow
-              key={charge.id}
-              trip={trip}
-              charge={charge}
-              amount={chargeAmount(charge.id)}
-              currency={currency}
-              showTaxable
-            />
-          ))}
-        </div>
-
-        <div className="flex items-center justify-between px-1">
-          <span className="text-body-sm font-semibold text-ink">Trip Subtotal</span>
-          <span className="tabular text-body-sm font-semibold">
-            {money(result.subtotal)}
-          </span>
-        </div>
+          <div className="mt-2">
+            <AddChargeMenu tripId={trip.id} section="ITEMIZED" label="Add charge" />
+          </div>
+        </section>
 
         {/* Taxes */}
-        <div className="rounded-xl border border-bone p-4">
+        <section className="rounded-xl border border-bone p-4">
+          <PanelHeading title="Taxes" />
+          {taxes.length > 0 ? (
+            <ChargeTable>
+              <ChargeHeader taxable={false} />
+              {taxes.map((charge) => (
+                <ChargeRow
+                  key={charge.id}
+                  trip={trip}
+                  charge={charge}
+                  amount={chargeAmount(charge.id)}
+                  currency={currency}
+                  showTaxable={false}
+                />
+              ))}
+            </ChargeTable>
+          ) : (
+            <p className="text-[12.5px] text-ash">No taxes on this trip.</p>
+          )}
           <button
             type="button"
             disabled={!canEdit}
             onClick={() => addCharge(trip.id, "TAX")}
-            className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-body-sm font-semibold text-teal-600 transition-colors hover:bg-teal-50 hover:text-teal-700 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-teal-500 disabled:opacity-50"
+            className="mt-2 inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-body-sm font-semibold text-teal-600 transition-colors hover:bg-teal-50 hover:text-teal-700 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-teal-500 disabled:opacity-50"
           >
-            + Taxes
+            <Plus className="size-3.5" aria-hidden="true" />
+            Add tax
           </button>
-          {taxes.map((charge) => (
-            <ChargeRow
-              key={charge.id}
-              trip={trip}
-              charge={charge}
-              amount={chargeAmount(charge.id)}
-              currency={currency}
-              showTaxable={false}
-            />
-          ))}
-          <div className="mt-2 flex items-center justify-between border-t border-bone pt-2">
-            <span className="text-body-sm font-semibold text-ink">Taxes</span>
-            <span className="tabular text-body-sm font-semibold">
-              {money(result.taxTotal)}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between rounded-xl bg-plaster px-4 py-3">
-          <span className="text-body font-semibold text-ink">Trip Total</span>
-          <span className="tabular text-body font-bold text-ink">
-            {money(result.total)}
-          </span>
-        </div>
+        </section>
       </div>
 
-      {/* Right rail */}
-      <div className="space-y-4 rounded-lg border border-bone bg-mist p-5">
-        <div>
-          <p className="text-body-sm font-semibold text-ink">
+      {/* The summary stays in view while the charges scroll past it, so the
+          number every change moves is never out of sight. */}
+      <aside className="space-y-4 lg:sticky lg:top-[4.5rem]">
+        <section
+          aria-labelledby={`price-summary-${trip.id}`}
+          className="rounded-xl border border-bone bg-mist p-5"
+        >
+          <h3
+            id={`price-summary-${trip.id}`}
+            className="text-body-sm font-semibold text-ink"
+          >
+            Price Summary
+          </h3>
+          <dl className="mt-3 space-y-2 text-body-sm">
+            <SummaryRow label="Base fare" value={money(result.baseFareTotal)} />
+            <SummaryRow label="Charges" value={money(itemizedTotal)} />
+            <div className="border-t border-bone pt-2">
+              <SummaryRow label="Subtotal" value={money(result.subtotal)} />
+            </div>
+            <SummaryRow label="Taxes" value={money(result.taxTotal)} />
+          </dl>
+          <div className="mt-4 flex items-baseline justify-between gap-3 border-t border-cloud pt-4">
+            <span className="text-body font-semibold text-ink">Trip Total</span>
+            <span className="tabular text-subheading font-semibold text-ink">
+              {money(result.total)}
+            </span>
+          </div>
+          <dl className="mt-3 space-y-1.5 text-body-sm">
+            <SummaryRow label="Due on booking" value={money(result.dueNow)} muted />
+            <SummaryRow label="Due later" value={money(result.dueLater)} muted />
+          </dl>
+        </section>
+
+        <section className="rounded-xl border border-bone p-5">
+          <h3 id={`visibility-${trip.id}`} className="text-body-sm font-semibold text-ink">
             Choose What Customers Will See
-          </p>
-          <div className="mt-3 space-y-2.5">
+          </h3>
+          <p className="mt-0.5 text-[12px] text-ash">Applies to every trip on this quote.</p>
+          <div
+            role="radiogroup"
+            aria-labelledby={`visibility-${trip.id}`}
+            className="mt-3 space-y-2.5"
+          >
             {QUOTE_VISIBILITY.map((value) => (
-              <label key={value} className="flex items-start gap-2 text-body-sm">
+              <label
+                key={value}
+                className="flex cursor-pointer items-start gap-2.5 text-body-sm has-disabled:cursor-default"
+              >
                 <input
                   type="radio"
-                  name="visibility"
-                  className="mt-0.5"
+                  name={`visibility-${trip.id}`}
+                  className="mt-[3px] size-3.5 accent-orange-500"
                   checked={state.header.customer_visibility === value}
                   disabled={!canEdit}
                   onChange={() =>
@@ -419,21 +621,20 @@ export function TripPricing({ trip }: { trip: QuoteTripInput }) {
                     })
                   }
                 />
-                <span className="text-slate">{VISIBILITY_LABELS[value]}</span>
+                <span
+                  className={
+                    state.header.customer_visibility === value
+                      ? "font-medium text-ink"
+                      : "text-slate"
+                  }
+                >
+                  {VISIBILITY_LABELS[value]}
+                </span>
               </label>
             ))}
           </div>
-        </div>
-
-        <div className="flex items-center justify-between border-t border-bone pt-4">
-          <span className="text-body-sm font-semibold text-ink">Trip Total</span>
-          <span className="tabular text-body-sm font-bold">{money(result.total)}</span>
-        </div>
-        <div className="flex items-center justify-between text-body-sm text-slate">
-          <span>Due on booking</span>
-          <span className="tabular">{money(result.dueNow)}</span>
-        </div>
-      </div>
+        </section>
+      </aside>
     </div>
   );
 }

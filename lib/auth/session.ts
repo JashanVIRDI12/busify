@@ -88,7 +88,9 @@ export const getMemberships = cache(
       .order("created_at", { ascending: true });
 
     if (error) {
-      console.error("Failed to load memberships", error);
+      // As one string: logged as an object, this reached the dev overlay as
+      // "{}" and hid the 401 behind it.
+      console.error(`Failed to load memberships: ${error.code} ${error.message}`);
       return [];
     }
 

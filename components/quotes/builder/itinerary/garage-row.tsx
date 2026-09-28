@@ -42,8 +42,29 @@ export function GarageRow({
   which: "departing" | "returning";
   schedule: AutoSchedule;
 }) {
-  const { setTrip, lookups, canEdit } = useBuilder();
+  const { setTrip, setStop, lookups, canEdit } = useBuilder();
   const isDeparting = which === "departing";
+
+  /**
+   * No yard, no leg. The router re-measures when a garage changes, but it
+   * needs two places to measure between — clearing the yard on a one-stop trip
+   * would otherwise leave the old deadhead counted in the totals.
+   */
+  function chooseGarage(id: string | null) {
+    if (isDeparting) {
+      setTrip(trip.id, { departing_garage_id: id });
+      const first = trip.stops[0];
+      if (!id && first) {
+        setStop(trip.id, first.id, { leg_miles: 0, leg_minutes: 0 });
+      }
+      return;
+    }
+
+    setTrip(trip.id, {
+      returning_garage_id: id,
+      ...(id ? {} : { return_leg_miles: 0, return_leg_minutes: 0 }),
+    });
+  }
 
   const garageId = isDeparting
     ? trip.departing_garage_id
@@ -60,6 +81,10 @@ export function GarageRow({
 
   const timeKey = isDeparting ? autoKey.departingTime : autoKey.returningTime;
   const timeIsAuto = schedule.isAuto(timeKey, timeValue);
+  const dateIsAuto = schedule.isAuto(
+    isDeparting ? autoKey.departingDate : autoKey.returningDate,
+    dateValue,
+  );
   const canRevert = canEdit && !timeIsAuto && Boolean(timeValue);
 
   return (
@@ -74,12 +99,7 @@ export function GarageRow({
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_165px_180px]">
         <Select
           value={garageId ?? NONE}
-          onValueChange={(value) =>
-            setTrip(trip.id, {
-              [isDeparting ? "departing_garage_id" : "returning_garage_id"]:
-                value === NONE ? null : value,
-            })
-          }
+          onValueChange={(value) => chooseGarage(value === NONE ? null : value)}
           disabled={!canEdit}
         >
           <SelectTrigger aria-label="Garage">
@@ -108,7 +128,7 @@ export function GarageRow({
         <DateField
           value={dateValue}
           disabled={!canEdit}
-          auto={schedule.isAuto(timeKey, timeValue)}
+          auto={dateIsAuto}
           onChange={(value) =>
             setTrip(trip.id, {
               [isDeparting ? "departing_date" : "returning_date"]: value,

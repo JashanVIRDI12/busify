@@ -52,8 +52,10 @@ export function GarageDrawer({
   const { state, formAction, reset } = useActionForm(
     editing ? updateGarageAction : createGarageAction,
     {
-      onSuccess: () => {
-        toast.success(editing ? "Garage updated" : "Garage added");
+      onSuccess: (result) => {
+        // A message on success means it saved without a map location.
+        if (result.message) toast.warning(result.message);
+        else toast.success(editing ? "Garage updated" : "Garage added");
         close();
       },
     },

@@ -98,7 +98,20 @@ export interface GeoProvider {
     points: GeoPoint[],
     shape: string | null,
     size: { width: number; height: number },
+    /**
+     * One character per point to print on its pin, so the map and the
+     * itinerary beside it number the stops the same way. `G` is the
+     * operator's yard and is drawn grey. Without labels pins count 1, 2, 3.
+     */
+    labels?: string[],
   ): string | null;
+}
+
+/** The pin label that marks the operator's own yard rather than a stop. */
+const YARD_LABEL = "G";
+
+function pinLabel(labels: string[] | undefined, index: number): string {
+  return labels?.[index] ?? (index < 9 ? String(index + 1) : "");
 }
 
 const EARTH_RADIUS_KM = 6371;
@@ -167,7 +180,17 @@ async function fetchJson<T>(
         : { cache: "no-store" as const }),
     });
 
-    if (!response.ok) return null;
+    if (!response.ok) {
+      // Still null to the caller, but said out loud: a key missing an API, or a
+      // request the provider rejects, otherwise looks exactly like an address
+      // nobody could find. Host and path only — Mapbox keys ride in the query.
+      const { host, pathname } = new URL(url);
+      console.error(
+        `[geo] ${host}${pathname} answered ${response.status}`,
+        (await response.text().catch(() => "")).slice(0, 300),
+      );
+      return null;
+    }
     return (await response.json()) as T;
   } catch {
     // A geo lookup failing must never break the quote — the operator can still
@@ -221,12 +244,91 @@ type GooglePlace = {
 type GoogleRoute = {
   routes?: {
     legs?: { distanceMeters?: number; duration?: string }[];
+    polyline?: { encodedPolyline?: string };
   }[];
 };
 
 /** Routes API durations arrive as a protobuf duration string, e.g. "1234s". */
 function parseDuration(value: string | undefined): number {
   return value ? Number.parseFloat(value.replace(/s$/, "")) || 0 : 0;
+}
+
+/** One computeRoutes body, shared so measuring and drawing take the same road. */
+function googleRouteRequest(points: GeoPoint[]) {
+  const waypoint = (point: GeoPoint) => ({
+    location: { latLng: { latitude: point.lat, longitude: point.lng } },
+  });
+
+  return {
+    origin: waypoint(points[0]!),
+    destination: waypoint(points[points.length - 1]!),
+    ...(points.length > 2
+      ? { intermediates: points.slice(1, -1).map(waypoint) }
+      : {}),
+    travelMode: "DRIVE",
+    // A coach is not a car, but Google has no bus profile. Leaving traffic out
+    // keeps the same itinerary measuring the same way whenever it is re-priced.
+    routingPreference: "TRAFFIC_UNAWARE",
+    units: "METRIC",
+  };
+}
+
+/** Static Maps serves at most 640 px a side; scale=2 doubles it for retina. */
+const GOOGLE_STATIC_MAX = 640;
+
+/** Static Maps answers 400 to any URL longer than 16,384 characters. */
+const GOOGLE_STATIC_URL_LIMIT = 16_384;
+
+/** Google's encoded polyline format, five decimal places. */
+function decodePolyline(encoded: string): GeoPoint[] {
+  const points: GeoPoint[] = [];
+  let index = 0;
+  let lat = 0;
+  let lng = 0;
+
+  const next = () => {
+    let result = 0;
+    let shift = 0;
+    let byte: number;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    return result & 1 ? ~(result >> 1) : result >> 1;
+  };
+
+  while (index < encoded.length) {
+    lat += next();
+    lng += next();
+    points.push({ lat: lat / 1e5, lng: lng / 1e5 });
+  }
+  return points;
+}
+
+function encodePolyline(points: GeoPoint[]): string {
+  let output = "";
+  let prevLat = 0;
+  let prevLng = 0;
+
+  const put = (delta: number) => {
+    let value = delta < 0 ? ~(delta << 1) : delta << 1;
+    while (value >= 0x20) {
+      output += String.fromCharCode((0x20 | (value & 0x1f)) + 63);
+      value >>= 5;
+    }
+    output += String.fromCharCode(value + 63);
+  };
+
+  for (const point of points) {
+    const lat = Math.round(point.lat * 1e5);
+    const lng = Math.round(point.lng * 1e5);
+    put(lat - prevLat);
+    put(lng - prevLng);
+    prevLat = lat;
+    prevLng = lng;
+  }
+  return output;
 }
 
 function googleProviderWith(key: string): GeoProvider {
@@ -328,9 +430,12 @@ function googleProviderWith(key: string): GeoProvider {
           },
           body: {
             textQuery: trimmed,
-            includedRegionCodes: ["ca", "us"],
+            // Text Search takes a single region to lean towards, not the list
+            // Autocomplete accepts — `includedRegionCodes` here is a 400 on
+            // every call. A bias still finds a cross-border "Buffalo, NY".
+            regionCode: "ca",
             languageCode: "en",
-            maxResultCount: 1,
+            pageSize: 1,
           },
         },
       );
@@ -348,10 +453,6 @@ function googleProviderWith(key: string): GeoProvider {
     async route(points) {
       if (points.length < 2) return { legs: [], totalMiles: 0, totalMinutes: 0 };
 
-      const waypoint = (point: GeoPoint) => ({
-        location: { latLng: { latitude: point.lat, longitude: point.lng } },
-      });
-
       const body = await fetchJson<GoogleRoute>(
         "https://routes.googleapis.com/directions/v2:computeRoutes",
         {
@@ -362,19 +463,7 @@ function googleProviderWith(key: string): GeoProvider {
             "X-Goog-FieldMask":
               "routes.legs.distanceMeters,routes.legs.duration",
           },
-          body: {
-            origin: waypoint(points[0]!),
-            destination: waypoint(points[points.length - 1]!),
-            ...(points.length > 2
-              ? { intermediates: points.slice(1, -1).map(waypoint) }
-              : {}),
-            travelMode: "DRIVE",
-            // A coach is not a car, but Google has no bus profile. Leaving
-            // traffic out keeps the same itinerary measuring the same way
-            // whenever it is re-priced.
-            routingPreference: "TRAFFIC_UNAWARE",
-            units: "METRIC",
-          },
+          body: googleRouteRequest(points),
         },
       );
 
@@ -387,6 +476,84 @@ function googleProviderWith(key: string): GeoProvider {
           duration: parseDuration(leg.duration),
         })),
       );
+    },
+
+    /**
+     * The same request as `route`, asking for the shape instead of the numbers
+     * — measuring runs on every edit in the builder and never needs geometry.
+     */
+    async routeShape(points) {
+      if (points.length < 2) return null;
+
+      const body = await fetchJson<GoogleRoute>(
+        "https://routes.googleapis.com/directions/v2:computeRoutes",
+        {
+          method: "POST",
+          timeoutMs: 8000,
+          headers: {
+            "X-Goog-Api-Key": key,
+            "X-Goog-FieldMask": "routes.polyline.encodedPolyline",
+          },
+          body: googleRouteRequest(points),
+        },
+      );
+
+      return body?.routes?.[0]?.polyline?.encodedPolyline ?? null;
+    },
+
+    staticMapUrl(points, shape, size, labels) {
+      if (points.length === 0) return null;
+
+      // Shrunk to fit rather than cropped, so the frame keeps its proportions.
+      const fit = Math.min(1, GOOGLE_STATIC_MAX / Math.max(size.width, size.height));
+
+      const build = (line: string | null) => {
+        const params = new URLSearchParams({
+          size: `${Math.round(size.width * fit)}x${Math.round(size.height * fit)}`,
+          scale: "2",
+          key,
+        });
+
+        // The driven line goes down first so the pins sit on top of it.
+        if (line) params.append("path", `color:0x0d8b7cd9|weight:4|enc:${line}`);
+
+        // Google labels a marker with a single character, so past nine the stop
+        // is drawn as a plain pin rather than a wrong number.
+        points.forEach((point, index) => {
+          const label = pinLabel(labels, index);
+          const color = label === YARD_LABEL ? "0x8b9098" : "0x12a594";
+          params.append(
+            "markers",
+            `size:mid|color:${color}${label ? `|label:${label}` : ""}|${point.lat},${point.lng}`,
+          );
+        });
+
+        // No centre or zoom: Google frames the markers and the path by itself.
+        return `https://maps.googleapis.com/maps/api/staticmap?${params}`;
+      };
+
+      let url = build(shape);
+
+      // A long run — Toronto to Ottawa and back — encodes to more than Google
+      // accepts in a URL. Thin the line until it fits: a 640-pixel picture
+      // cannot show the dropped points anyway.
+      if (shape && url.length > GOOGLE_STATIC_URL_LIMIT) {
+        const line = decodePolyline(shape);
+        for (
+          let keepEvery = 2;
+          url.length > GOOGLE_STATIC_URL_LIMIT && keepEvery < line.length;
+          keepEvery *= 2
+        ) {
+          url = build(
+            encodePolyline(
+              line.filter((_, i) => i % keepEvery === 0 || i === line.length - 1),
+            ),
+          );
+        }
+      }
+
+      // Pins alone beat no picture at all.
+      return url.length > GOOGLE_STATIC_URL_LIMIT ? build(null) : url;
     },
   };
 
@@ -532,7 +699,7 @@ function mapboxProviderWith(token: string): GeoProvider {
       return body?.code === "Ok" ? (body.routes[0]?.geometry ?? null) : null;
     },
 
-    staticMapUrl(points, shape, size) {
+    staticMapUrl(points, shape, size, labels) {
       if (points.length === 0) return null;
 
       const overlays: string[] = [];
@@ -545,8 +712,11 @@ function mapboxProviderWith(token: string): GeoProvider {
       // Mapbox numbers a pin from its label, and only for a single character,
       // so past nine the stop is drawn as a plain dot rather than a wrong number.
       points.forEach((point, index) => {
-        const label = index < 9 ? `-${index + 1}` : "";
-        overlays.push(`pin-s${label}+12a594(${point.lng},${point.lat})`);
+        const label = pinLabel(labels, index);
+        const color = label === YARD_LABEL ? "8b9098" : "12a594";
+        overlays.push(
+          `pin-s${label ? `-${label.toLowerCase()}` : ""}+${color}(${point.lng},${point.lat})`,
+        );
       });
 
       // `auto` frames the overlays, with padding so a pin never sits on the edge.

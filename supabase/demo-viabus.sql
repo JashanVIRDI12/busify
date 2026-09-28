@@ -5,16 +5,16 @@
 --
 -- Unlike seed.sql / seed-console.sql this creates no organization and no auth
 -- users. It fills in the one that is already there, so a real signed-up account
--- has something to show a customer: a fleet, drivers, contacts, a priced quote
--- pipeline and a fortnight of reservations with money against them.
+-- has something to show a customer: garages at real addresses, a fleet and its
+-- rate card, drivers, contacts and inbound trip requests. Quotes are built in
+-- the app on top of this — see the note where they used to be written.
 --
 -- Safe to re-run: every insert is guarded on a natural key, so a second run
 -- adds nothing.
 --
--- Deliberately leaves gaps — a reservation with no vehicle, one with no driver,
--- a coach in maintenance, a licence expiring inside 30 days. An empty dispatch
--- board proves nothing; the point of those screens is showing what is *not*
--- covered yet.
+-- Deliberately leaves gaps — a coach in maintenance, a licence expiring inside
+-- 30 days, a driver on leave. The point of those screens is showing what is
+-- *not* covered yet.
 -- ===========================================================================
 
 do $$
@@ -25,7 +25,6 @@ declare
   v_org_name constant text := 'Via Bus Demo';
 
   v_org   uuid;
-  v_owner uuid;
   v_zone  text;
   -- Local midnight today. Trips are laid out on the operator's clock, so
   -- running this at 3 p.m. must not produce a school trip leaving at 10 p.m.
@@ -38,21 +37,6 @@ declare
   v_type_mini   uuid;
   v_type_van    uuid;
 
-  v_quote uuid;
-  v_qtrip uuid;
-
-  -- Pricing, recomputed here exactly as lib/pricing/quote.ts does it, so the
-  -- stored totals agree with what the builder shows when the quote is opened.
-  v_base     numeric(12,2);
-  v_items    numeric(12,2);
-  v_subtotal numeric(12,2);
-  v_tax      numeric(12,2);
-  v_total    numeric(12,2);
-
-  v_trip    uuid;
-  v_vehicle uuid;
-  v_driver  uuid;
-  r record;
 begin
   select id, timezone into v_org, v_zone
     from public.organizations where name = v_org_name;
@@ -66,12 +50,6 @@ begin
     raise notice 'No organization found — run demo-org.sql first.';
     return;
   end if;
-
-  select user_id into v_owner
-    from public.organization_members
-   where organization_id = v_org
-   order by case role when 'OWNER' then 0 when 'ADMIN' then 1 else 2 end
-   limit 1;
 
   v_day0 := date_trunc('day', now() at time zone coalesce(v_zone, 'America/Toronto'));
 
@@ -103,10 +81,35 @@ begin
     select 1 from public.garages where organization_id = v_org and name = g.name
   );
 
+  -- Where Google Places puts each yard. Dead legs are measured from these
+  -- points, so without them a demo quote shows no deadhead at all. Only filled
+  -- where missing: re-saving a garage in Settings re-locates it from its address.
+  update public.garages g
+     set latitude = v.lat, longitude = v.lng
+    from (values
+      ('Etobicoke Garage', 43.681617, -79.593195),
+      ('Scarborough Yard', 43.816929, -79.246081)
+    ) as v(name, lat, lng)
+   where g.organization_id = v_org
+     and g.name = v.name
+     and g.latitude is null;
+
   select id into v_garage_main from public.garages
    where organization_id = v_org and name = 'Etobicoke Garage';
   select id into v_garage_east from public.garages
    where organization_id = v_org and name = 'Scarborough Yard';
+
+  -- New quotes start from the main yard, unless the operator already chose one,
+  -- and the Garages list badges whichever garage that is.
+  update public.organization_settings
+     set default_garage_id = v_garage_main
+   where organization_id = v_org
+     and default_garage_id is null;
+
+  update public.garages
+     set is_default = (id = (select default_garage_id from public.organization_settings
+                              where organization_id = v_org))
+   where organization_id = v_org;
 
   -- -------------------------------------------------------------------------
   -- Vehicle types, and the rate card that prices them
@@ -268,192 +271,44 @@ begin
          case when t.ret is null then null
               else (v_day0 + t.ret) at time zone coalesce(v_zone, 'America/Toronto') end,
          t.pax, t.status::public.trip_request_status, t.notes
+  -- Real places, so a quote made from one of these measures a real route.
   from (values
     ('Helen Boyd',     'helen.boyd@northfield.test',      '(416) 555-0401',
-     '240 Bloor St W, Toronto', 'Ottawa, ON',
+     '240 Bloor St W, Toronto', 'Parliament Hill, Ottawa, ON',
      interval '9 days 7 hours', interval '11 days 18 hours', 52, 'NEW',
      'Grade 12 history trip. Two chaperones, one wheelchair user.'),
     ('Raj Mehta',      'raj.mehta@aurorasw.test',         '(416) 555-0402',
-     '88 Queens Quay W, Toronto', 'Blue Mountain Resort',
+     '88 Queens Quay W, Toronto', 'Blue Mountain Village, The Blue Mountains, ON',
      interval '16 days 8 hours', interval '16 days 20 hours', 40, 'REVIEWING',
      'Company offsite. Needs wifi on board.'),
     ('Chantal Dubois', 'chantal.dubois@lakeshorefc.test', '(905) 555-0403',
-     '1 Rutherford Rd, Brampton', 'Buffalo, NY',
+     '1 Rutherford Rd S, Brampton', 'UB Stadium, Amherst, NY',
      interval '23 days 6 hours', interval '23 days 23 hours', 22, 'NEEDS_INFORMATION',
-     'Cross-border. Need the passenger manifest before we can price it.')
+     'Cross-border. Need the passenger manifest before we can price it.'),
+    ('Marcus Chen',    'marcus.chen@example.test',        '(647) 555-0406',
+     'Humber College North Campus, 205 Humber College Blvd, Toronto',
+     'Canada''s Wonderland, Vaughan, ON',
+     interval '30 days 9 hours', interval '30 days 19 hours', 45, 'NEW',
+     'Student orientation day. A second coach if sign-ups pass 56.'),
+    ('Sofia Rossi',    'sofia.rossi@example.test',        '(905) 555-0407',
+     'Union Station, 65 Front St W, Toronto', 'Niagara Falls, ON',
+     interval '37 days 8 hours', interval '37 days 21 hours', 28, 'NEW',
+     'Family reunion day trip. A winery stop in Niagara-on-the-Lake on the way back.')
   ) as t(contact, email, phone, pickup, dest, depart, ret, pax, status, notes)
   where not exists (
     select 1 from public.trip_requests where organization_id = v_org and contact_email = t.email
   );
 
   -- -------------------------------------------------------------------------
-  -- A priced quote pipeline
+  -- Quotes and reservations are deliberately not written here.
   --
-  -- Each quote is a real builder quote: a trip with days/hours/distance and a
-  -- rate card behind it, itemised charges, and the tax row. The base fare is
-  -- computed the way the engine computes it — the highest of daily, hourly and
-  -- per-kilometre — so opening one shows a populated Pricing tab whose numbers
-  -- add up rather than a total pasted over an empty breakdown.
+  -- They used to be, with distances typed in and a dead/live split guessed at
+  -- 12/88, so every one showed a price the app would never have produced — and
+  -- re-measured to different numbers the moment it was opened. They are built
+  -- in the quote builder instead, where Google measures the route from the
+  -- garage and the pricing engine prices it, then converted to reservations
+  -- with the builder's own action.
   -- -------------------------------------------------------------------------
-  for r in
-    select * from (values
-      -- title, contact, pipeline, depart, pickup, dest, pax, type, days, hours, km, itemised
-      ('Northfield Ottawa trip',      'helen.boyd@northfield.test',      'QUOTED',    interval '9 days 7 hours',  '240 Bloor St W, Toronto',   'Ottawa, ON',           52, v_type_coach, 3, 26, 900.0, 295.00),
-      ('Aurora Q4 offsite shuttle',   'raj.mehta@aurorasw.test',         'LEAD',      interval '16 days 8 hours', '88 Queens Quay W, Toronto', 'Blue Mountain Resort', 40, v_type_coach, 1, 12, 420.0,  45.00),
-      ('Lakeshore Buffalo away game', 'chantal.dubois@lakeshorefc.test', 'FOLLOW_UP', interval '23 days 6 hours', '1 Rutherford Rd, Brampton', 'Buffalo, NY',          22, v_type_mini,  1, 17, 340.0, 225.00),
-      ('Pearson arrivals — Aurora',   'raj.mehta@aurorasw.test',         'WON',       interval '4 days 5 hours',  'Toronto Pearson T1',        '88 Queens Quay W',     12, v_type_van,   1,  4,  55.0,   0.00)
-    ) as q(title, email, pipeline, depart, pickup, dest, pax, type_id, days, hours, km, items)
-  loop
-    if exists (select 1 from public.quotes where organization_id = v_org and title = r.title) then
-      continue;
-    end if;
-
-    -- The rate card for the type this quote is built around.
-    select
-      greatest(
-        coalesce(vr.daily_rate, 0)     * r.days,
-        coalesce(vr.hourly_rate, 0)    * r.hours,
-        coalesce(vr.live_mile_rate, 0) * r.km,
-        0
-      )
-      into v_base
-      from public.vehicle_rates vr
-     where vr.organization_id = v_org
-       and vr.vehicle_type_id = r.type_id
-       and vr.vehicle_id is null;
-
-    v_base     := round(coalesce(v_base, 0), 2);
-    v_items    := r.items;
-    v_subtotal := round(v_base + v_items, 2);
-    v_tax      := round(v_subtotal * 0.13, 2);
-    v_total    := round(v_subtotal + v_tax, 2);
-
-    insert into public.quotes
-      (organization_id, customer_id, title, status, pipeline_status, currency,
-       tax_province, tax_rate_percent, created_by, subtotal, tax, total,
-       pickup_at, pickup_address, sent_at)
-    values
-      (v_org,
-       (select id from public.customers where organization_id = v_org and email = r.email),
-       r.title,
-       (case when r.pipeline = 'LEAD' then 'DRAFT' else 'SENT' end)::public.quote_status,
-       r.pipeline::public.quote_pipeline_status,
-       'CAD', 'ON', 13, v_owner,
-       v_subtotal, v_tax, v_total,
-       (v_day0 + r.depart) at time zone coalesce(v_zone, 'America/Toronto'),
-       r.pickup,
-       case when r.pipeline = 'LEAD' then null else now() - interval '2 days' end)
-    returning id into v_quote;
-
-    insert into public.quote_trips
-      (organization_id, quote_id, position, name, trip_type, passenger_count, driver_count,
-       departing_garage_id, returning_garage_id, departing_date, departing_time,
-       base_fare_mode, rate_daily, rate_hourly, rate_per_mile, rate_flat_base,
-       days, hours, total_miles, live_miles, dead_miles, estimated_minutes,
-       base_fare_total, subtotal, tax_total, total)
-    select
-      v_org, v_quote, 0, 'Trip 1', 'ROUND_TRIP', r.pax, 1,
-      v_garage_main, v_garage_main, (v_day0 + r.depart)::date, '07:00',
-      'HIGHEST',
-      coalesce(vr.daily_rate, 0), coalesce(vr.hourly_rate, 0),
-      coalesce(vr.live_mile_rate, 0), 0,
-      r.days, r.hours, r.km, round(r.km * 0.88, 2), round(r.km * 0.12, 2),
-      r.hours * 60,
-      v_base, v_subtotal, v_tax, v_total
-      from public.vehicle_rates vr
-     where vr.organization_id = v_org
-       and vr.vehicle_type_id = r.type_id
-       and vr.vehicle_id is null
-    returning id into v_qtrip;
-
-    insert into public.quote_trip_stops
-      (organization_id, quote_trip_id, position, kind, label, address, stop_date, stop_time, leg_miles, leg_minutes)
-    values
-      (v_org, v_qtrip, 0, 'PICKUP',  'Pickup',  r.pickup, (v_day0 + r.depart)::date, '07:00', round(r.km * 0.12, 2), round(r.hours * 6)),
-      (v_org, v_qtrip, 1, 'DROPOFF', 'Dropoff', r.dest,   (v_day0 + r.depart)::date, '11:30', round(r.km * 0.88, 2), round(r.hours * 54));
-
-    insert into public.quote_trip_vehicles
-      (organization_id, quote_trip_id, position, vehicle_type_id, quantity)
-    values (v_org, v_qtrip, 0, r.type_id, 1);
-
-    -- Itemised extras, then the Ontario HST row the builder seeds on every trip.
-    if r.items > 0 then
-      insert into public.quote_trip_charges
-        (organization_id, quote_trip_id, section, position, label, kind, rate, quantity, amount, taxable)
-      values
-        (v_org, v_qtrip, 'ITEMIZED', 0,
-         case when r.items >= 250 then 'Driver accommodation' else 'Tolls and parking' end,
-         'FLAT', r.items, 1, r.items, true);
-    end if;
-
-    insert into public.quote_trip_charges
-      (organization_id, quote_trip_id, section, position, label, kind, rate, quantity, amount, taxable)
-    values (v_org, v_qtrip, 'TAX', 0, 'HST 13%', 'PERCENT', 13, 1, v_tax, false);
-
-    insert into public.quote_payment_methods
-      (organization_id, quote_id, method, position, enabled, online_processing)
-    values
-      (v_org, v_quote, 'CARD',  0, true,  true),
-      (v_org, v_quote, 'BANK',  1, true,  true),
-      (v_org, v_quote, 'CHECK', 2, true,  false),
-      (v_org, v_quote, 'WIRE',  3, false, false),
-      (v_org, v_quote, 'OTHER', 4, false, false);
-  end loop;
-
-  -- -------------------------------------------------------------------------
-  -- Reservations — confirmed work, so Dispatch and Payments have something
-  --
-  -- Inserted one at a time because app.assign_trip_reference() numbers each row
-  -- by counting the siblings already present; a batch insert would see zero
-  -- siblings for every row and hand them all the same number.
-  -- -------------------------------------------------------------------------
-  for r in
-    select * from (values
-      ('Grade 11 Science Centre',  'helen.boyd@northfield.test',      '240 Bloor St W, Toronto',   'Ontario Science Centre', interval '2 days 8 hours',  interval '2 days 16 hours', 48, 'CONFIRMED',  1680.00, 1680.00, 'PAID',    'Coach 101', 'marc.tremblay@viabus.test'),
-      ('Aurora airport run',       'raj.mehta@aurorasw.test',         '88 Queens Quay W, Toronto', 'Toronto Pearson T1',     interval '3 days 5 hours',  null,                        12, 'CONFIRMED',   540.00,  270.00, 'PARTIAL', 'Van 301',   'priya.raman@viabus.test'),
-      ('Lakeshore home fixture',   'chantal.dubois@lakeshorefc.test', '1 Rutherford Rd, Brampton', 'BMO Field, Toronto',     interval '5 days 9 hours',  interval '5 days 18 hours', 22, 'SCHEDULED',  1120.00,    0.00, 'UNPAID',  'Mini 201',  null),
-      ('Northfield Ottawa trip',   'helen.boyd@northfield.test',      '240 Bloor St W, Toronto',   'Ottawa, ON',             interval '9 days 7 hours',  interval '11 days 18 hours',52, 'SCHEDULED',  5243.20, 1500.00, 'PARTIAL', null,        'daniel.okafor@viabus.test'),
-      ('Amara wedding shuttle',    'amara.nwosu@example.test',        'Casa Loma, Toronto',        'Liberty Grand, Toronto', interval '12 days 15 hours',interval '12 days 23 hours',36, 'SCHEDULED',   980.00,    0.00, 'UNPAID',  null,        null),
-      ('Owen golf outing',         'owen.fraser@example.test',        'Etobicoke Garage',          'Glen Abbey, Oakville',   interval '-6 days 7 hours', interval '-6 days 19 hours',18, 'COMPLETED',   860.00,  860.00, 'PAID',    'Mini 201',  'sylvie.lefebvre@viabus.test')
-    ) as t(group_name, email, pickup, dest, depart, ret, pax, status, due, paid, pay_status, vehicle, driver)
-  loop
-    if exists (
-      select 1 from public.trips where organization_id = v_org and group_name = r.group_name
-    ) then
-      continue;
-    end if;
-
-    insert into public.trips
-      (organization_id, customer_id, group_name, pickup_location, destination,
-       departure_at, return_at, passenger_count, status, garage_id,
-       total_due, amount_paid, payment_status, created_by)
-    values
-      (v_org,
-       (select id from public.customers where organization_id = v_org and email = r.email),
-       r.group_name, r.pickup, r.dest,
-       (v_day0 + r.depart) at time zone coalesce(v_zone, 'America/Toronto'),
-       case when r.ret is null then null
-            else (v_day0 + r.ret) at time zone coalesce(v_zone, 'America/Toronto') end,
-       r.pax, r.status::public.trip_status, v_garage_main,
-       r.due, r.paid, r.pay_status::public.reservation_payment_status, v_owner)
-    returning id into v_trip;
-
-    select id into v_vehicle from public.vehicles
-     where organization_id = v_org and name = r.vehicle;
-    select id into v_driver from public.drivers
-     where organization_id = v_org and email = r.driver;
-
-    -- A reservation with no coach and one with no driver are left deliberately:
-    -- the dispatch board exists to show what is still uncovered.
-    if v_vehicle is not null or v_driver is not null then
-      insert into public.trip_assignments
-        (organization_id, trip_id, vehicle_id, driver_id)
-      values (v_org, v_trip, v_vehicle, v_driver);
-    end if;
-
-    v_vehicle := null;
-    v_driver  := null;
-  end loop;
 
   raise notice 'Demo data complete.';
 end;

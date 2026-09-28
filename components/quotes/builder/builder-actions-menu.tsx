@@ -4,8 +4,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   CalendarCheck,
-  ChevronDown,
   Copy,
+  Ellipsis,
   ExternalLink,
   FileText,
   Mail,
@@ -43,7 +43,12 @@ import {
 
 import { useBuilder } from "./builder-context";
 
-export function BuilderActionsMenu() {
+export function BuilderActionsMenu({
+  saved,
+}: {
+  /** False on /quotes/new until the first save: there is no PDF to open yet. */
+  saved: boolean;
+}) {
   const { quoteId, canEdit, save, dirty, publicUrl } = useBuilder();
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -88,24 +93,42 @@ export function BuilderActionsMenu() {
           menu keeps what is either rare or irreversible. */}
       {canEdit && (
         <>
-          <Button variant="outline" onClick={emailToCustomer} disabled={pending}>
+          {/* Sending is what a finished quote is for, so once the quote exists
+              it carries the one filled button on the page. */}
+          <Button
+            variant={saved ? "default" : "outline"}
+            onClick={emailToCustomer}
+            loading={pending}
+          >
             <Mail />
             Email quote
           </Button>
-          <Button variant="outline" asChild>
-            <a href={`/quotes/${quoteId}/pdf`} target="_blank" rel="noreferrer">
+          {saved ? (
+            <Button variant="outline" asChild>
+              <a
+                href={`/quotes/${quoteId}/pdf`}
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Download PDF"
+              >
+                <FileText />
+                <span className="hidden sm:inline">Download PDF</span>
+              </a>
+            </Button>
+          ) : (
+            <Button variant="outline" disabled title="Save the quote first">
               <FileText />
-              Download PDF
-            </a>
-          </Button>
+              <span className="hidden sm:inline">Download PDF</span>
+            </Button>
+          )}
         </>
       )}
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button>
-            More
-            <ChevronDown />
+          <Button variant="quiet" aria-label="More actions">
+            <Ellipsis className="text-ash" />
+            <span className="hidden sm:inline">More</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">

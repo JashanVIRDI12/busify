@@ -2,7 +2,17 @@ import { MapPin } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-export type MapPoint = { lat: number; lng: number; label?: string };
+export type MapPoint = {
+  lat: number;
+  lng: number;
+  /** What the pin stands for, for the image's alt text. */
+  label?: string;
+  /**
+   * The character printed on the pin: the stop's number from the itinerary,
+   * or `G` for the yard, so the list and the map agree about what "2" is.
+   */
+  marker?: string;
+};
 
 /**
  * The reservation's route, drawn.
@@ -34,7 +44,7 @@ export function TripMap({
     return (
       <div
         className={cn(
-          "flex flex-col items-center justify-center gap-2 rounded-xl border border-bone bg-mist/50 p-8 text-center",
+          "flex flex-col items-center justify-center gap-2 bg-mist px-6 py-10 text-center",
           className,
         )}
       >
@@ -50,19 +60,19 @@ export function TripMap({
   }
 
   const path = placed.map((point) => `${point.lng},${point.lat}`).join(";");
-  const src = `/api/geo/map?path=${encodeURIComponent(path)}&w=${width}&h=${height}`;
+  // Labels only travel when every pin has one; otherwise the provider numbers
+  // them 1, 2, 3 and at least counts consistently.
+  const labels = placed.every((point) => point.marker && /^[A-Z0-9]$/.test(point.marker))
+    ? `&labels=${placed.map((point) => point.marker).join(",")}`
+    : "";
+  const src = `/api/geo/map?path=${encodeURIComponent(path)}&w=${width}&h=${height}${labels}`;
 
   const described = placed
     .map((point, index) => point.label ?? `Stop ${index + 1}`)
     .join(", then ");
 
   return (
-    <div
-      className={cn(
-        "overflow-hidden rounded-xl border border-bone bg-mist",
-        className,
-      )}
-    >
+    <div className={cn("overflow-hidden bg-mist", className)}>
       {/*
         A plain <img>: the source is already sized and cached by the route
         handler, and running it through the image optimiser would put a second
@@ -75,7 +85,7 @@ export function TripMap({
         height={height}
         alt={`Map of the route: ${described}.`}
         loading="lazy"
-        className="h-auto w-full"
+        className="block h-auto w-full"
       />
     </div>
   );

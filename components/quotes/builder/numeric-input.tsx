@@ -5,6 +5,8 @@ import * as React from "react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
+import { useBuilder } from "./builder-context";
+
 type NumericInputProps = Omit<
   React.ComponentProps<"input">,
   "value" | "onChange" | "type"
@@ -15,11 +17,21 @@ type NumericInputProps = Omit<
   nullable?: boolean;
   prefix?: string;
   suffix?: string;
+  /**
+   * Sizes the box the prefix and suffix are pinned to. A width on `className`
+   * narrows only the input, which leaves a "%" stranded at the far side of a
+   * table cell; give the width here instead.
+   */
+  containerClassName?: string;
 };
 
 /**
  * A number field the operator can actually type in: it holds a string while
  * focused (so "1." and "" are allowed mid-edit) and commits a number out.
+ *
+ * Read-only unless the viewer may edit the quote. Every rate, quantity and
+ * percentage in the builder is one of these, and a field that takes typing
+ * nobody can save is worse than one that says so.
  */
 export function NumericInput({
   value,
@@ -28,10 +40,13 @@ export function NumericInput({
   prefix,
   suffix,
   className,
+  containerClassName,
+  disabled,
   onBlur,
   onFocus,
   ...props
 }: NumericInputProps) {
+  const { canEdit } = useBuilder();
   const [draft, setDraft] = React.useState<string | null>(null);
 
   const display =
@@ -50,6 +65,7 @@ export function NumericInput({
   const field = (
     <Input
       {...props}
+      disabled={disabled ?? !canEdit}
       inputMode="decimal"
       value={display}
       onFocus={(event) => {
@@ -71,10 +87,10 @@ export function NumericInput({
     />
   );
 
-  if (!prefix && !suffix) return field;
+  if (!prefix && !suffix && !containerClassName) return field;
 
   return (
-    <div className="relative">
+    <div className={cn("relative", containerClassName)}>
       {prefix && (
         <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-body-sm text-ash">
           {prefix}

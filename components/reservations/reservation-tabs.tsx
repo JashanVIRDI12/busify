@@ -23,9 +23,13 @@ type Panel = {
 export function ReservationTabs({ panels }: { panels: Panel[] }) {
   return (
     <Tabs defaultValue={panels[0]?.value}>
-      <TabsList className="w-full justify-start overflow-x-auto">
+      <TabsList className="scrollbar-slim w-full justify-start overflow-x-auto">
         {panels.map((panel) => (
-          <TabsTrigger key={panel.value} value={panel.value} className="gap-1.5">
+          <TabsTrigger
+            key={panel.value}
+            value={panel.value}
+            className="shrink-0 gap-1.5 whitespace-nowrap"
+          >
             {panel.label}
             {panel.badge !== undefined && panel.badge > 0 && (
               <span className="rounded-full bg-teal-100 px-1.5 text-[10px] font-semibold text-teal-700">

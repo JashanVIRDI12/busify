@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Plus, X } from "lucide-react";
 
+import { QUOTE_PIPELINE_STATUS, StatusPill, pillFor } from "@/components/data/status-pill";
 import { FilesPanel, type QuoteFile } from "@/components/quotes/builder/files-panel";
 import { Input } from "@/components/ui/input";
 import {
@@ -40,22 +41,23 @@ const PRIORITY_LABELS: Record<string, string> = {
 };
 
 /**
- * `Label: value` on one line, left-aligned. The values are live controls rather
- * than a read-only summary — this rail is where a quote's status actually gets
- * changed, so a dropdown that looks like text is the point.
+ * Label and value on one line, the values held to one column so the rail scans
+ * straight down it. The values are live controls rather than a read-only
+ * summary — this rail is where a quote's status actually gets changed, so a
+ * dropdown that looks like text is the point.
  */
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-2 py-[3px]">
-      <span className="shrink-0 text-body-sm text-slate">{label}:</span>
-      <div className="min-w-0 flex-1">{children}</div>
+    <div className="grid grid-cols-[5.25rem_minmax(0,1fr)] items-center gap-2 py-1">
+      <span className="text-body-sm text-slate">{label}</span>
+      <div className="min-w-0">{children}</div>
     </div>
   );
 }
 
 /** A select styled to read as inline text until you reach for it. */
 const INLINE_TRIGGER =
-  "h-7 w-auto max-w-full gap-1 border-none px-1 text-body-sm font-medium text-teal-600 shadow-none hover:bg-mist data-[placeholder]:font-normal data-[placeholder]:text-fog";
+  "-ml-1 h-7 w-auto max-w-full gap-1 border-none px-1 text-body-sm font-medium text-teal-600 shadow-none hover:bg-mist data-[placeholder]:font-normal data-[placeholder]:text-fog";
 
 export function BuilderSidebar({
   createdAt,
@@ -74,11 +76,12 @@ export function BuilderSidebar({
   const { header } = state;
   const [addingReferral, setAddingReferral] = useState(false);
   const [addingTag, setAddingTag] = useState(false);
+  const status = pillFor(QUOTE_PIPELINE_STATUS, header.pipeline_status);
 
   return (
     <div className="space-y-4 text-body-sm">
       <div>
-        <Row label="Quote Status">
+        <Row label="Status">
           <Select
             value={header.pipeline_status}
             onValueChange={(value) =>
@@ -86,8 +89,12 @@ export function BuilderSidebar({
             }
             disabled={!canEdit}
           >
-            <SelectTrigger size="sm" className={INLINE_TRIGGER}>
-              <SelectValue />
+            <SelectTrigger size="sm" aria-label="Quote status" className={INLINE_TRIGGER}>
+              {/* The pill the quote list shows, so the status is recognised
+                  here at the same glance it is there. */}
+              <SelectValue>
+                <StatusPill label={status.label} tone={status.tone} />
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {QUOTE_PIPELINE_STATUSES.map((value) => (
@@ -99,7 +106,7 @@ export function BuilderSidebar({
           </Select>
         </Row>
 
-        <Row label="Sales Rep">
+        <Row label="Sales rep">
           <Select
             value={header.sales_rep_id ?? NONE}
             onValueChange={(value) =>
@@ -107,7 +114,7 @@ export function BuilderSidebar({
             }
             disabled={!canEdit}
           >
-            <SelectTrigger size="sm" className={INLINE_TRIGGER}>
+            <SelectTrigger size="sm" aria-label="Sales rep" className={INLINE_TRIGGER}>
               <SelectValue placeholder="None" />
             </SelectTrigger>
             <SelectContent>
@@ -139,7 +146,7 @@ export function BuilderSidebar({
             }
             disabled={!canEdit}
           >
-            <SelectTrigger size="sm" className={INLINE_TRIGGER}>
+            <SelectTrigger size="sm" aria-label="Priority" className={INLINE_TRIGGER}>
               <SelectValue placeholder="None" />
             </SelectTrigger>
             <SelectContent>
@@ -161,7 +168,7 @@ export function BuilderSidebar({
             }
             disabled={!canEdit}
           >
-            <SelectTrigger size="sm" className={INLINE_TRIGGER}>
+            <SelectTrigger size="sm" aria-label="Event type" className={INLINE_TRIGGER}>
               <SelectValue placeholder="None" />
             </SelectTrigger>
             <SelectContent>
@@ -183,24 +190,13 @@ export function BuilderSidebar({
           </Select>
         </Row>
 
-        <Row label="Created Date">
-          <span className="px-1 text-body-sm text-carbon">
-            {createdAt ? formatStampDate(createdAt, timezone) : "--"}
-          </span>
-        </Row>
-
-        <Row label="Last Activity">
-          <span className="px-1 text-body-sm text-carbon">
-            {updatedAt ? formatStampDate(updatedAt, timezone) : "--"}
-          </span>
-        </Row>
-
-        <Row label="Referred By">
+        <Row label="Referred by">
           {addingReferral || (header.referred_by && addingReferral) ? (
             <Input
               autoFocus
               defaultValue={header.referred_by ?? ""}
               disabled={!canEdit}
+              aria-label="Referred by"
               className="h-7 px-2 text-body-sm"
               onBlur={(event) => {
                 setHeader({ referred_by: event.target.value.trim() || null });
@@ -215,7 +211,7 @@ export function BuilderSidebar({
             <button
               type="button"
               disabled={!canEdit}
-              className="px-1 text-body-sm text-carbon hover:underline"
+              className="-ml-1 max-w-full truncate rounded px-1 text-left text-body-sm text-carbon hover:bg-mist"
               onClick={() => setAddingReferral(true)}
             >
               {header.referred_by}
@@ -225,49 +221,70 @@ export function BuilderSidebar({
           )}
         </Row>
 
-        <div className="flex flex-wrap items-center gap-1.5 py-[3px]">
-          <span className="shrink-0 text-body-sm text-slate">Tags:</span>
-          {header.tags.map((tag) => (
-            <span
-              key={tag}
-              className="inline-flex items-center gap-1 rounded-full bg-teal-50 px-2 py-0.5 text-[11.5px] font-medium text-teal-700"
-            >
-              {tag}
-              {canEdit && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    setHeader({ tags: header.tags.filter((item) => item !== tag) })
+        <div className="grid grid-cols-[5.25rem_minmax(0,1fr)] items-start gap-2 py-1">
+          <span className="pt-1 text-body-sm text-slate">Tags</span>
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5 pt-0.5">
+            {header.tags.map((tag) => (
+              <span
+                key={tag}
+                className="inline-flex items-center gap-1 rounded-full bg-teal-50 px-2 py-0.5 text-[11.5px] font-medium text-teal-700"
+              >
+                {tag}
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setHeader({ tags: header.tags.filter((item) => item !== tag) })
+                    }
+                    aria-label={`Remove ${tag}`}
+                    className="text-teal-600/70 hover:text-teal-700"
+                  >
+                    <X className="size-3" />
+                  </button>
+                )}
+              </span>
+            ))}
+            {addingTag ? (
+              <Input
+                autoFocus
+                aria-label="New tag"
+                placeholder="Tag, then Enter"
+                className="h-7 w-28 px-2 text-body-sm"
+                onBlur={() => setAddingTag(false)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    const value = event.currentTarget.value.trim();
+                    if (value && !header.tags.includes(value)) {
+                      setHeader({ tags: [...header.tags, value] });
+                    }
+                    event.currentTarget.value = "";
                   }
-                  aria-label={`Remove ${tag}`}
-                  className="text-teal-600/70 hover:text-teal-700"
-                >
-                  <X className="size-3" />
-                </button>
-              )}
-            </span>
-          ))}
-          {addingTag ? (
-            <Input
-              autoFocus
-              className="h-7 w-28 px-2 text-body-sm"
-              onBlur={() => setAddingTag(false)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  const value = event.currentTarget.value.trim();
-                  if (value && !header.tags.includes(value)) {
-                    setHeader({ tags: [...header.tags, value] });
-                  }
-                  event.currentTarget.value = "";
-                }
-                if (event.key === "Escape") setAddingTag(false);
-              }}
-            />
-          ) : (
-            <AddButton disabled={!canEdit} onClick={() => setAddingTag(true)} />
-          )}
+                  if (event.key === "Escape") setAddingTag(false);
+                }}
+              />
+            ) : (
+              <AddButton disabled={!canEdit} onClick={() => setAddingTag(true)} />
+            )}
+          </div>
         </div>
       </div>
+
+      {/* When, rather than what: read, never edited, so it sits apart from the
+          controls above and a step quieter. */}
+      <dl className="space-y-1 border-t border-bone pt-3 text-[12px]">
+        <div className="grid grid-cols-[5.25rem_minmax(0,1fr)] gap-2">
+          <dt className="text-ash">Created</dt>
+          <dd className="tabular text-slate">
+            {createdAt ? formatStampDate(createdAt, timezone) : "Not saved yet"}
+          </dd>
+        </div>
+        <div className="grid grid-cols-[5.25rem_minmax(0,1fr)] gap-2">
+          <dt className="text-ash">Last activity</dt>
+          <dd className="tabular text-slate">
+            {updatedAt ? formatStampDate(updatedAt, timezone) : "--"}
+          </dd>
+        </div>
+      </dl>
 
       <FilesPanel
         quoteId={quoteId}
@@ -291,7 +308,7 @@ function AddButton({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="inline-flex items-center gap-0.5 px-1 text-body-sm font-medium text-teal-600 transition-colors hover:text-teal-700 disabled:opacity-50"
+      className="-ml-1 inline-flex items-center gap-0.5 rounded px-1 text-body-sm font-medium text-teal-600 transition-colors hover:bg-teal-50 hover:text-teal-700 disabled:opacity-50"
     >
       <Plus className="size-3.5" /> Add
     </button>

@@ -18,10 +18,15 @@ const poppins = Poppins({
   display: "swap",
 });
 
+/**
+ * Loaded as the variable font, not as weights 400 and 500. Google serves both
+ * weights from this same file anyway, and asking for them separately lists the
+ * file twice — which Turbopack's font loader fails on ("next/font/google
+ * queries have exactly one entry").
+ */
 const sometype = Sometype_Mono({
   variable: "--font-sometype",
   subsets: ["latin"],
-  weight: ["400", "500"],
   display: "swap",
 });
 

@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { Eye } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -39,6 +41,66 @@ const METHOD_LABELS: Record<PaymentMethodKind, string> = {
   OTHER: "Other",
 };
 
+/**
+ * One titled part of the tab. The switches that qualify a section sit under
+ * its content, where they read as its rules, rather than off at the far edge
+ * of its heading where they read as a different control.
+ */
+function SectionTitle({ title, required }: { title: string; required?: boolean }) {
+  return (
+    <h3 className="text-body font-semibold text-ink">
+      {title}
+      {required && (
+        <span className="ml-0.5 text-destructive" aria-hidden>
+          *
+        </span>
+      )}
+    </h3>
+  );
+}
+
+function Section({
+  title,
+  required,
+  children,
+}: {
+  title: string;
+  required?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <section className="space-y-4 py-6 first:pt-0 last:pb-0">
+      <SectionTitle title={title} required={required} />
+      {children}
+    </section>
+  );
+}
+
+/** A switch and what it does, laid out the same way everywhere on the tab. */
+function Toggle({
+  checked,
+  onCheckedChange,
+  label,
+  children,
+}: {
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  label: ReactNode;
+  /** Controls that only apply while the switch is on, set inline after it. */
+  children?: ReactNode;
+}) {
+  const { canEdit } = useBuilder();
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-body-sm text-carbon">
+      <label className="flex items-center gap-3">
+        <Switch checked={checked} disabled={!canEdit} onCheckedChange={onCheckedChange} />
+        {label}
+      </label>
+      {checked && children}
+    </div>
+  );
+}
+
 function PaymentTermsTable() {
   const { state, computed, currency, setTrip, timezone, canEdit } = useBuilder();
   const money = (major: number) => formatMoney(major, currency, { precise: true });
@@ -51,8 +113,8 @@ function PaymentTermsTable() {
             <th className="py-2 pr-3">Trip</th>
             <th className="py-2 pr-3">Pickup date</th>
             <th className="py-2 pr-3 text-right">Trip total</th>
-            <th className="py-2 pr-3 text-right">Due now %</th>
-            <th className="py-2 pr-3 text-right">Due now $</th>
+            <th className="w-28 py-2 pr-3 text-right">Due now %</th>
+            <th className="w-32 py-2 pr-3 text-right">Due now $</th>
             <th className="py-2 pr-3 text-right">Due later $</th>
             <th className="py-2">Balance due date</th>
           </tr>
@@ -74,7 +136,8 @@ function PaymentTermsTable() {
                 </td>
                 <td className="py-2.5 pr-3">
                   <NumericInput
-                    className="h-8 w-20 text-right"
+                    containerClassName="ml-auto w-20"
+                    className="h-8 text-right"
                     suffix="%"
                     value={trip.due_now_percent}
                     onValueChange={(value) =>
@@ -87,7 +150,8 @@ function PaymentTermsTable() {
                 </td>
                 <td className="py-2.5 pr-3">
                   <NumericInput
-                    className="h-8 w-24 text-right"
+                    containerClassName="ml-auto w-28"
+                    className="h-8 text-right"
                     prefix="$"
                     nullable
                     value={
@@ -176,9 +240,9 @@ function ContractTermsDialog() {
         </SelectContent>
       </Select>
       {current && (
-        <Button variant="ghost" size="icon-sm" onClick={() => setOpen(true)}>
-          <span className="sr-only">Preview terms</span>
-          ⋯
+        <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
+          <Eye />
+          Preview
         </Button>
       )}
       <Dialog open={open} onOpenChange={setOpen}>
@@ -205,61 +269,31 @@ export function PaymentTab() {
   const { header } = state;
 
   return (
-    <div className="space-y-8">
-      {/* Payment terms */}
-      <section className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-body font-semibold text-ink">
-            Payment Terms <span className="text-destructive">*</span>
-          </h3>
-          <label className="flex items-center gap-2 text-body-sm text-slate">
-            <Switch
-              checked={header.allow_full_card_payment}
-              disabled={!canEdit}
-              onCheckedChange={(checked) =>
-                setHeader({ allow_full_card_payment: checked })
-              }
-            />
-            Allow payment in full during checkout when paying with card
-          </label>
-        </div>
+    <div className="divide-y divide-bone">
+      <Section title="Payment Terms" required>
         <PaymentTermsTable />
-        <label className="flex items-center gap-2 text-body-sm text-slate">
-          <Switch
-            checked={header.allow_instant_booking}
-            disabled={!canEdit}
-            onCheckedChange={(checked) =>
-              setHeader({ allow_instant_booking: checked })
-            }
+        <div className="space-y-3">
+          <Toggle
+            checked={header.allow_full_card_payment}
+            onCheckedChange={(checked) => setHeader({ allow_full_card_payment: checked })}
+            label="Allow payment in full during checkout when paying with card"
           />
-          Allow customer to instantly book this quote online
-        </label>
-      </section>
-
-      {/* Payment methods */}
-      <section className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-body font-semibold text-ink">
-            Accepted Payment Methods <span className="text-destructive">*</span>
-          </h3>
-          <label className="flex items-center gap-2 text-body-sm text-slate">
-            <Switch
-              checked={header.allow_pay_later}
-              disabled={!canEdit}
-              onCheckedChange={(checked) => setHeader({ allow_pay_later: checked })}
-            />
-            Enable &ldquo;Pay Later&rdquo; to allow online booking without a payment
-            method
-          </label>
+          <Toggle
+            checked={header.allow_instant_booking}
+            onCheckedChange={(checked) => setHeader({ allow_instant_booking: checked })}
+            label="Allow customer to instantly book this quote online"
+          />
         </div>
+      </Section>
 
+      <Section title="Accepted Payment Methods" required>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-body-sm">
             <thead>
               <tr className="border-b border-bone text-left text-[11px] font-semibold tracking-wide text-ash uppercase">
                 <th className="py-2 pr-3">Method</th>
                 <th className="py-2 pr-3">Online processing</th>
-                <th className="py-2 pr-3">Processing fee</th>
+                <th className="w-32 py-2 pr-3 text-right">Processing fee</th>
                 <th className="py-2">Note &amp; instructions for the customer</th>
               </tr>
             </thead>
@@ -267,15 +301,12 @@ export function PaymentTab() {
               {state.paymentMethods.map((method) => (
                 <tr key={method.method}>
                   <td className="py-2.5 pr-3">
-                    <label className="flex items-center gap-2 font-medium text-ink">
-                      <input
-                        type="checkbox"
+                    <label className="flex items-center gap-2.5 font-medium text-ink">
+                      <Checkbox
                         checked={method.enabled}
                         disabled={!canEdit}
-                        onChange={(e) =>
-                          setPaymentMethod(method.method, {
-                            enabled: e.target.checked,
-                          })
+                        onCheckedChange={(checked) =>
+                          setPaymentMethod(method.method, { enabled: checked === true })
                         }
                       />
                       {METHOD_LABELS[method.method]}
@@ -296,13 +327,15 @@ export function PaymentTab() {
                         {method.online_processing ? "Enabled" : "Off"}
                       </label>
                     ) : (
-                      "—"
+                      <span className="text-ash">—</span>
                     )}
                   </td>
                   <td className="py-2.5 pr-3">
                     <NumericInput
-                      className="h-8 w-24 text-right"
+                      containerClassName="ml-auto w-24"
+                      className="h-8 text-right"
                       suffix="%"
+                      aria-label={`${METHOD_LABELS[method.method]} processing fee`}
                       value={method.processing_fee_percent}
                       onValueChange={(value) =>
                         setPaymentMethod(method.method, {
@@ -314,6 +347,7 @@ export function PaymentTab() {
                   <td className="py-2.5">
                     <Input
                       className="h-8"
+                      aria-label={`Note for customers paying by ${METHOD_LABELS[method.method].toLowerCase()}`}
                       placeholder="e.g. wire account number, e-transfer address"
                       value={method.customer_note ?? ""}
                       disabled={!canEdit}
@@ -330,55 +364,46 @@ export function PaymentTab() {
           </table>
         </div>
 
-        <label className="flex items-center gap-2 text-body-sm text-slate">
-          <Switch
-            checked={header.po_only}
-            disabled={!canEdit}
-            onCheckedChange={(checked) => setHeader({ po_only: checked })}
-          />
-          Enable PO Number as the only payment method
-          {header.po_only && (
-            <Input
-              className="h-8 w-48"
-              placeholder="PO Number"
-              value={header.po_number ?? ""}
-              onChange={(e) =>
-                setHeader({ po_number: e.target.value || null })
-              }
-            />
-          )}
-        </label>
-      </section>
-
-      {/* Payment policy */}
-      <section className="space-y-2">
-        <h3 className="text-body font-semibold text-ink">Payment Policy</h3>
-        <Textarea
-          rows={4}
-          value={header.payment_policy ?? ""}
-          disabled={!canEdit}
-          placeholder="Payment or cancellation terms the customer sees at checkout. This does not replace your terms of service."
-          onChange={(e) =>
-            setHeader({ payment_policy: e.target.value || null })
-          }
-        />
-      </section>
-
-      {/* Expiry + signature */}
-      <section className="space-y-3">
-        <label className="flex flex-wrap items-center gap-2 text-body-sm text-slate">
-          <Switch
-            checked={header.expiry_days !== null}
-            disabled={!canEdit}
-            onCheckedChange={(checked) =>
-              setHeader({ expiry_days: checked ? 14 : null })
+        <div className="space-y-3">
+          <Toggle
+            checked={header.allow_pay_later}
+            onCheckedChange={(checked) => setHeader({ allow_pay_later: checked })}
+            label={
+              <span>
+                Enable &ldquo;Pay Later&rdquo; to allow online booking without a payment
+                method
+              </span>
             }
           />
-          This quote will expire
-          {header.expiry_days !== null && (
-            <>
+          <Toggle
+            checked={header.po_only}
+            onCheckedChange={(checked) => setHeader({ po_only: checked })}
+            label="Enable PO Number as the only payment method"
+          >
+            <Input
+              className="h-8 w-48"
+              aria-label="PO number"
+              placeholder="PO Number"
+              value={header.po_number ?? ""}
+              disabled={!canEdit}
+              onChange={(e) => setHeader({ po_number: e.target.value || null })}
+            />
+          </Toggle>
+        </div>
+      </Section>
+
+      <Section title="Checkout">
+        <div className="space-y-3">
+          <Toggle
+            checked={header.expiry_days !== null}
+            onCheckedChange={(checked) => setHeader({ expiry_days: checked ? 14 : null })}
+            label="This quote will expire"
+          >
+            <span className="flex flex-wrap items-center gap-2">
               <NumericInput
-                className="h-8 w-16 text-center"
+                containerClassName="w-16"
+                className="h-8 text-center"
+                aria-label="Days until the quote expires"
                 value={header.expiry_days}
                 onValueChange={(value) =>
                   setHeader({
@@ -389,13 +414,14 @@ export function PaymentTab() {
               <span>days from the</span>
               <Select
                 value={header.expiry_anchor}
+                disabled={!canEdit}
                 onValueChange={(value) =>
                   setHeader({
                     expiry_anchor: value as typeof header.expiry_anchor,
                   })
                 }
               >
-                <SelectTrigger className="h-8 w-28">
+                <SelectTrigger className="h-8 w-28" aria-label="Which sent date">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -404,26 +430,32 @@ export function PaymentTab() {
                 </SelectContent>
               </Select>
               <span>sent date</span>
-            </>
-          )}
-        </label>
-
-        <label className="flex items-center gap-2 text-body-sm text-slate">
-          <Switch
+            </span>
+          </Toggle>
+          <Toggle
             checked={header.require_signature}
-            disabled={!canEdit}
-            onCheckedChange={(checked) =>
-              setHeader({ require_signature: checked })
-            }
+            onCheckedChange={(checked) => setHeader({ require_signature: checked })}
+            label="Require signature upon checkout"
           />
-          Require signature upon checkout
-        </label>
-      </section>
+        </div>
+      </Section>
 
-      {/* Overage + contract terms */}
-      <section className="grid gap-6 sm:grid-cols-2">
-        <div className="space-y-2">
-          <h3 className="text-body font-semibold text-ink">Overage Rate</h3>
+      <Section title="Payment Policy">
+        <Textarea
+          rows={4}
+          aria-label="Payment policy"
+          value={header.payment_policy ?? ""}
+          disabled={!canEdit}
+          placeholder="Payment or cancellation terms the customer sees at checkout. This does not replace your terms of service."
+          onChange={(e) =>
+            setHeader({ payment_policy: e.target.value || null })
+          }
+        />
+      </Section>
+
+      <div className="grid gap-x-8 gap-y-6 pt-6 sm:grid-cols-2">
+        <section className="space-y-4">
+          <SectionTitle title="Overage Rate" />
           <div className="flex gap-2">
             <Select
               value={header.overage_basis ?? NONE}
@@ -437,7 +469,7 @@ export function PaymentTab() {
               }
               disabled={!canEdit}
             >
-              <SelectTrigger>
+              <SelectTrigger aria-label="Overage rate type">
                 <SelectValue placeholder="Overage rate type" />
               </SelectTrigger>
               <SelectContent>
@@ -448,21 +480,21 @@ export function PaymentTab() {
               </SelectContent>
             </Select>
             <NumericInput
+              containerClassName="w-36 shrink-0"
               prefix="$"
               nullable
+              aria-label="Overage rate"
               value={header.overage_rate}
               onValueChange={(value) => setHeader({ overage_rate: value })}
             />
           </div>
-        </div>
+        </section>
 
-        <div className="space-y-2">
-          <h3 className="text-body font-semibold text-ink">
-            Contract Terms <span className="text-destructive">*</span>
-          </h3>
+        <section className="space-y-4">
+          <SectionTitle title="Contract Terms" required />
           <ContractTermsDialog />
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
   );
 }
