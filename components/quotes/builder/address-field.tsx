@@ -204,6 +204,10 @@ export function AddressField({
       );
       const body = (await response.json()) as ResolveResponse;
       if (body.result) {
+        // Google's full address rarely matches the prediction's wording, so the
+        // text changes again here. Mark it as picked, or the lookup would run on
+        // it and reopen the list the operator just chose from.
+        justPicked.current = true;
         onChange(body.result.label || hit.label, {
           lat: body.result.lat,
           lng: body.result.lng,
