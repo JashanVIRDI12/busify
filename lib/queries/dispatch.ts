@@ -11,6 +11,7 @@ export type DispatchAssignment = {
   vehicleTypeName: string | null;
   driverId: string | null;
   driverName: string | null;
+  driverPhone: string | null;
 };
 
 export type DispatchTrip = {
@@ -87,7 +88,7 @@ export async function getDispatchTrips(
        trip_assignments(
          id, vehicle_id, driver_id,
          vehicles(id, name, vehicle_type_id, vehicle_types(id, name)),
-         drivers(id, first_name, last_name)
+         drivers(id, first_name, last_name, phone)
        )`,
     )
     .lt("departure_at", to.toISOString())
@@ -127,6 +128,7 @@ export async function getDispatchTrips(
                 .filter(Boolean)
                 .join(" ")
             : null,
+          driverPhone: row.drivers?.phone ?? null,
         }),
       );
 

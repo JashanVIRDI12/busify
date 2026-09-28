@@ -520,6 +520,14 @@ export function ReservationDrawer({
                           options={options}
                           canEdit={crewEditable}
                         />
+                        {row?.driverPhone && (
+                          <a
+                            href={`tel:${row.driverPhone.replace(/[^\d+]/g, "")}`}
+                            className="tabular block w-fit text-[12px] text-slate hover:text-teal-600 hover:underline"
+                          >
+                            {row.driverPhone}
+                          </a>
+                        )}
                       </span>
                     </div>
                   </li>
