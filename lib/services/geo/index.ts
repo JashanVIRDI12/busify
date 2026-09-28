@@ -479,8 +479,11 @@ function googleProviderWith(key: string): GeoProvider {
     },
 
     /**
-     * The same request as `route`, asking for the shape instead of the numbers
-     * — measuring runs on every edit in the builder and never needs geometry.
+     * The same request as `route`, asking for the shape instead of the numbers.
+     *
+     * Separate from `route` because the field mask decides what Google bills
+     * for and how much comes back: the itinerary re-measures on every edit and
+     * never needs geometry, while the map asks once and needs nothing else.
      */
     async routeShape(points) {
       if (points.length < 2) return null;
