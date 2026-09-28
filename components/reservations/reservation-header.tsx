@@ -1,6 +1,7 @@
 import { CalendarClock, Route, Users } from "lucide-react";
 
 import { EditReservationDialog } from "@/components/reservations/edit-reservation-dialog";
+import { ReservationStatusMenu } from "@/components/reservations/reservation-status-menu";
 import { TripStatusBadge } from "@/components/shared/status-badge";
 import { formatDayLabel, formatStampTime, relativeDays } from "@/lib/datetime";
 import { formatNumber } from "@/lib/utils";
@@ -24,11 +25,19 @@ export function ReservationHeader({
   trip,
   timeZone,
   canEdit = false,
+  canChangeStatus = false,
+  hasVehicle = false,
+  hasDriver = false,
 }: {
   trip: Trip;
   timeZone: string;
   /** Offer the edit dialog; false for read-only roles and closed trips. */
   canEdit?: boolean;
+  /** Make the status pill a menu. Unlike editing, this stays on for closed
+      trips, since reopening one is a status change. */
+  canChangeStatus?: boolean;
+  hasVehicle?: boolean;
+  hasDriver?: boolean;
 }) {
   const from = street(trip.pickup_location);
   const to = street(trip.destination);
@@ -77,8 +86,17 @@ export function ReservationHeader({
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
-        <TripStatusBadge status={trip.status} />
-        {canEdit && <EditReservationDialog trip={trip} timeZone={timeZone} />}
+        {canChangeStatus ? (
+          <ReservationStatusMenu
+            tripId={trip.id}
+            status={trip.status}
+            hasVehicle={hasVehicle}
+            hasDriver={hasDriver}
+          />
+        ) : (
+          <TripStatusBadge status={trip.status} />
+        )}
+        {canEdit &&<EditReservationDialog trip={trip} timeZone={timeZone} />}
       </div>
     </header>
   );

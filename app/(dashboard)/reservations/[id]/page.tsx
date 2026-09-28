@@ -376,6 +376,9 @@ export default async function TripDetailPage({
         trip={trip}
         timeZone={timeZone}
         canEdit={writeAllowed && !locked}
+        canChangeStatus={writeAllowed}
+        hasVehicle={assignments.some((entry) => entry.vehicle !== null)}
+        hasDriver={hasDriver}
       />
 
       <ReservationSummary
