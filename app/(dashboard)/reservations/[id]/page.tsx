@@ -381,21 +381,17 @@ export default async function TripDetailPage({
       <ReservationSummary
         trip={trip}
         crew={{
-          coaches: assignments
-            .map((entry) => entry.vehicle?.name)
-            .filter((name): name is string => Boolean(name)),
-          drivers: assignments.flatMap((entry) =>
-            entry.driver
-              ? [
-                  {
-                    name: [entry.driver.first_name, entry.driver.last_name]
-                      .filter(Boolean)
-                      .join(" "),
-                    phone: entry.driver.phone,
-                  },
-                ]
-              : [],
-          ),
+          rows: assignments.map((entry) => ({
+            id: entry.assignment.id,
+            vehicleId: entry.vehicle?.id ?? null,
+            vehicleName: entry.vehicle?.name ?? null,
+            driverId: entry.driver?.id ?? null,
+            driverName: entry.driver
+              ? [entry.driver.first_name, entry.driver.last_name].filter(Boolean).join(" ")
+              : null,
+            driverPhone: entry.driver?.phone ?? null,
+          })),
+          canEdit: writeAllowed && !locked,
         }}
         currency={organization.currency}
         timeZone={timeZone}

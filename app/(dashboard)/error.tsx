@@ -2,9 +2,10 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { RotateCw, TriangleAlert } from "lucide-react";
+import { Loader2, RotateCw, TriangleAlert } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { isStaleBuildError, reloadOntoCurrentBuild } from "@/lib/stale-build";
 
 /**
  * Console-scoped error boundary.
@@ -21,9 +22,37 @@ export default function ConsoleError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const stale = isStaleBuildError(error);
+
   useEffect(() => {
-    console.error("Console route failed", error);
-  }, [error]);
+    // A save from a page loaded before the last deploy: nothing is wrong except
+    // the page's age, so load the current build instead of asking to retry an
+    // action that no longer exists.
+    if (stale) reloadOntoCurrentBuild();
+    else console.error("Console route failed", error);
+  }, [error, stale]);
+
+  if (stale) {
+    return (
+      <div className="panel mx-auto mt-10 max-w-lg p-8 text-center">
+        <span className="mx-auto mb-4 flex size-11 items-center justify-center rounded-full bg-teal-50 text-teal-600">
+          <Loader2 className="size-5 animate-spin" />
+        </span>
+        <h1 className="text-subheading font-semibold text-ink">Busify was just updated</h1>
+        <p className="mx-auto mt-2 max-w-sm text-body-sm text-pretty text-slate">
+          This page was opened on the previous version, so that last change did not
+          go through. Reloading onto the new one — if it does not, press Reload —
+          then make the change again.
+        </p>
+        <div className="mt-6 flex justify-center">
+          <Button onClick={() => window.location.reload()}>
+            <RotateCw />
+            Reload
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="panel mx-auto mt-10 max-w-lg p-8 text-center">

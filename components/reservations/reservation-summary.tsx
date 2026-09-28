@@ -1,7 +1,11 @@
 import Link from "next/link";
-import { BusFront, FileText, UserRound } from "lucide-react";
+import { FileText } from "lucide-react";
 
 import { StatusPill } from "@/components/data/status-pill";
+import {
+  ReservationCrew,
+  type ReservationCrewRow,
+} from "@/components/reservations/reservation-crew";
 import { Button } from "@/components/ui/button";
 import {
   formatDayLabel,
@@ -40,11 +44,8 @@ export function ReservationSummary({
   canInvoice,
 }: {
   trip: Trip;
-  /** Who is on the job; empty lists read as a gap to fill. */
-  crew: {
-    coaches: string[];
-    drivers: { name: string; phone: string | null }[];
-  };
+  /** Who is on the job, one entry per assignment row; empty reads as a gap. */
+  crew: { rows: ReservationCrewRow[]; canEdit: boolean };
   currency: string;
   timeZone: string;
   canInvoice: boolean;
@@ -129,26 +130,9 @@ export function ReservationSummary({
 
         {/* The next question after "when" is "who". Level with the invoice row
             opposite, so both halves of the card end on the same line. */}
-        <dl className="mt-5 flex min-h-11 flex-wrap items-center gap-x-8 gap-y-2 border-t border-bone pt-3 text-body-sm lg:mt-auto">
-          <CrewFact icon={<BusFront />} label="Coach" names={crew.coaches} />
-          <CrewFact icon={<UserRound />} label="Driver" names={crew.drivers.map((d) => d.name)}>
-            {crew.drivers.length > 0 &&
-              crew.drivers.map((driver, index) => (
-                <span key={index}>
-                  {index > 0 && ", "}
-                  {driver.name}
-                  {driver.phone && (
-                    <a
-                      href={`tel:${driver.phone.replace(/[^\d+]/g, "")}`}
-                      className="tabular ml-2 font-normal text-slate hover:text-teal-600 hover:underline"
-                    >
-                      {driver.phone}
-                    </a>
-                  )}
-                </span>
-              ))}
-          </CrewFact>
-        </dl>
+        <div className="mt-5 flex min-h-11 flex-col justify-center border-t border-bone pt-3 lg:mt-auto">
+          <ReservationCrew tripId={trip.id} rows={crew.rows} canEdit={crew.canEdit} />
+        </div>
       </div>
 
       <div className="border-t border-bone p-5 sm:p-6 lg:border-t-0 lg:border-l">
@@ -202,36 +186,5 @@ export function ReservationSummary({
         </div>
       </div>
     </section>
-  );
-}
-
-/** A coach or a driver line; unassigned reads orange, as a gap to fill. */
-function CrewFact({
-  icon,
-  label,
-  names,
-  children,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  names: string[];
-  /** Richer rendering of the names, e.g. with a phone number beside each. */
-  children?: React.ReactNode;
-}) {
-  return (
-    <div className="flex min-w-0 items-center gap-2">
-      <dt className="inline-flex items-center gap-1.5 text-slate [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-ash">
-        {icon}
-        {label}
-      </dt>
-      <dd
-        className={cn(
-          "truncate font-medium",
-          names.length > 0 ? "text-ink" : "text-orange-600",
-        )}
-      >
-        {names.length > 0 ? (children ?? names.join(", ")) : "Not assigned"}
-      </dd>
-    </div>
   );
 }

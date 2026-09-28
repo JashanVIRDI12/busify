@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { RotateCcw, TriangleAlert } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { isStaleBuildError, reloadOntoCurrentBuild } from "@/lib/stale-build";
 
 export default function GlobalError({
   error,
@@ -12,9 +13,31 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const stale = isStaleBuildError(error);
+
   useEffect(() => {
-    console.error(error);
-  }, [error]);
+    // Opened before the last deploy (the sign-in form, most often): reload onto
+    // the current build rather than retrying an action that no longer exists.
+    if (stale) reloadOntoCurrentBuild();
+    else console.error(error);
+  }, [error, stale]);
+
+  if (stale) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center px-6">
+        <div className="w-full max-w-md space-y-4 text-center">
+          <h1 className="text-xl font-semibold tracking-tight">Busify was just updated</h1>
+          <p className="text-sm text-pretty text-muted-foreground">
+            Reloading onto the new version — then try that again.
+          </p>
+          <Button onClick={() => window.location.reload()}>
+            <RotateCcw />
+            Reload
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-dvh items-center justify-center px-6">

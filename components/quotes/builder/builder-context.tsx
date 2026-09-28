@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 
 import { saveQuoteBuilderAction } from "@/app/(dashboard)/quotes/builder-actions";
 import { computeQuote, type QuoteComputed } from "@/lib/quotes/compute";
+import { isStaleBuildError } from "@/lib/stale-build";
 import {
   builderFingerprint,
   newCharge,
@@ -217,8 +218,14 @@ export function QuoteBuilderProvider({
       }
       setError(result.message);
       return false;
-    } catch {
-      setError("Could not reach the server. Your changes are not saved.");
+    } catch (error) {
+      setError(
+        isStaleBuildError(error)
+          ? // Reloading here would throw away the unsaved edits, so it is the
+            // operator's call, made knowingly.
+            "Busify was updated while this quote was open, so it cannot save. Reload the page to keep working — changes since the last save will need re-entering."
+          : "Could not reach the server. Your changes are not saved.",
+      );
       return false;
     } finally {
       inFlight.current = false;
