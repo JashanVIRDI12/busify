@@ -62,11 +62,13 @@ export function CalendarBoard({
   trips,
   timeZone,
   currency,
+  canEdit = false,
 }: {
   cells: CalendarCell[];
   trips: DispatchTrip[];
   timeZone: string;
   currency: string;
+  canEdit?: boolean;
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const byId = new Map(trips.map((trip) => [trip.id, trip]));
@@ -156,6 +158,7 @@ export function CalendarBoard({
         trip={openId ? (byId.get(openId) ?? null) : null}
         timeZone={timeZone}
         currency={currency}
+        canEdit={canEdit}
         onClose={() => setOpenId(null)}
       />
     </>

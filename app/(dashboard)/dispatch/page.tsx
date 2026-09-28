@@ -4,6 +4,7 @@ import { CalendarBoard, type CalendarCell } from "@/components/dispatch/calendar
 import { CalendarNav, MiniCalendar } from "@/components/dispatch/calendar-nav";
 import { DispatchFilterRail } from "@/components/dispatch/filter-rail";
 import { requireSession } from "@/lib/auth/session";
+import { canWrite } from "@/lib/permissions";
 import {
   daysCovered,
   miniMonth,
@@ -53,7 +54,7 @@ export default async function DispatchPage({
 }: {
   searchParams: Promise<SearchParamsInput>;
 }) {
-  const { organization } = await requireSession();
+  const { organization, role } = await requireSession();
   const resolved = await searchParams;
   const params = parseListParams(resolved);
   const zone = organization.timezone;
@@ -159,6 +160,7 @@ export default async function DispatchPage({
           trips={visible}
           timeZone={zone}
           currency={organization.currency}
+          canEdit={canWrite(role)}
         />
       </div>
     </div>

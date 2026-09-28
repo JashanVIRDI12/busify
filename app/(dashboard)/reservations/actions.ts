@@ -16,7 +16,7 @@ import {
 import { canManage, canWrite } from "@/lib/permissions";
 import { getFleetAvailability } from "@/lib/queries/availability";
 import type { createClient } from "@/lib/supabase/server";
-import { uuid } from "@/lib/validations/shared";
+import { uuid, type ActionResult } from "@/lib/validations/shared";
 import {
   assignmentSchema,
   reservationUpdateSchema,
@@ -36,6 +36,7 @@ const BLOCKING_TRIP_STATUSES = [
 function revalidateTrip(id: string) {
   revalidatePath("/reservations");
   revalidatePath(`/reservations/${id}`);
+  revalidatePath("/dispatch");
   revalidatePath("/vehicles");
   revalidatePath("/reports");
 }
@@ -489,4 +490,142 @@ export async function updateReservationAction(
   revalidatePath("/board");
   revalidatePath("/dispatch");
   return formSuccess("Reservation updated.");
+}
+
+export type AssignmentOption = { id: string; label: string; detail: string };
+
+/**
+ * The coaches and drivers free for one trip's window, for picking one without
+ * leaving the dispatch board. Same rule as the reservation page: in service,
+ * not on an overlapping trip, and for drivers no time off and a valid licence.
+ * Whoever is already on this trip is left out — they are shown as the current
+ * value, not offered a second time.
+ */
+export async function assignmentOptionsAction(
+  tripId: string,
+): Promise<ActionResult<{ vehicles: AssignmentOption[]; drivers: AssignmentOption[] }>> {
+  const { session, supabase } = await actionContext();
+  if (!canWrite(session.role)) {
+    return { ok: false, message: "Your role does not allow changing assignments." };
+  }
+
+  const id = uuid.safeParse(tripId);
+  if (!id.success) return { ok: false, message: "That trip could not be found." };
+
+  const [{ data: trip }, { data: rows }] = await Promise.all([
+    supabase
+      .from("trips")
+      .select("id, departure_at, return_at, passenger_count")
+      .eq("id", id.data)
+      .maybeSingle(),
+    supabase.from("trip_assignments").select("vehicle_id, driver_id").eq("trip_id", id.data),
+  ]);
+  if (!trip) return { ok: false, message: "That trip could not be found." };
+
+  const availability = await getFleetAvailability(trip, { excludeTripId: trip.id });
+  const onTrip = new Set((rows ?? []).flatMap((row) => [row.vehicle_id, row.driver_id]));
+
+  return {
+    ok: true,
+    data: {
+      vehicles: availability.vehicles
+        .filter((entry) => entry.available && !onTrip.has(entry.vehicle.id))
+        .map((entry) => ({
+          id: entry.vehicle.id,
+          label: entry.vehicle.name,
+          detail: `${entry.vehicle.capacity} seats`,
+        })),
+      drivers: availability.drivers
+        .filter((entry) => entry.available && !onTrip.has(entry.driver.id))
+        .map((entry) => ({
+          id: entry.driver.id,
+          label: [entry.driver.first_name, entry.driver.last_name].filter(Boolean).join(" "),
+          detail: entry.driver.phone ?? "",
+        })),
+    },
+  };
+}
+
+const assignmentPartSchema = z.object({
+  assignment_id: uuid,
+  field: z.enum(["vehicle_id", "driver_id"]),
+  value: uuid.nullable(),
+});
+
+/**
+ * Puts a coach or a driver on one existing assignment row, or takes one off.
+ *
+ * Filling the row in place matters: a converted quote arrives with one empty
+ * row per coach it sold, and a coach assigned without its driver is a row half
+ * filled. Adding a second row for the driver would draw that one job as two
+ * crews. Availability is checked again here for the same reason as when
+ * assigning — another dispatcher may have taken the driver since the list was
+ * fetched.
+ */
+export async function setAssignmentPartAction(input: {
+  assignment_id: string;
+  field: "vehicle_id" | "driver_id";
+  value: string | null;
+}): Promise<ActionResult> {
+  const { session, supabase } = await actionContext();
+  if (!canWrite(session.role)) {
+    return { ok: false, message: "Your role does not allow changing assignments." };
+  }
+
+  const parsed = assignmentPartSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, message: "That assignment could not be updated." };
+  const { assignment_id, field, value } = parsed.data;
+
+  const { data: row } = await supabase
+    .from("trip_assignments")
+    .select("id, trip_id, vehicle_id, driver_id, trips(id, status, departure_at, return_at, passenger_count)")
+    .eq("id", assignment_id)
+    .maybeSingle();
+
+  const trip = row?.trips as
+    | { id: string; status: string; departure_at: string; return_at: string | null; passenger_count: number }
+    | null
+    | undefined;
+  if (!row || !trip) return { ok: false, message: "That assignment could not be found." };
+  if (trip.status === "CANCELLED" || trip.status === "COMPLETED") {
+    return { ok: false, message: "This trip is closed, so its assignments are locked." };
+  }
+
+  if (value) {
+    const availability = await getFleetAvailability(trip, { excludeTripId: trip.id });
+    const entry =
+      field === "vehicle_id"
+        ? availability.vehicles.find((candidate) => candidate.vehicle.id === value)
+        : availability.drivers.find((candidate) => candidate.driver.id === value);
+    if (!entry) {
+      return {
+        ok: false,
+        message:
+          field === "vehicle_id"
+            ? "That vehicle is no longer in your fleet."
+            : "That driver is no longer on your roster.",
+      };
+    }
+    if (!entry.available) {
+      return {
+        ok: false,
+        message: `${field === "vehicle_id" ? "That vehicle" : "That driver"} is not available — ${entry.reason?.toLowerCase()}.`,
+      };
+    }
+  }
+
+  const previousVehicle = row.vehicle_id;
+  const { error } = await supabase
+    .from("trip_assignments")
+    .update(field === "vehicle_id" ? { vehicle_id: value } : { driver_id: value })
+    .eq("id", assignment_id);
+  if (error) return { ok: false, message: error.message };
+
+  if (field === "vehicle_id") {
+    if (previousVehicle) await syncVehicleStatus(supabase, previousVehicle);
+    if (value) await syncVehicleStatus(supabase, value);
+  }
+
+  revalidateTrip(trip.id);
+  return { ok: true, data: undefined };
 }
